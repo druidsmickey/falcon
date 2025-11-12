@@ -1,0 +1,407 @@
+/* Betslip Container */
+.betslip-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+/* Header */
+.betslip-header {
+  background-color: rgba(25, 118, 210, 0.9);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px 8px 0 0;
+  margin: -20px -20px 20px -20px;
+}
+
+.betslip-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+/* Content Area */
+.betslip-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Detail Items */
+.detail-item {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.detail-item label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Race and Horse Row */
+.race-horse-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.race-field {
+  flex: 0 0 auto;
+}
+
+.horse-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.save-field {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.save-field .save-button {
+  height: 40px;
+  padding: 0 20px;
+}
+
+/* Client Name and Tax Row */
+.client-tax-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.client-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.tax-field {
+  flex: 0 0 120px;
+}
+
+/* Books/Stake and F500/Odds Row */
+.books-odds-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.books-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.odds-field {
+  flex: 0 0 150px;
+}
+
+/* Payout and Last Bet Row */
+.payout-lastbet-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.payout-field {
+  flex: 0 0 200px;
+}
+
+.lastbet-field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Form Fields */
+.stake-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.stake-input:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+/* Mat-Select Styling */
+.header-select {
+  width: 100%;
+  background-color: rgba(25, 118, 210, 0.7);
+  border-radius: 4px;
+}
+
+.header-select ::ng-deep .mat-form-field-wrapper {
+  padding-bottom: 0;
+}
+
+.header-select ::ng-deep .mat-form-field-underline {
+  display: none;
+}
+
+.header-select ::ng-deep .mat-select-value,
+.header-select ::ng-deep .mat-select-placeholder,
+.header-select ::ng-deep .mat-select-arrow {
+  color: white;
+}
+
+.header-select ::ng-deep .mat-select-value {
+  padding-left: 8px;
+}
+
+.header-select ::ng-deep .mat-option {
+  padding-left: 24px;
+}
+
+.header-select ::ng-deep .mat-option:hover,
+.header-select ::ng-deep .mat-option.mat-selected,
+.header-select ::ng-deep .mat-option.mat-active {
+  background-color: rgba(25, 118, 210, 0.5) !important;
+}
+
+.race-select {
+  width: 55px;
+  min-width: 55px;
+}
+
+/* Checkbox Styling */
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.checkbox-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-input input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #1976d2;
+}
+
+.checkbox-input label {
+  margin: 0;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: normal;
+}
+
+/* Recent Clients List */
+.recent-clients-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.client-button {
+  padding: 4px 8px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.client-button:hover {
+  background-color: #1565c0;
+}
+
+.client-button:active {
+  background-color: #0d47a1;
+}
+
+/* Odds Display */
+.odds-display {
+  padding: 10px;
+  background-color: #f5f5f5;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Payout Section */
+.payout-section {
+  background-color: #e3f2fd;
+  padding: 15px;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.payout-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1976d2;
+  text-align: center;
+  padding: 10px;
+}
+
+/* Last Bet Transaction */
+.sidebar-transactions-inline {
+  margin-top: 10px;
+}
+
+.transaction-item-compact {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.transaction-field {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Save Message */
+.save-message {
+  background-color: #4caf50;
+  color: white;
+  padding: 12px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 15px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button Container */
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.save-button {
+  padding: 8px 50px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.save-button:hover {
+  background-color: #45a049;
+}
+
+.save-button:active {
+  background-color: #3d8b40;
+}
+
+.save-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .betslip-container {
+    padding: 10px;
+  }
+
+  .betslip-header {
+    margin: -10px -10px 15px -10px;
+    padding: 15px;
+  }
+
+  .betslip-header h2 {
+    font-size: 20px;
+  }
+
+  .betslip-content {
+    padding: 15px;
+  }
+
+  .detail-item {
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+  }
+
+  .payout-value {
+    font-size: 20px;
+  }
+
+  .client-button {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  .betslip-header h2 {
+    font-size: 18px;
+  }
+
+  .stake-input {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .payout-value {
+    font-size: 18px;
+  }
+
+  .save-button {
+    padding: 10px 30px;
+    font-size: 14px;
+  }
+
+  .transaction-item-compact {
+    font-size: 11px;
+    padding: 6px;
+  }
+}
+
+/* Cancelled bet styling */
+.cancelled {
+  text-decoration: line-through;
+  opacity: 0.6;
+}

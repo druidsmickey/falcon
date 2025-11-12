@@ -1,0 +1,412 @@
+.events-container {
+  padding: 10px;
+  margin: 0;
+  color: #212121;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.event-form-field {
+  width: 120px;
+}
+
+.market-form-field {
+  width: 120px; /* Reduced from 300px to 120px - enough for 3 digits */
+  margin-right: 20px;
+  margin-bottom: 15px;
+  display: inline-block; /* Make them display side by side */
+}
+
+.race-details-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.market-list-form-field {
+  width: 250px;
+  margin-right: 15px;
+  margin-bottom: 10px;
+}
+
+.events-list {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #e3f2fd; /* Light blue background */
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+}
+
+.events-list h3 {
+  color: #1565c0; /* Dark blue for section headers */
+  font-weight: 600;
+}
+
+.horizontal-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+.event-item {
+  margin: 0; /* Remove vertical margin for horizontal layout */
+  flex: 0 0 auto; /* Don't grow or shrink, use natural size */
+}
+
+.event-item .mat-radio-button {
+  color: #424242; /* Dark gray for radio button text */
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .horizontal-radio-group {
+    gap: 8px; /* Reduced from 15px to 8px for tablets */
+  }
+  
+  .event-item {
+    flex: 0 0 calc(50% - 4px); /* Two columns on mobile with smaller gap */
+  }
+}
+
+@media (max-width: 480px) {
+  .horizontal-radio-group {
+    gap: 5px; /* Much tighter spacing for mobile */
+  }
+  
+  .event-item {
+    flex: 0 0 calc(33.333% - 3px); /* Three columns on mobile for more compact layout */
+  }
+  
+  .event-item .mat-radio-button {
+    font-size: 14px; /* Slightly smaller font for mobile */
+  }
+}
+
+@media (max-width: 360px) {
+  .horizontal-radio-group {
+    gap: 3px; /* Very tight spacing for very small screens */
+  }
+  
+  .event-item {
+    flex: 0 0 calc(25% - 2px); /* Four columns on very small screens */
+  }
+  
+  .event-item .mat-radio-button {
+    font-size: 12px; /* Even smaller font for very small screens */
+  }
+
+  /* Adjust form fields for very small screens */
+  .race-details-form {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .market-form-field {
+    width: 100px; /* Even smaller for very small screens */
+    margin-right: 10px;
+  }
+}
+
+.market-details {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.market-details h3 {
+  color: #1565c0; /* Dark blue for main headers */
+  font-weight: 600;
+  border-bottom: 2px solid #e3f2fd;
+  padding-bottom: 8px;
+}
+
+.market-lists {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f3e5f5; /* Light purple background */
+  border: 1px solid #7b1fa2;
+  border-radius: 4px;
+}
+
+.market-lists h4 {
+  color: #6a1b9a; /* Dark purple for subsection headers */
+  font-weight: 600;
+}
+
+.market-list-item {
+  margin: 10px 0;
+}
+
+h1 {
+  color: #1565c0; /* Dark blue for main title */
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+h3 {
+  color: #1565c0; /* Dark blue for section headers */
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+h4 {
+  color: #6a1b9a; /* Dark purple for subsection headers */
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+p {
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  color: #424242; /* Dark gray for body text */
+}
+
+strong {
+  color: #1565c0; /* Dark blue for emphasized text */
+  font-weight: 600;
+}
+
+.market-info {
+  background-color: #e8f5e8; /* Light green background */
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+.market-info p {
+  margin: 0;
+  font-size: 18px;
+  color: #2e7d32; /* Dark green for market info text */
+  font-weight: 500;
+}
+
+/* Debug info styling */
+.debug-info {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #fff3e0; /* Light orange background */
+  border: 1px solid #ff9800;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #e65100; /* Dark orange for debug text */
+}
+
+.debug-info strong {
+  color: #bf360c; /* Darker orange for debug headers */
+}
+
+.navigation {
+  text-align: center;
+  margin-top: 30px;
+  padding: 20px;
+  border-top: 2px solid #e3f2fd;
+}
+
+.navigation button {
+  font-size: 16px;
+  padding: 12px 24px;
+}
+
+/* Material form field improvements */
+.mat-form-field {
+  color: #424242;
+}
+
+.mat-form-field-label {
+  color: #1976d2 !important; /* Blue labels */
+}
+
+.mat-input-element {
+  color: #212121 !important; /* Dark text in inputs */
+}
+
+/* Radio button improvements */
+.mat-radio-button .mat-radio-label {
+  color: #424242 !important; /* Dark text for radio labels */
+}
+
+.mat-radio-button.mat-accent .mat-radio-inner-circle {
+  background-color: #1976d2; /* Blue accent for selected radio */
+}
+
+.mat-radio-button.mat-accent .mat-radio-ripple .mat-ripple-element {
+  background-color: #1976d2; /* Blue ripple effect */
+}
+
+/* Enhanced Material Design styling */
+::ng-deep .mat-form-field-appearance-fill .mat-form-field-flex {
+  background-color: #fafafa !important; /* Light gray background for inputs */
+}
+
+::ng-deep .mat-form-field-appearance-fill .mat-form-field-underline::before {
+  background-color: #1976d2 !important; /* Blue underline */
+}
+
+::ng-deep .mat-form-field-appearance-fill.mat-focused .mat-form-field-flex {
+  background-color: #ffffff !important; /* White background when focused */
+}
+
+::ng-deep .mat-form-field-label {
+  color: #1976d2 !important; /* Blue labels always */
+  font-weight: 500 !important;
+}
+
+::ng-deep .mat-form-field.mat-focused .mat-form-field-label {
+  color: #0d47a1 !important; /* Darker blue when focused */
+}
+
+::ng-deep .mat-input-element {
+  color: #212121 !important; /* Dark text in all inputs */
+  font-size: 16px !important;
+  font-weight: 400 !important;
+}
+
+::ng-deep .mat-input-element::placeholder {
+  color: #757575 !important; /* Medium gray placeholders */
+  opacity: 1 !important;
+}
+
+::ng-deep .mat-form-field-underline {
+  background-color: #1976d2 !important; /* Blue underline */
+}
+
+::ng-deep .mat-form-field-ripple {
+  background-color: #1976d2 !important; /* Blue ripple effect */
+}
+
+/* Radio button enhancements */
+::ng-deep .mat-radio-label-content {
+  color: #424242 !important; /* Dark text for radio button labels */
+  font-weight: 500 !important;
+}
+
+::ng-deep .mat-radio-button.mat-accent.mat-radio-checked .mat-radio-outer-circle {
+  border-color: #1976d2 !important; /* Blue border when checked */
+}
+
+::ng-deep .mat-radio-button.mat-accent .mat-radio-inner-circle {
+  background-color: #1976d2 !important; /* Blue inner circle */
+}
+
+::ng-deep .mat-radio-button .mat-radio-outer-circle {
+  border-color: #757575 !important; /* Gray border when unchecked */
+}
+
+::ng-deep .mat-radio-button:hover .mat-radio-outer-circle {
+  border-color: #1976d2 !important; /* Blue border on hover */
+}
+
+/* Form field specific enhancements */
+.event-form-field ::ng-deep .mat-form-field-label {
+  color: #2e7d32 !important; /* Green for event count field */
+}
+
+.event-form-field ::ng-deep .mat-form-field-underline {
+  background-color: #4caf50 !important; /* Green underline */
+}
+
+.market-form-field ::ng-deep .mat-form-field-label {
+  color: #1565c0 !important; /* Dark blue for market fields */
+}
+
+.market-form-field ::ng-deep .mat-form-field-underline {
+  background-color: #1976d2 !important; /* Blue underline */
+}
+
+.market-list-form-field ::ng-deep .mat-form-field-label {
+  color: #6a1b9a !important; /* Purple for market list fields */
+}
+
+.market-list-form-field ::ng-deep .mat-form-field-underline {
+  background-color: #7b1fa2 !important; /* Purple underline */
+}
+
+/* Save to Database Section */
+.save-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.save-section h3 {
+  color: white;
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.button-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.button-group button {
+  flex: 1;
+  min-width: 200px;
+}
+
+.button-group button mat-icon {
+  margin-right: 8px;
+}
+
+.status-message {
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-top: 15px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.status-success {
+  background-color: #4caf50;
+  color: white;
+  border-left: 4px solid #2e7d32;
+}
+
+.status-error {
+  background-color: #f44336;
+  color: white;
+  border-left: 4px solid #c62828;
+}
+
+.status-info {
+  background-color: #2196f3;
+  color: white;
+  border-left: 4px solid #1565c0;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments for save section */
+@media (max-width: 768px) {
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .button-group button {
+    min-width: 100%;
+  }
+}

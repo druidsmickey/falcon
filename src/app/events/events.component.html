@@ -1,0 +1,99 @@
+<div class="events-container">
+  <div class="market-info">
+    <p><strong>No of races:</strong>
+        <mat-form-field class="event-form-field">
+        <input matInput 
+               type="number" 
+               [(ngModel)]="numEvents" 
+               (ngModelChange)="generateEvents()"
+               (input)="onNumEventsInput($event)"
+               placeholder="Enter number of races"
+               min="0">
+        </mat-form-field>
+    </p>
+  </div>
+
+  <!-- Events List with Radio Buttons -->
+  <div class="events-list" *ngIf="events.length > 0">
+    <h3>Select Race:</h3>
+    <mat-radio-group [(ngModel)]="selectedEventId" (change)="onEventSelect($event.value)" class="horizontal-radio-group">
+      <div *ngFor="let event of events" class="event-item">
+        <mat-radio-button [value]="event.id">{{event.name}}</mat-radio-button>
+      </div>
+    </mat-radio-group>
+  </div>
+
+  <!-- Market Details for Selected Event -->
+  <div class="market-details" *ngIf="selectedEventId && eventData[selectedEventId]">
+    <h3>Details for Race {{selectedEventId}}:</h3>
+    
+    <!-- Race Details Form -->
+    <div class="race-details-form">
+      <!-- Market Name Input -->
+      <mat-form-field class="market-form-field">
+        <mat-label>Race Num</mat-label>
+        <input matInput 
+               [ngModel]="getMarketName()"
+               (ngModelChange)="setMarketName($event)"
+               placeholder="Race Number">
+      </mat-form-field>
+
+      <!-- Number of Market Lists(horses) Input -->
+      <mat-form-field class="market-form-field">
+        <mat-label>Number of Horses</mat-label>
+        <input matInput 
+               type="number" 
+               [ngModel]="getNumMarketList()"
+               (ngModelChange)="onMarketListCountChange($event)"
+               placeholder="Enter number of horses">
+      </mat-form-field>
+    </div>
+
+    <!-- Market List(Horses) Names -->
+    <div class="market-lists" *ngIf="eventData[selectedEventId].marketLists && eventData[selectedEventId].marketLists.length > 0">
+      <h4>Horse Names:</h4>
+      <div *ngFor="let marketList of eventData[selectedEventId].marketLists; let i = index" class="market-list-item">
+        <mat-form-field class="market-list-form-field">
+          <mat-label>Horse {{marketList.id}} Name</mat-label>
+          <input matInput 
+                 [(ngModel)]="marketList.name"
+                 (ngModelChange)="saveEventData()"
+                 placeholder="Enter horse name">
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Debug info - remove this after testing -->
+    <div class="debug-info">
+      <strong>Debug Info:</strong><br>
+      Selected Event ID: {{selectedEventId}}<br>
+      Market Name: {{eventData[selectedEventId]?.marketName}}<br>
+      Num Market List: {{eventData[selectedEventId]?.numMarketList}}<br>
+      Market Lists Length: {{eventData[selectedEventId]?.marketLists?.length}}<br>
+      Market Lists: {{eventData[selectedEventId]?.marketLists | json}}
+    </div>
+
+    <!-- Save to Database Section -->
+    <div class="save-section">
+      <h3>💾 Database Operations</h3>
+      <div class="button-group">
+        <button mat-flat-button color="primary" (click)="saveToDatabase()" [disabled]="isSaving">
+          <mat-icon>cloud_upload</mat-icon>
+          {{ isSaving ? 'Saving...' : 'Save to Database' }}
+        </button>
+        <button mat-flat-button color="accent" (click)="loadFromDatabase()" [disabled]="isLoading">
+          <mat-icon>cloud_download</mat-icon>
+          {{ isLoading ? 'Loading...' : 'Load from Database' }}
+        </button>
+        <button mat-flat-button routerLink="/params">
+          <mat-icon>visibility</mat-icon>
+          View Summary
+        </button>
+      </div>
+      <div class="status-message" *ngIf="statusMessage" [ngClass]="statusClass">
+        {{ statusMessage }}
+      </div>
+    </div>
+  </div>
+</div>
+\

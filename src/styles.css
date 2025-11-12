@@ -1,0 +1,26 @@
+/* You can add global styles to this file, and also import other style files */
+
+html, body { 
+  height: 100%; 
+  overflow-x: hidden; /* Prevent horizontal scroll on body */
+  width: 100%;
+}
+
+body { 
+  margin: 0; 
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  max-width: 100vw; /* Ensure body doesn't exceed viewport width */
+}
+
+/* Ensure all main containers don't overflow horizontally */
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent horizontal scroll on all containers */
+app-root {
+  display: block;
+  width: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
+}

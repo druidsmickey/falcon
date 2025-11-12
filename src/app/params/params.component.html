@@ -1,0 +1,166 @@
+<div class="params-container">
+  <!--<h1>Parameters Summary</h1>-->
+  
+  <!-- Market Type Info -->
+  <!--
+  <div class="market-type-info">
+    <h3>Market Type: {{marketTypeName}} ({{marketType}})</h3>
+  </div>
+    -->
+  
+  <!-- Events Overview -->
+   <!--
+  <div class="events-overview" *ngIf="appData.numEvents && appData.numEvents > 0">
+    <h3>Events Overview</h3>
+    <p><strong>Total Races:</strong> {{appData.numEvents}}</p>
+    <p><strong>Selected Race:</strong> {{appData.selectedEventId || 'None'}}</p>
+  </div>
+    -->
+
+  <!-- Events Details -->
+  <div class="events-details" *ngIf="appData.events.length > 0">
+    <!--
+    <h3>Race Details</h3>
+  -->
+
+    <div *ngFor="let event of appData.events" class="event-detail-card">
+      <div class="event-header">
+        <h4>Race {{event.id}} 
+          <span class="selected-indicator" *ngIf="appData.selectedEventId === event.id">(Currently Selected)</span>
+        </h4>
+      </div>
+      
+      <div class="event-content" *ngIf="appData.eventData[event.id]">
+        <!--
+        <div class="event-info">
+          <p><strong>Race Name:</strong> {{appData.eventData[event.id].marketName || 'Not set'}}</p>
+          <p><strong>Number of Horses:</strong> {{appData.eventData[event.id].numMarketList || 'Not set'}}</p>
+        </div>
+        -->
+
+        <!-- Horses Table -->
+        <div class="horses-table" *ngIf="appData.eventData[event.id].marketLists && appData.eventData[event.id].marketLists.length > 0">
+          <div class="table-header-row">
+            <h5>Horses: ({{appData.eventData[event.id].marketLists.length}} horses)</h5>
+            <button mat-flat-button 
+                    [color]="isEditing(event.id) ? 'accent' : 'primary'"
+                    (click)="toggleEdit(event.id)"
+                    class="modify-save-btn">
+              {{ getButtonText(event.id) }}
+            </button>
+          </div>
+          
+          <!-- Regular HTML table -->
+          <table class="simple-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background: white;">
+            <thead>
+              <tr style="background-color: #7b1fa2; color: white;">
+                <th style="padding: 10px; text-align: left;">#</th>
+                <th style="padding: 10px; text-align: left;">Name</th>
+                <th style="padding: 10px; text-align: left;">Special Date & Time</th>
+                <th style="padding: 10px; text-align: left;">Rule 4 Date & Time</th>
+                <th style="padding: 10px; text-align: left;">Rule 4</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let horse of appData.eventData[event.id].marketLists; let i = index" style="border-bottom: 1px solid #e1bee7;">
+                <td style="padding: 10px;">{{horse.id}}</td>
+                
+                <!-- Name field - editable when in edit mode -->
+                <td style="padding: 10px;">
+                  <span *ngIf="!isEditing(event.id)">{{horse.name || 'Unnamed'}}</span>
+                  <input *ngIf="isEditing(event.id)" 
+                         type="text" 
+                         [(ngModel)]="horse.name"
+                         (ngModelChange)="onHorseFieldChange(event.id, i, 'name', $event)"
+                         style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                </td>
+                
+                <!-- Special field - editable when in edit mode (DATE & TIME) -->
+                <td style="padding: 10px;">
+                  <span *ngIf="!isEditing(event.id)">{{formatDateTime(horse.special)}}</span>
+                  <input *ngIf="isEditing(event.id)" 
+                         type="datetime-local" 
+                         [(ngModel)]="horse.special"
+                         (ngModelChange)="onHorseFieldChange(event.id, i, 'special', $event)"
+                         style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                </td>
+                
+                <!-- Rule 4 field - editable when in edit mode (DATE & TIME) -->
+                <td style="padding: 10px;">
+                  <span *ngIf="!isEditing(event.id)">{{formatDateTime(horse.rule4)}}</span>
+                  <input *ngIf="isEditing(event.id)" 
+                         type="datetime-local" 
+                         [(ngModel)]="horse.rule4"
+                         (ngModelChange)="onHorseFieldChange(event.id, i, 'rule4', $event)"
+                         style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                </td>
+                
+                <!-- Rule 4 Deduction field - editable when in edit mode -->
+                <td style="padding: 10px;">
+                  <span *ngIf="!isEditing(event.id)">{{horse.rule4Deduction || 0}}</span>
+                  <input *ngIf="isEditing(event.id)" 
+                         type="number" 
+                         [(ngModel)]="horse.rule4Deduction"
+                         (ngModelChange)="onHorseFieldChange(event.id, i, 'rule4Deduction', $event)"
+                         style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Material Table (commented out for now)
+          <div class="mat-elevation-z2">
+            <table mat-table [dataSource]="appData.eventData[event.id].marketLists" class="horses-mat-table">
+              
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>#</th>
+                <td mat-cell *matCellDef="let horse">{{horse.id}}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Name</th>
+                <td mat-cell *matCellDef="let horse">{{horse.name || 'Unnamed'}}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="special">
+                <th mat-header-cell *matHeaderCellDef>Special</th>
+                <td mat-cell *matCellDef="let horse">{{horse.special || 0}}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="rule4">
+                <th mat-header-cell *matHeaderCellDef>Rule 4</th>
+                <td mat-cell *matCellDef="let horse">{{horse.rule4 || 0}}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="rule4Deduction">
+                <th mat-header-cell *matHeaderCellDef>Rule 4 Deduction</th>
+                <td mat-cell *matCellDef="let horse">{{horse.rule4Deduction || 0}}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+          </div>
+          -->
+        </div>
+      </div>
+      
+      <!-- No data message -->
+      <div class="no-data" *ngIf="!appData.eventData[event.id]">
+        <p><em>No details configured for this race yet.</em></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Events Message -->
+  <div class="no-events" *ngIf="!appData.events || appData.events.length === 0">
+    <p><em>No races have been created yet. Go to the Events page to create races.</em></p>
+  </div>
+
+  <!-- Navigation -->
+  <div class="navigation">
+    <button mat-flat-button color="primary" routerLink="/events">
+      Back to Events
+    </button>
+  </div>
+</div>

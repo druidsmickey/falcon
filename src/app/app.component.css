@@ -1,0 +1,95 @@
+/* Mobile-first layout */
+mat-toolbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-height: 64px;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Hide scrollbar but keep functionality */
+mat-toolbar::-webkit-scrollbar {
+  height: 4px;
+}
+
+mat-toolbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+/* Content container - fixed width, no horizontal scroll */
+router-outlet {
+  display: block;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.example-spacer {
+  flex: 1 1 auto;
+  min-width: 20px; /* Ensure it has minimum space */
+}
+
+.black {
+  background-color: black !important;
+  color: white;
+}
+
+.pink {
+  background-color: pink !important;
+  color: black;
+}
+
+.active-route {
+  background-color: blue !important;
+  color: white !important;
+}
+
+.data-indicator {
+  font-size: 14px;
+  margin-right: 10px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.clear-data-btn {
+  font-size: 12px;
+  min-width: auto;
+  padding: 0 8px;
+  opacity: 0.9;
+}
+
+.clear-all-btn {
+  font-size: 12px;
+  min-width: auto;
+  padding: 0 8px;
+  opacity: 0.8;
+  background-color: rgba(255, 0, 0, 0.2);
+}
+
+.active-market {
+  border: 2px solid yellow !important;
+  background-color: rgba(255, 255, 0, 0.3) !important;
+}
+
+.backend-status {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-right: 10px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.backend-status.connected {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #2e7d32;
+  border: 1px solid #4caf50;
+}
+
+.backend-status.disconnected {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #c62828;
+  border: 1px solid #f44336;
+}

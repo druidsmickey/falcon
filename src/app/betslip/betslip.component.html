@@ -1,0 +1,114 @@
+<div class="betslip-container">
+
+  <div class="betslip-content">
+    <!-- Race and Horse Selection -->
+    <div class="detail-item">
+      <div class="race-horse-row">
+        <div class="race-field">
+          <mat-form-field class="header-select race-select">
+            <mat-select [(ngModel)]="selectedRaceId" (ngModelChange)="onRaceChange()">
+              <mat-option *ngFor="let race of getRaces()" [value]="race.id">
+                {{ race.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="horse-field">
+          <mat-form-field class="header-select">
+            <mat-select [(ngModel)]="selectedHorse" (ngModelChange)="onHorseChange()">
+              <mat-option *ngFor="let horse of getSelectedRaceHorses()" [value]="horse">
+                {{ horse.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Save Button -->
+        <div class="save-field">
+          <button class="save-button" (click)="saveHorse()">Save</button>
+        </div>
+      </div>
+
+    <!-- Checkboxes -->
+
+      <div class="checkbox-row">
+        <div class="checkbox-input">
+          <input type="checkbox" [(ngModel)]="useF500" (ngModelChange)="onBetTypeChange()" id="useF500-betslip">
+          <label for="useF500-betslip">{{ useF500 ? 'F500' : 'Odds' }}</label>
+        </div>
+
+        <div class="checkbox-input">
+          <input type="checkbox" [(ngModel)]="isSales" (ngModelChange)="onBetTypeChange()" id="isSales-betslip">
+          <label for="isSales-betslip">{{ isSales ? 'Sales' : 'Purch' }}</label>
+        </div>
+
+        <div class="checkbox-input">
+          <input type="checkbox" [(ngModel)]="hasTax" (ngModelChange)="onTaxChange()" id="hasTax-betslip">
+          <label for="hasTax-betslip">Tax</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Clients -->
+    <div class="detail-item" *ngIf="recentClients.length > 0">
+      <div class="recent-clients-list">
+        <button class="client-button" *ngFor="let client of recentClients" (click)="selectClient(client)">
+          {{ client.clientName }}
+        </button>
+      </div>
+      <div></div>
+    <!-- Client Name and Tax -->
+      <div class="client-tax-row">
+        <div class="client-field">
+            <label>Client Name:</label>
+            <input type="text" [(ngModel)]="clientName" class="stake-input" placeholder="Enter client name">
+        </div>
+
+        <div class="tax-field">
+            <label>Tax:</label>
+            <input type="number" [(ngModel)]="tax" class="stake-input" placeholder="Enter tax">
+        </div>
+
+      </div>
+
+    <!-- Books/Stake and F500/Odds -->
+      <div class="books-odds-row">
+        <div class="books-field">
+          <label>{{ useF500 ? 'Books' : 'Stake' }}:</label>
+          <input type="number" [(ngModel)]="betAmount" (ngModelChange)="onBetAmountChange()" class="stake-input" placeholder="Enter amount">
+        </div>
+
+        <div class="odds-field" *ngIf="selectedHorse">
+          <label>{{ useF500 ? 'F500' : 'Odds' }}:</label>
+          <input type="number" [(ngModel)]="selectedHorse.odds100" (ngModelChange)="updatePayout()" class="stake-input" placeholder="Enter odds" step="1" [min]="useF500 ? 1 : 110" [max]="useF500 ? 460 : 9000">
+        </div>
+      </div>
+    </div>
+
+    <!-- Payout and Last Bet -->
+    <div class="detail-item">
+        <div class="lastbet-field" *ngIf="betTransactions.length > 0" style="flex: 1;">
+          <label>Last Bet:</label>
+          <div class="sidebar-transactions-inline">
+            <div class="transaction-item-compact" *ngFor="let transaction of betTransactions" [class.cancelled]="transaction.cancel === 1">
+          <div style="font-size: 16px; line-height: 1.3;">
+            <strong>{{ transaction.clientName }}</strong> - {{ transaction.transactionType === 'Sales' ? 'Sales' : 'Purchases' }}
+            <strong>{{ transaction.raceNum }}</strong> - <strong>{{ transaction.horseNum }}</strong> {{ transaction.isF500 ? 'Bks' : 'Stk' }}: <strong>{{ transaction.isF500 ? transaction.books : transaction.stake }}</strong> | 
+            {{ transaction.isF500 ? 'F500' : 'Odds' }}: <strong>{{ transaction.isF500 ? transaction.f500 : transaction.odds100 }}</strong></div>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- Save Message -->
+    <div class="save-message" *ngIf="showSavedMessage">
+      ✅ Bet saved successfully!
+    </div>
+
+    <!-- Save Button -->
+    <div class="button-container">
+      <button class="save-button" (click)="saveHorse()">Save Bet</button>
+    </div>
+  </div>
+</div>

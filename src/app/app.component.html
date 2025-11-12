@@ -1,0 +1,60 @@
+<mat-toolbar [ngClass]="toolbarColor">
+  <span>Games - {{marketType === 0 ? 'Local' : 'Int'}}</span>
+  <button matIconButton class="example-icon" 
+          [class.active-market]="marketType === 0"
+          aria-label="Local icon-button with menu icon" 
+          (click)="setLocalMode()">
+    <mat-icon>Local</mat-icon>
+  </button>
+  <button matIconButton class="example-icon" 
+          [class.active-market]="marketType === 1"
+          aria-label="International icon-button with menu icon" 
+          (click)="setInternationalMode()">
+    <mat-icon>Inter</mat-icon>
+  </button>
+
+  <button mat-flat-button aria-label="Single button" routerLink="/single" routerLinkActive="active-route">
+    Single
+  </button>  
+  <button mat-flat-button aria-label="Betslip button" routerLink="/betslip" routerLinkActive="active-route">
+    Betslip
+  </button>
+  <button mat-flat-button aria-label="List button" routerLink="/list" routerLinkActive="active-route">
+    List
+  </button>
+  <button mat-flat-button aria-label="Events button" routerLink="/events" routerLinkActive="active-route">
+    Events
+  </button>
+  <button mat-flat-button aria-label="Params button" routerLink="/params" routerLinkActive="active-route">
+    Params
+  </button>
+
+
+
+
+  <span class="example-spacer"></span>
+  
+  <!-- Backend status indicator -->
+  <span class="backend-status" [class.connected]="backendConnected" [class.disconnected]="!backendConnected">
+    {{ backendConnected ? '🟢 Backend Online' : '🔴 Backend Offline' }}
+  </span>
+  
+  <!-- Data status indicator -->
+  <span *ngIf="appData && appData.numEvents" class="data-indicator">
+    {{appData.numEvents}} races ({{marketType === 0 ? 'Local' : 'International'}})
+  </span>
+  
+  <!-- Clear current market data button -->
+  <button mat-flat-button *ngIf="appData && appData.numEvents" (click)="clearCurrentMarketData()" 
+          aria-label="Clear current market data" class="clear-data-btn">
+    Clear {{marketType === 0 ? 'Local' : 'International'}}
+  </button>
+  
+  <!-- Clear all markets data button -->
+  <button mat-flat-button (click)="clearAllMarketsData()" 
+          aria-label="Clear all markets data" class="clear-all-btn">
+    Clear All Markets
+  </button>
+</mat-toolbar>
+
+<router-outlet></router-outlet>

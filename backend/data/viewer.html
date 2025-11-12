@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Database Viewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+        }
+        .storage-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .data-box {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .empty-state {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .button-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #da190b;
+        }
+        .btn-info {
+            background-color: #2196F3;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: #0b7dda;
+        }
+        .market-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .market-local {
+            background-color: #333;
+            color: white;
+        }
+        .market-international {
+            background-color: #ffb6c1;
+            color: #333;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Games Database Viewer</h1>
+    
+    <div class="button-group">
+        <button class="btn-primary" onclick="refreshData()">🔄 Refresh Data</button>
+        <button class="btn-info" onclick="exportData()">💾 Export JSON</button>
+        <button class="btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="storage-section">
+        <h2>📊 Current Market Type</h2>
+        <div id="currentMarket"></div>
+    </div>
+
+    <div class="storage-section">
+        <h2>🏠 Local Market Data <span class="market-type market-local">LOCAL</span></h2>
+        <div id="localData"></div>
+    </div>
+
+    <div class="storage-section">
+        <h2>🌍 International Market Data <span class="market-type market-international">INTERNATIONAL</span></h2>
+        <div id="internationalData"></div>
+    </div>
+
+    <div class="storage-section">
+        <h2>🔑 All LocalStorage Keys</h2>
+        <div id="allKeys"></div>
+    </div>
+
+    <script>
+        function refreshData() {
+            displayCurrentMarket();
+            displayLocalData();
+            displayInternationalData();
+            displayAllKeys();
+            displayStats();
+        }
+
+        function displayStats() {
+            const localData = getLocalData();
+            const intlData = getInternationalData();
+            const currentMarket = localStorage.getItem('marketType') || '1';
+            
+            const localRaces = localData?.numEvents || 0;
+            const intlRaces = intlData?.numEvents || 0;
+            const totalRaces = localRaces + intlRaces;
+            
+            let localHorses = 0;
+            if (localData?.eventData) {
+                Object.values(localData.eventData).forEach(event => {
+                    localHorses += event.marketLists?.length || 0;
+                });
+            }
+            
+            let intlHorses = 0;
+            if (intlData?.eventData) {
+                Object.values(intlData.eventData).forEach(event => {
+                    intlHorses += event.marketLists?.length || 0;
+                });
+            }
+            
+            const statsHTML = `
+                <div class="stat-card">
+                    <h3>Current Market</h3>
+                    <div class="value">${currentMarket === '0' ? 'Local' : 'International'}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Races</h3>
+                    <div class="value">${totalRaces}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Local Races</h3>
+                    <div class="value">${localRaces}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>International Races</h3>
+                    <div class="value">${intlRaces}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Horses</h3>
+                    <div class="value">${localHorses + intlHorses}</div>
+                </div>
+            `;
+            
+            document.getElementById('stats').innerHTML = statsHTML;
+        }
+
+        function displayCurrentMarket() {
+            const marketType = localStorage.getItem('marketType');
+            const marketName = marketType === '0' ? 'Local' : 'International';
+            const marketClass = marketType === '0' ? 'market-local' : 'market-international';
+            
+            document.getElementById('currentMarket').innerHTML = `
+                <p>Current market type: <span class="market-type ${marketClass}">${marketName}</span></p>
+                <p>Market Type Value: <strong>${marketType || 'Not Set'}</strong></p>
+            `;
+        }
+
+        function getLocalData() {
+            const data = localStorage.getItem('gamesAppData_Local');
+            return data ? JSON.parse(data) : null;
+        }
+
+        function getInternationalData() {
+            const data = localStorage.getItem('gamesAppData_International');
+            return data ? JSON.parse(data) : null;
+        }
+
+        function displayLocalData() {
+            const data = getLocalData();
+            displayMarketData('localData', data, 'Local');
+        }
+
+        function displayInternationalData() {
+            const data = getInternationalData();
+            displayMarketData('internationalData', data, 'International');
+        }
+
+        function displayMarketData(elementId, data, marketName) {
+            const element = document.getElementById(elementId);
+            
+            if (!data || !data.numEvents) {
+                element.innerHTML = `<div class="empty-state">No ${marketName} data found</div>`;
+                return;
+            }
+
+            let html = `
+                <p><strong>Number of Races:</strong> ${data.numEvents}</p>
+                <p><strong>Selected Race ID:</strong> ${data.selectedEventId || 'None'}</p>
+            `;
+
+            if (data.eventData && Object.keys(data.eventData).length > 0) {
+                html += '<h3>Race Details:</h3>';
+                
+                Object.entries(data.eventData).forEach(([raceId, raceData]) => {
+                    html += `
+                        <div style="margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 4px;">
+                            <h4>Race ${raceId}: ${raceData.marketName || 'Unnamed'}</h4>
+                            <p><strong>Number of Horses:</strong> ${raceData.numMarketList || 0}</p>
+                    `;
+                    
+                    if (raceData.marketLists && raceData.marketLists.length > 0) {
+                        html += '<div class="table-container"><table>';
+                        html += '<tr><th>#</th><th>Horse Name</th><th>Odds100</th><th>Special</th><th>Rule4</th><th>Rule4 Deduction</th></tr>';
+                        
+                        raceData.marketLists.forEach(horse => {
+                            html += `
+                                <tr>
+                                    <td>${horse.id}</td>
+                                    <td><strong>${horse.name || '(No name)'}</strong></td>
+                                    <td>${horse.odds100 || 0}</td>
+                                    <td>${horse.special || 0}</td>
+                                    <td>${horse.rule4 || 0}</td>
+                                    <td>${horse.rule4Deduction || 0}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += '</table></div>';
+                    }
+                    
+                    html += '</div>';
+                });
+            }
+
+            html += '<h3>Raw JSON Data:</h3>';
+            html += `<div class="data-box">${JSON.stringify(data, null, 2)}</div>`;
+            
+            element.innerHTML = html;
+        }
+
+        function displayAllKeys() {
+            const keys = Object.keys(localStorage);
+            const element = document.getElementById('allKeys');
+            
+            if (keys.length === 0) {
+                element.innerHTML = '<div class="empty-state">No data in localStorage</div>';
+                return;
+            }
+
+            let html = '<ul style="list-style: none; padding: 0;">';
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                const isJson = value && (value.startsWith('{') || value.startsWith('['));
+                
+                html += `
+                    <li style="margin: 10px 0; padding: 10px; background: #f9f9f9; border-left: 3px solid #4CAF50;">
+                        <strong>${key}:</strong>
+                        ${isJson ? `<div class="data-box">${JSON.stringify(JSON.parse(value), null, 2)}</div>` : value}
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            
+            element.innerHTML = html;
+        }
+
+        function exportData() {
+            const data = {
+                marketType: localStorage.getItem('marketType'),
+                local: getLocalData(),
+                international: getInternationalData(),
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `games-data-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('Data exported successfully!');
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear ALL data? This cannot be undone!')) {
+                localStorage.clear();
+                refreshData();
+                alert('All data cleared!');
+            }
+        }
+
+        // Auto-refresh every 5 seconds
+        setInterval(refreshData, 5000);
+        
+        // Initial load
+        refreshData();
+    </script>
+</body>
+</html>

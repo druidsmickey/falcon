@@ -1,0 +1,216 @@
+<div class="single-container">
+ 
+  <!-- Race Numbers Row -->
+  <div class="race-numbers-container">
+    <button 
+      *ngFor="let race of getRaces()" 
+      mat-flat-button 
+      (click)="selectRace(race.id)"
+      [class.selected]="isRaceSelected(race.id)"
+      class="race-button">
+      R{{ race.id }}
+    </button>
+  </div>
+
+  <!-- Horse Table (shown when a race is selected) -->
+  <div *ngIf="selectedRaceId !== null" class="horse-table-container">
+    <table mat-table [dataSource]="horseDataSource" class="horse-table">
+      
+      <!-- Horse Number Column -->
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>Horse #</th>
+        <td mat-cell *matCellDef="let horse" (click)="openHorseSidebar(horse.id)" class="clickable">{{ horse.id }}</td>
+      </ng-container>
+
+      <!-- Horse Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Horse Name</th>
+        <td mat-cell *matCellDef="let horse" (click)="openHorseSidebar(horse.id)" class="clickable">{{ horse.name }}</td>
+      </ng-container>
+
+      <!-- Books Column -->
+      <ng-container matColumnDef="books">
+        <th mat-header-cell *matHeaderCellDef>Books</th>
+        <td mat-cell *matCellDef="let horse" (click)="openHorseSidebar(horse.id)" class="clickable">
+          {{ horse.books || 0 }}
+        </td>
+      </ng-container>
+
+      <!-- Profit/Loss Column -->
+      <ng-container matColumnDef="profitLoss">
+        <th mat-header-cell *matHeaderCellDef>P/L</th>
+        <td mat-cell *matCellDef="let horse" (click)="openHorseSidebar(horse.id)" class="clickable" [class.profit]="horse.profitLoss > 0" [class.loss]="horse.profitLoss < 0">
+          {{ horse.profitLoss || 0 }}
+        </td>
+      </ng-container>
+
+      <!-- Average Column -->
+      <ng-container matColumnDef="avg">
+        <th mat-header-cell *matHeaderCellDef>Avg</th>
+        <td mat-cell *matCellDef="let horse" (click)="openHorseSidebar(horse.id)" class="clickable">
+          {{ horse.avg || 0 }}
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <!-- Total Row -->
+    <table class="horse-table total-table">
+      <tr class="total-row">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td class="total-avg">Total Avg:{{ totalAvg || 0 }}</td>
+      </tr>
+    </table>
+
+    <!-- Last Bet Transaction -->
+    <div *ngIf="betTransactions.length > 0" class="transactions-section">
+      <h3>
+        Last Bet
+        <span *ngIf="showSavedMessage" class="saved-message">Bet Saved!</span>
+      </h3>
+      <table class="transactions-table compact">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>R</th>
+            <th>H#</th>
+            <th>Type</th>
+            <th>{{ betTransactions[0]?.isF500 ? 'Bks' : 'Amt' }}</th>
+            <th>{{ betTransactions[0]?.isF500 ? 'F500' : 'Odds' }}</th>
+            <th>Payout</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let transaction of betTransactions" [class.cancelled]="transaction.cancel === 1">
+            <td>{{ transaction.clientName }}</td>
+            <td>{{ transaction.raceNum }}</td>
+            <td>{{ transaction.horseNum }}</td>
+            <td>{{ transaction.transactionType === 'Sales' ? 'S' : 'P' }}</td>
+            <td>{{ transaction.isF500 ? transaction.books : transaction.stake }}</td>
+            <td>{{ transaction.isF500 ? transaction.f500 : transaction.odds100 }}</td>
+            <td>{{ transaction.payout?.toFixed(0) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- No race selected message -->
+  <div *ngIf="selectedRaceId === null" class="no-selection">
+    <p>Please select a race number to view horses</p>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<div class="sidebar" [class.open]="sidebarOpen">
+  <div class="sidebar-header">
+    <div style="flex: 1; margin-right: 10px; display: flex; gap: 10px;">
+      <mat-form-field appearance="fill" class="blue-select header-select race-select">
+        <mat-select [(ngModel)]="selectedRaceId" (selectionChange)="onRaceChangeInSidebar()">
+          <mat-option *ngFor="let race of getRaces()" [value]="race.id">
+            R{{ race.id }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="fill" style="flex: 1;" class="blue-select header-select">
+        <mat-select [(ngModel)]="selectedHorse" (selectionChange)="onHorseChange()">
+          <mat-option *ngFor="let horse of getSelectedRaceHorses()" [value]="horse">
+            {{ horse.id }} - {{ horse.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="sidebar-actions">
+      <button mat-icon-button (click)="saveHorse()" title="Save">
+        <mat-icon>save</mat-icon>
+      </button>
+      <button mat-icon-button (click)="closeSidebar()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+  
+  <div class="sidebar-content" *ngIf="selectedHorse">
+    <div class="detail-item">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label>
+          <input type="checkbox" [(ngModel)]="useF500" (ngModelChange)="onBetTypeChange()" class="checkbox-input"> {{ useF500 ? 'F500' : 'Odds' }}
+        </label>
+        <label>
+          <input type="checkbox" [(ngModel)]="isSales" (ngModelChange)="onBetTypeChange()" class="checkbox-input"> {{ isSales ? 'Sales' : 'Purch' }}
+        </label>
+        <label>
+          <input type="checkbox" [(ngModel)]="hasTax" (change)="onTaxChange()" class="checkbox-input"> Tax
+        </label>
+      </div>
+    </div>
+
+    <div class="detail-item">
+      <!-- Recent Clients Section -->
+      <div *ngIf="recentClients.length > 0" style="margin-bottom: 8px;">
+        <div class="recent-clients-list">
+          <button 
+            *ngFor="let client of recentClients" 
+            class="client-button"
+            (click)="selectClient(client)"
+            title="Click to load last bet details">
+            {{ client.clientName }}
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 2;">
+          <label>{{ useF500 ? 'Books:' : 'Stake:' }}</label>
+          <input type="number" [(ngModel)]="betAmount" (ngModelChange)="onBetAmountChange()" [placeholder]="useF500 ? 'Enter books amount' : 'Enter stake amount'" class="stake-input" min="0" step="0.01">
+        </div>
+        <div style="flex: 1;">
+          <label>{{ useF500 ? 'F500:' : 'Odds' }}</label>
+          <input type="number" [(ngModel)]="selectedHorse.odds100" (ngModelChange)="updatePayout()" [placeholder]="useF500 ? 'Enter F500' : 'Enter odds100'" class="stake-input" step="1" [min]="useF500 ? 1 : 110" [max]="useF500 ? 460 : 9000">
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 2;">
+          <label>Client Name:</label>
+          <input type="text" [(ngModel)]="clientName" placeholder="Enter client name" class="stake-input">
+        </div>
+        <div style="flex: 1;">
+          <label>Tax:</label>
+          <input type="number" [(ngModel)]="tax" placeholder="Enter tax" class="stake-input" min="0" step="0.01">
+        </div>
+      </div>
+
+    </div>
+
+
+
+    <!-- Do not add the Remark textbox -->
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div class="detail-item" style="flex: 0 0 auto; min-width: 90px;">
+        <label>Payout:</label>
+        <span style="display: inline-block; min-width: 70px; font-weight: bold;">{{ calculatePayout() }}</span>
+      </div>
+
+      <!-- Last Bet Transaction -->
+      <div *ngIf="betTransactions.length > 0" class="sidebar-transactions-inline" style="flex: 1;">
+        <div class="transaction-item-compact" *ngFor="let transaction of betTransactions">
+          <div style="font-size: 11px; line-height: 1.3;">
+            <strong>{{ transaction.clientName }}</strong> - {{ transaction.transactionType === 'Sales' ? 'S' : 'P' }}
+            <div>R{{ transaction.raceNum }} | H{{ transaction.horseNum }}</div>
+            <div>{{ transaction.isF500 ? 'Bks' : 'Stk' }}: {{ transaction.isF500 ? transaction.books : transaction.stake }} | 
+            {{ transaction.isF500 ? 'F500' : 'Odds' }}: {{ transaction.isF500 ? transaction.f500 : transaction.odds100 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" [class.show]="sidebarOpen" (click)="closeSidebar()"></div>

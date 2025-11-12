@@ -1,0 +1,382 @@
+/* Container */
+.list-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.list-header {
+  margin-bottom: 20px;
+}
+
+.list-header h2 {
+  margin: 0 0 15px 0;
+  color: #1976d2;
+}
+
+/* Filter Controls */
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.number-input {
+  width: 70px;
+  padding: 10px 5px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.number-input:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.filter-select {
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.refresh-button {
+  padding: 10px 20px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.refresh-button:hover {
+  background-color: #1565c0;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Summary */
+.summary {
+  display: flex;
+  gap: 20px;
+  padding: 15px;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.summary-item {
+  font-size: 14px;
+  color: #333;
+}
+
+.summary-item strong {
+  color: #1976d2;
+  margin-right: 5px;
+}
+
+/* Cards Container */
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Bet Card */
+.bet-card {
+  background-color: white;
+  border-radius: 8px;
+  border: 3px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+
+.bet-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: #bdbdbd;
+}
+
+.bet-card mat-card-content {
+  padding: 16px;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.race-horse-info {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+/* Card Details */
+.card-details {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* Card Client */
+.card-client {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cancel-label {
+  background-color: #f44336;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 12px;
+  color: #666;
+}
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timestamp {
+  font-style: italic;
+}
+
+.payout {
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.cancel-button {
+  padding: 6px 12px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.cancel-button:hover {
+  background-color: #d32f2f;
+}
+
+.cancel-button:active {
+  background-color: #b71c1c;
+}
+
+.cancel-button.cancelled {
+  background-color: #d32f2f;
+}
+
+.cancel-button.cancelled:hover {
+  background-color: #d32f2f;
+}
+
+.cancel-button.cancelled:active {
+  background-color: #d32f2f;
+}
+
+/* Table Container */
+.table-container {
+  overflow-x: auto;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Styling */
+.transactions-table {
+  width: 100%;
+  font-size: 13px;
+}
+
+.transactions-table th {
+  background-color: #1976d2;
+  color: white;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.transactions-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.transactions-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Transaction Type Badges */
+.transaction-type {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.type-sales {
+  background-color: #4caf50;
+  color: white;
+}
+
+.type-purchase {
+  background-color: #ff9800;
+  color: white;
+}
+
+/* No Data Message */
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .list-container {
+    padding: 10px;
+  }
+
+  .filter-controls {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 5px;
+  }
+
+  .search-input {
+    min-width: 150px;
+    flex: 0 0 150px;
+  }
+
+  .number-input {
+    width: 70px;
+    flex: 0 0 70px;
+  }
+
+  .filter-select {
+    min-width: 120px;
+    flex: 0 0 120px;
+  }
+
+  .refresh-button {
+    min-width: 100px;
+    flex: 0 0 100px;
+  }
+
+  .summary {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cards-container {
+    grid-template-columns: 1fr;
+  }
+
+  .bet-card mat-card-content {
+    padding: 12px;
+  }
+
+  .card-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .race-horse-info {
+    font-size: 12px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .transaction-type {
+    flex-shrink: 0;
+  }
+
+  .card-details {
+    font-size: 13px;
+  }
+
+  .transactions-table {
+    font-size: 11px;
+  }
+
+  .transactions-table th,
+  .transactions-table td {
+    padding: 8px 4px;
+  }
+}
+
+/* Strikethrough for cancelled bets */
+.cancelled {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
