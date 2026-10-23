@@ -12,20 +12,20 @@ jobs:
       matrix:
         app:
           - name: gambit
-            apiUrl: /api-gambit
+            apiUrl: /api-gambit-2027
             baseHref: /Gambit/2027/
-            port: 3000
+            port: 3010
             target: /root/Gambit/itb/2027
-            pm2: gambit-backend
+            pm2: gambit-backend-2027
             mongo: GAMBIT_MONGODB_URI
             jwt: GAMBIT_JWT_SECRET
 
           - name: cumbre
-            apiUrl: /api-cumbre
+            apiUrl: /api-cumbre-2027
             baseHref: /Cumbre/2027/
-            port: 3001
+            port: 3011
             target: /root/Cumbre/itb/2027
-            pm2: cumbre-backend
+            pm2: cumbre-backend-2027
             mongo: CUMBRE_MONGODB_URI
             jwt: CUMBRE_JWT_SECRET
 
@@ -65,6 +65,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
             cd ${{ matrix.app.target }}/backend
 
             cat <<EOF > .env
