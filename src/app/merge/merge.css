@@ -1,0 +1,432 @@
+.merge-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.merge-title {
+  text-align: center;
+  color: #1f2937;
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.addon-input {
+  width: 72px;
+  height: 32px;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.addon-save-btn {
+  margin-left: 4px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+  background: #1976d2;
+  color: white;
+  cursor: pointer;
+}
+
+.addon-save-btn:hover {
+  background: #1565c0;
+}
+
+.meeting-selection {
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.meeting-selection h3 {
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.meeting-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.meeting-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.meeting-checkbox:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.meeting-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.meeting-checkbox span {
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.meeting-selection button {
+  padding: 0.75rem 2rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.meeting-selection button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.meeting-selection button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.controls {
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.controls button {
+  padding: 0.5rem 1.25rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.controls button:hover {
+  background: #2563eb;
+}
+
+.controls input[type="text"] {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  min-width: 250px;
+}
+
+.addon-client-input {
+  padding: 0.5rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  min-width: 0;
+  width: 120px;
+}
+
+.controls input[type="text"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+}
+
+.reports-table thead {
+  background: #f3f4f6;
+}
+
+.reports-table th {
+  padding: 0.875rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.reports-table td {
+  padding: 0.75rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #1f2937;
+}
+
+.reports-table tbody tr:nth-child(even) {
+  background: #f0fdf4;
+}
+
+.reports-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.reports-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.client-summary-row {
+  background: #dcfce7 !important;
+  font-weight: 500;
+  border-bottom: 3px solid #86efac !important;
+}
+
+.client-summary-row:hover {
+  background: #bbf7d0 !important;
+}
+
+.client-summary {
+  padding: 0.875rem 0.75rem !important;
+  font-size: 0.9rem;
+  color: #1e40af;
+  text-align: left !important;
+}
+
+.summary-value {
+  font-weight: 600;
+}
+
+.positive-value {
+  color: #059669 !important;
+}
+
+.negative-value {
+  color: #dc2626 !important;
+}
+
+.pur-bet-type {
+  color: #2563eb !important;
+  font-weight: 600;
+}
+
+.strike-stake {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.withdrawn-label,
+.rule4-label,
+.winner-label,
+.cancelled-label,
+.special-label {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.withdrawn-label {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.rule4-label {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.rule4-deduction-label {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.winner-label {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.cancelled-label {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.special-label {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.payout-value {
+  font-weight: 600;
+  color: #059669;
+}
+
+.payout-value-red {
+  font-weight: 600;
+  color: #dc2626;
+}
+
+/* Summary tables styling */
+.profit-table,
+.loss-table {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.profit-table thead {
+  background: #d1fae5;
+}
+
+.profit-table th {
+  color: #065f46;
+}
+
+.loss-table thead {
+  background: #fee2e2;
+}
+
+.loss-table th {
+  color: #991b1b;
+}
+
+.profit-table tbody tr:last-child,
+.loss-table tbody tr:last-child {
+  background: #f3f4f6;
+  font-weight: 600;
+  border-top: 2px solid #d1d5db;
+}
+
+.merge-container > p {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 2rem 0 1rem 0;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.merge-container > button:last-of-type {
+  display: block;
+  margin: 0 auto 2rem auto;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.merge-container > button:last-of-type:hover {
+  background: #2563eb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .merge-container {
+    padding: 1rem;
+  }
+  
+  .reports-table {
+    font-size: 0.8rem;
+  }
+  
+  .reports-table th,
+  .reports-table td {
+    padding: 0.5rem 0.4rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .merge-title {
+    font-size: 1.5rem;
+  }
+  
+  .reports-table {
+    font-size: 0.75rem;
+    display: block;
+    overflow-x: auto;
+  }
+  
+  .controls input[type="text"] {
+    min-width: 150px;
+  }
+  
+  .meeting-checkboxes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .merge-container {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .meeting-selection,
+  .controls,
+  .merge-container button {
+    display: none !important;
+  }
+  
+  .reports-table {
+    box-shadow: none;
+    margin-top: 0;
+    page-break-inside: auto;
+  }
+
+  .reports-table thead {
+    display: table-header-group;
+  }
+
+  .reports-table tbody tr {
+    page-break-inside: avoid;
+  }
+
+  /* Keep client groups together on same page */
+  .client-first-row {
+    page-break-before: always;
+    border-top: 3px solid #3b82f6 !important;
+  }
+
+  .client-bet-row,
+  .client-summary-row {
+    page-break-after: avoid;
+  }
+}

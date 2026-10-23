@@ -1,0 +1,111 @@
+<mat-tab-group [disablePagination]="true">
+    <mat-tab label="Email">
+    <ng-template matTabContent>
+      <app-email></app-email>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Entry">
+    <ng-template matTabContent>
+      <app-dataentry></app-dataentry>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Single">
+    <ng-template matTabContent>
+      <app-single></app-single>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Chart">
+    <ng-template matTabContent>
+      <app-chart></app-chart>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="WhatsApp">
+    <ng-template matTabContent>
+      <app-whatsapp></app-whatsapp>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="List">
+    <ng-template matTabContent>
+      <app-listdata></app-listdata>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Winners">
+    <ng-template matTabContent>
+      <app-winners></app-winners>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Reports">
+    <ng-template matTabContent>
+      <app-reports></app-reports>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Merge">
+    <ng-template matTabContent>
+      <app-merge></app-merge>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Params">
+    <ng-template matTabContent>
+      <app-params></app-params>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Init">
+    <ng-template matTabContent>
+      <app-init></app-init>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Password">
+    <ng-template matTabContent>
+      <app-change-password></app-change-password>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="">
+    <ng-template matTabLabel>
+      <button
+        (click)="onSyncNow()"
+        class="sync-tab-btn"
+        [class.online]="isOnline()"
+        [class.offline]="!isOnline()"
+        [class.checking]="checkingConnection()"
+        [disabled]="syncState().syncing"
+        style="margin-top: 2px;"
+      >
+        <span class="sync-tab-dot"></span>
+        {{ checkingConnection() ? 'Checking...' : (isOnline() ? 'Online' : 'Offline') }}
+        <span class="sync-sep">|</span>
+        {{ syncState().syncing ? 'Syncing...' : 'Sync' }}
+      </button>
+    </ng-template>
+    <ng-template matTabContent>
+      <div class="sync-panel">
+        <div class="sync-panel-line">
+          Network: {{ checkingConnection() ? 'Checking...' : (isOnline() ? 'Internet Online' : 'Internet Offline') }}
+        </div>
+        <div class="sync-panel-line">
+          Pending: {{ syncState().pending }} | Conflicts: {{ syncState().conflict }} | Failed: {{ syncState().failed }}
+        </div>
+        <div class="sync-panel-line" [class.sync-ok]="syncState().failed === 0 && syncState().conflict === 0" [class.sync-bad]="syncState().failed > 0 || syncState().conflict > 0">
+          {{ syncState().lastMessage }}
+        </div>
+        <div class="sync-panel-line">
+          Last Sync: {{ formatSyncTime(syncState().lastSyncedAt) }}
+        </div>
+        <button
+          (click)="onSyncNow()"
+          class="sync-panel-btn"
+          [disabled]="syncState().syncing"
+        >
+          {{ syncState().syncing ? 'Syncing...' : 'Sync Now' }}
+        </button>
+      </div>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="">
+    <ng-template matTabLabel>
+      <button (click)="onLogout()" class="logout-btn" style="margin-top: 2px;">Logout</button>
+    </ng-template>
+    <ng-template matTabContent>
+      <!-- Empty: button is in tab bar only -->
+    </ng-template>
+  </mat-tab>
+</mat-tab-group>

@@ -1,0 +1,32 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Horizontal scrolling tab header */
+.mat-mdc-tab-header {
+  overflow: visible !important;
+}
+
+.mat-mdc-tab-label-container {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.mat-mdc-tab-list {
+  flex-grow: 0 !important;
+}
+
+@media print {
+  .mat-mdc-tab-header {
+    display: none !important;
+  }
+
+  .mat-mdc-tab-body-wrapper,
+  .mat-mdc-tab-body,
+  .mat-mdc-tab-body-content,
+  .mat-mdc-tab-body-active,
+  .mat-mdc-tab-group,
+  .mat-mdc-tab-group-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

@@ -1,0 +1,154 @@
+<mat-sidenav-container class="chart-container">
+  <mat-sidenav #sidenav position="end" mode="over" class="betslip-sidenav" [autoFocus]="false" (closed)="resetBetslipForm()">
+    <div class="betslip-content" [class.purchase-bg]="betType === 'purchase'">
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <h3 style="flex: 0 0 auto; margin: 0;">R {{ selectedRaceNum }}</h3>
+        <div style="flex: 1; text-align: center;">
+          <span class="horse-name-display" style="color: red; font-size: 1.35rem; font-weight: bold; background-color: #d0f5d7; padding: 3px; border-radius: 4px;">#&nbsp;&nbsp;{{ betslipSelectedHorseName }}</span>
+        </div>
+      </div>
+     
+      <div class="form-grid">
+        <!-- Horse Selection -->
+        <div class="full-width radio-group">
+          <div class="horse-buttons">
+            <button 
+              *ngFor="let horse of betslipHorses" 
+              mat-mini-fab
+              [disabled]="horse.hasSpecial || horse.hasRule4"
+              (click)="selectBetslipHorse(horse.horseNum)"
+              class="horse-btn"
+              [class.selected]="betslipSelectedHorseNum === horse.horseNum"
+              [class.winner-horse]="horse.isWinner">
+              {{ horse.horseNum }}
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Bet Option Selection -->
+        <div class="full-width" style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; flex-direction: row !important;">
+          <mat-radio-group [(ngModel)]="betType" class="radio-buttons" style="flex-shrink: 0;">
+            <mat-radio-button value="sales">S</mat-radio-button>
+            <mat-radio-button value="purchase">P</mat-radio-button>
+          </mat-radio-group>
+          <mat-radio-group [(ngModel)]="oddsType" class="radio-buttons" style="flex-shrink: 0;">
+            <mat-radio-button value="f500">F500</mat-radio-button>
+            <mat-radio-button value="odds">Odds</mat-radio-button>
+          </mat-radio-group>
+        </div>
+        
+        <!-- Recent Clients -->
+        <div class="full-width" *ngIf="recentClients.length > 0" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;">
+          <button 
+            *ngFor="let client of recentClients" 
+            mat-mini-fab
+            (click)="selectClient(client)"
+            class="client-btn"
+            style="font-size: 17px; padding: 0px 23px; min-width: 0; height: 38px;">
+            {{ client }}
+          </button>
+        </div>
+
+        <!-- All Inputs in One Row -->
+        <div class="full-width" style="display: flex; gap: 4px; flex-wrap: nowrap; padding: 3px 0;">
+          <mat-form-field appearance="outline" style="flex: 1; min-width: 100px;">
+            <mat-label>{{ oddsType === 'odds' ? 'Stakes' : 'Books' }}</mat-label>
+            <input matInput type="number" [(ngModel)]="stakeBooks" 
+                   (input)="validateStakeBooks()" 
+                   (blur)="validateStakeBooks()">
+            <mat-error *ngIf="stakeBooksError">{{ stakeBooksError }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" style="flex: 1.2; min-width: 50px;" [style.background-color]="oddsType === 'odds' ? '#40E0D0' : 'transparent'">
+            <mat-label>{{ oddsType === 'odds' ? 'Odds' : 'F500' }}</mat-label>
+            <input matInput type="number" [(ngModel)]="odds" 
+                   (input)="validateOdds()" 
+                   (blur)="validateOdds()">
+            <mat-error *ngIf="oddsError">{{ oddsError }}</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" style="flex: 1.2; min-width: 50px;">
+            <mat-label>Name</mat-label>
+            <input matInput [(ngModel)]="clientName" (input)="onClientNameInput()">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" style="flex: 0.8; min-width: 40px;">
+            <mat-label>Tax</mat-label>
+            <input matInput type="number" [(ngModel)]="tax">
+          </mat-form-field>
+        </div>
+
+        <!-- Action Buttons and Last Bet -->
+        <div class="full-width" style="display: flex; gap: 19px; align-items: stretch; flex-direction: column; padding: 19px 0;">
+          <div style="display: flex; gap: 19px;">
+            <button mat-raised-button color="primary" (click)="saveBet()" style="flex: 1; height: 80px; font-size: 1.5rem; background-color: #1976d2; color: white;">
+              Save Bet
+            </button>
+            <div *ngIf="lastBet" [style.background-color]="lastBet.stake < 0 || lastBet.books < 0 ? '#fee2e2' : '#f0f9ff'" style="flex: 1; padding: 3px; border: 1px solid #ddd; border-radius: 4px; display: flex; flex-direction: column; justify-content: center;">
+              <div style="font-size: 0.975rem; line-height: 1.4;" [style.text-decoration]="lastBet.cancelled ? 'line-through' : 'none'">
+                <div><strong style="color: black;">{{ lastBet.clientName }}</strong></div>
+                <div><strong style="color: rgb(34, 110, 35)">R{{ lastBet.raceNum }} H{{ lastBet.horseNum }} {{ lastBet.horseName }}</strong></div>
+                <div>
+                  <strong *ngIf="lastBet.f500">{{ lastBet.books < 0 ? -lastBet.books : lastBet.books }} x {{ lastBet.f500 }}</strong>
+                  <strong *ngIf="!lastBet.f500">{{ lastBet.stake < 0 ? -lastBet.stake : lastBet.stake }} @ <span style="color: #1976d2;">{{ lastBet.odds100 }}</span></strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button mat-raised-button (click)="closeSidenav()" style="margin-top: 100px; background-color: #dc2626; color: #fff;">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content #sidenavContent>
+    <!-- <h3 class="chart-title">Race Charts</h3> -->
+    
+    <div *ngIf="loading" class="loading">Loading data...</div>
+    
+    <div *ngIf="!loading && races.length === 0" class="no-data">
+      No selected races found. Please select a meeting in the Init page first.
+    </div>
+    
+    <div *ngIf="!loading && races.length > 0">
+      @for (racePair of getRacePairs(); track $index) {
+        <div class="race-pair">
+          @for (race of racePair; track race.raceNum) {
+            <div class="race-table-wrapper">
+              <h4 class="race-title">Race {{ race.raceNum }} (<span style="color: rgb(0, 149, 255);">{{ race.totalAvg | number:'1.0-0' }}</span>)</h4>
+              <table class="race-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Horse</th>
+                    <th>Books</th>
+                    <th>P&L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (horse of race.horses; track horse.horseNum) {
+                    <tr [ngClass]="{'winner-row': horse.isWinner, 'negative-profit': horse.profitLoss < 0 && !horse.isWinner}" 
+                        (click)="openBetslip(race.raceNum, horse.horseNum)"
+                        [style.cursor]="race.hasWinner ? 'not-allowed' : 'pointer'"
+                        [style.opacity]="race.hasWinner && !horse.isWinner ? '0.6' : '1'">
+                      <td>{{ horse.horseNum }}</td>
+                      <td class="horse-name" [ngClass]="{'strikethrough': horse.hasSpecial || horse.hasRule4}">{{ horse.horseName }}</td>
+                      <td class="books">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.books | number:'1.0-0') }}</td>
+                      <td class="profit-loss" [ngClass]="{
+                        'positive': horse.profitLoss > 0,
+                        'negative': horse.profitLoss < 0
+                      }">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.profitLoss | number:'1.0-0') }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

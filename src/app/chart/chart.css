@@ -1,0 +1,362 @@
+:host {
+  display: block;
+  overscroll-behavior-y: none;
+}
+
+.chart-container {
+  width: 100%;
+  height: 100dvh;
+}
+
+mat-sidenav-container {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+mat-sidenav-content {
+  padding: 1rem;
+  overflow-x: auto;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Betslip Styles */
+.betslip-sidenav {
+  width: 350px;
+  padding: 0;
+  background: transparent;
+}
+
+.betslip-content {
+  background: #f9fafb;
+  transition: background-color 0.3s ease;
+  padding: 1rem;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.betslip-content.purchase-bg {
+  background-color: #fee2e2;
+}
+
+.betslip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.betslip-content h3 {
+  margin: 0 0 0.25rem 0;
+  color: #1976d2;
+  font-size: 1.1rem;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.radio-group {
+  padding: 0;
+}
+
+.horse-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 2px;
+  overflow: visible;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.horse-btn {
+  min-width: 32px !important;
+  max-width: 36px !important;
+  height: 32px !important;
+  padding: 0 4px !important;
+  font-size: 0.875rem !important;
+  line-height: 32px !important;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+.horse-btn.selected {
+  background: #1976d2 !important;
+  color: white !important;
+  border-color: #1976d2;
+}
+
+.horse-name-display {
+  font-size: 0.9rem;
+  color: #374151;
+  padding: 0.25rem 0;
+  min-height: 1.5rem;
+  font-weight: 500;
+}
+
+.radio-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.client-btn {
+  background-color: #40E0D0 !important;
+  color: black !important;
+}
+
+
+mat-sidenav {
+  padding: 1rem;
+}
+
+::ng-deep .mat-mdc-form-field {
+  font-size: 0.9rem;
+  margin-bottom: 0 !important;
+  line-height: 1 !important;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  height: 38px !important;
+}
+
+::ng-deep .mat-mdc-form-field-infix {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}
+
+::ng-deep .radio-buttons mat-radio-button .mdc-form-field {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+::ng-deep .radio-buttons mat-radio-button .mdc-radio {
+  padding: 4px !important;
+}
+
+mat-radio-group {
+  display: flex;
+  gap: 1rem;
+}
+
+mat-radio-button {
+  margin: 0.5rem 0;
+}
+
+.chart-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: #1f2937;
+}
+
+.loading, .no-data {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.race-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Mobile optimization for Samsung Galaxy A51 (412px width) */
+@media (max-width: 450px) {
+  .chart-container {
+    padding: 0.5rem;
+  }
+
+  /* 16px prevents mobile browser auto-zoom and page jump on input focus */
+  .betslip-sidenav input,
+  .betslip-sidenav .mat-mdc-input-element,
+  .betslip-sidenav textarea {
+    font-size: 16px !important;
+  }
+  
+  .race-pair {
+    gap: 0.5rem;
+  }
+  
+  .chart-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.race-table-wrapper {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.race-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem;
+  background: transparent;
+  color: black;
+  margin: 0;
+  text-align: center;
+}
+
+.race-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 450px) {
+  .race-table {
+    font-size: 0.7rem;
+  }
+  
+  .race-title {
+    font-size: 0.85rem;
+    padding: 0.4rem;
+  }
+}
+
+.race-table thead {
+  background: #f3f4f6;
+}
+
+.race-table th {
+  padding: 0.4rem 0.3rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.race-table th:first-child {
+  text-align: center;
+  width: 10%;
+}
+
+.race-table th:nth-child(2) {
+  width: 45%;
+}
+
+.race-table th:nth-child(3),
+.race-table th:nth-child(4) {
+  text-align: right;
+  width: 22.5%;
+}
+
+.race-table td {
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.race-table td:first-child {
+  text-align: center;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.race-table td.horse-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0;
+}
+
+.race-table td.horse-name.strikethrough {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.race-table td.books,
+.race-table td.profit-loss {
+  text-align: right;
+  font-weight: 500;
+}
+
+.race-table td.profit-loss.positive {
+  color: #000000;
+}
+
+.race-table td.profit-loss.negative {
+  color: #000000;
+}
+
+.race-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.race-table tbody tr:nth-child(even):not(.winner-row):not(.negative-profit) {
+  background: #f0fdf4;
+}
+
+.race-table tbody tr:nth-child(even):not(.winner-row):not(.negative-profit):hover {
+  background: #dcfce7 !important;
+}
+.race-table tbody tr.negative-profit {
+  background: #4988C4 !important;
+  color: white;
+}
+
+.race-table tbody tr.negative-profit td {
+  color: white;
+}
+
+.race-table tbody tr.negative-profit:hover {
+  background: #3a73a8 !important;
+}
+.race-table tbody tr.winner-row {
+  background: #f26a8d !important;
+  color: white;
+  font-weight: 600;
+}
+
+.race-table tbody tr.winner-row td {
+  color: white;
+}
+
+.race-table tbody tr.winner-row:hover {
+  background: #d55a7a !important;
+}
+
+.race-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.button-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.button-container button {
+  flex: 1;
+}
+
+/* Very small screens - stack tables vertically */
+@media (max-width: 380px) {
+  .race-pair {
+    grid-template-columns: 1fr;
+  }
+}

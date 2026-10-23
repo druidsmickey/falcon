@@ -1,0 +1,112 @@
+<div class="email-composer-container">
+  <mat-card class="email-card">
+    <mat-card-header>
+      <mat-card-title>New Email</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="email-form">
+        <!-- To Field -->
+        <div class="field-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>To</mat-label>
+            <input matInput [(ngModel)]="to" name="to" placeholder="recipient@example.com">
+          </mat-form-field>
+          <div class="cc-bcc-buttons">
+            @if (!showCc()) {
+              <button mat-button type="button" (click)="toggleCc()" class="cc-bcc-btn">Cc</button>
+            }
+            @if (!showBcc()) {
+              <button mat-button type="button" (click)="toggleBcc()" class="cc-bcc-btn">Bcc</button>
+            }
+          </div>
+        </div>
+
+        <!-- Cc Field -->
+        @if (showCc()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Cc</mat-label>
+            <input matInput [(ngModel)]="cc" name="cc" placeholder="cc@example.com">
+          </mat-form-field>
+        }
+
+        <!-- Bcc Field -->
+        @if (showBcc()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Bcc</mat-label>
+            <input matInput [(ngModel)]="bcc" name="bcc" placeholder="bcc@example.com">
+          </mat-form-field>
+        }
+
+        <!-- Subject Field -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Subject</mat-label>
+          <input matInput [(ngModel)]="subject" name="subject" placeholder="Enter subject">
+        </mat-form-field>
+
+        <!-- Message Body -->
+        <mat-form-field appearance="outline" class="full-width message-field">
+          <mat-label>Message</mat-label>
+          <textarea 
+            matInput 
+            [(ngModel)]="message" 
+            name="message"
+            rows="12"
+            placeholder="Type your message here..."></textarea>
+        </mat-form-field>
+
+        <!-- Attachments Section -->
+        <div class="attachments-section">
+          <input 
+            type="file" 
+            #fileInput 
+            (change)="onFileSelected($event)" 
+            multiple 
+            style="display: none;">
+          
+          <button 
+            mat-stroked-button 
+            type="button" 
+            (click)="fileInput.click()" 
+            class="attach-btn">
+            <mat-icon>attach_file</mat-icon>
+            Attach Files
+          </button>
+
+          @if (attachments().length > 0) {
+            <div class="attachments-list">
+              @for (file of attachments(); track $index) {
+                <mat-chip class="attachment-chip">
+                  <mat-icon class="attachment-icon">insert_drive_file</mat-icon>
+                  {{ file.name }}
+                  <button matChipRemove (click)="removeAttachment($index)">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            type="button" 
+            (click)="sendEmail()"
+            class="send-btn">
+            <mat-icon>send</mat-icon>
+            Send
+          </button>
+          <button 
+            mat-stroked-button 
+            type="button" 
+            (click)="clearForm()">
+            Clear
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

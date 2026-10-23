@@ -1,0 +1,77 @@
+<div class="init-container">
+  <h2>Meeting and Race Setup</h2>
+
+  <mat-card class="form-card">
+    <!-- Meeting Selection -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Meeting Name</mat-label>
+      <mat-select [(ngModel)]="selectedMeeting" (selectionChange)="onMeetingChange()">
+        <mat-option *ngFor="let meeting of meetingNames" [value]="meeting">
+          {{ meeting }}
+        </mat-option>
+        <mat-option value="new">+ Create New Meeting</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Meeting Created Date -->
+    <mat-form-field *ngIf="meetingCreatedAt" appearance="outline" class="full-width">
+      <mat-label>Meeting Created On</mat-label>
+      <input matInput [value]="meetingCreatedAt | date:'dd/MM/yyyy HH:mm'" readonly>
+    </mat-form-field>
+
+    <!-- New Meeting Name Input -->
+    <mat-form-field *ngIf="isCreatingNew" appearance="outline" class="full-width">
+      <mat-label>New Meeting Name</mat-label>
+      <input matInput [(ngModel)]="newMeetingName" (input)="onMeetingNameInput()" placeholder="Enter meeting name" class="uppercase-input">
+    </mat-form-field>
+
+    <!-- Total Number of Races -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Total Number of Races</mat-label>
+      <input matInput type="number" [(ngModel)]="totalRaces" (ngModelChange)="onTotalRacesChange()" 
+             min="0" placeholder="Enter total races">
+    </mat-form-field>
+
+    <!-- Selected Checkbox -->
+    <div class="checkbox-container">
+      <mat-checkbox [(ngModel)]="isSelected">
+        Set as Selected Meeting
+      </mat-checkbox>
+      <p class="checkbox-hint">When checked, this will be the selected meeting and all others will be unselected.</p>
+    </div>
+  </mat-card>
+
+  <!-- Dynamic Race Forms -->
+  <mat-card *ngFor="let race of races; let i = index" class="race-card">
+    <h3>Race {{ race.raceNum }}</h3>
+    
+    <div class="race-fields">
+      <mat-form-field appearance="outline">
+        <mat-label>Race Number</mat-label>
+        <input matInput type="number" [(ngModel)]="race.raceNum" readonly>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Race Name</mat-label>
+        <input matInput [(ngModel)]="race.raceName" (input)="onRaceNameInput(race)" placeholder="Enter race name" class="uppercase-input">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Number of Horses</mat-label>
+        <input matInput type="number" [(ngModel)]="race.numHorse" min="0" placeholder="Enter number">
+      </mat-form-field>
+    </div>
+  </mat-card>
+
+  <!-- Save Button -->
+  <div class="button-container" *ngIf="races.length > 0">
+    <button mat-raised-button color="primary" (click)="saveRaces()">
+      Save Races
+    </button>
+    <button mat-raised-button color="warn" (click)="deleteMeeting()" 
+            *ngIf="!isCreatingNew && selectedMeeting" 
+            style="margin-left: 1rem;">
+      Delete Meeting
+    </button>
+  </div>
+</div>

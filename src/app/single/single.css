@@ -1,0 +1,304 @@
+.single-container {
+  padding: 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.single-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.loading, .no-data, .select-prompt {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.race-selection {
+  margin-bottom: 1.5rem;
+}
+
+.race-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  margin-bottom: 8px;
+  justify-content: flex-start;
+}
+
+.race-btn {
+  min-width: 32px !important;
+  max-width: 36px !important;
+  height: 32px !important;
+  padding: 0 4px !important;
+  font-size: 0.875rem !important;
+  line-height: 32px !important;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+.race-btn:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.race-btn.selected {
+  background: #1976d2 !important;
+  color: white !important;
+  border-color: #1976d2;
+}
+
+.chart-display {
+  margin-top: 1rem;
+}
+
+.race-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.race-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.race-table th {
+  background: #f3f4f6;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.race-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+}
+
+.race-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.race-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.race-table tbody tr.disabled-row {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.race-table tbody tr.disabled-row:hover {
+  background: white;
+}
+
+.race-table tbody tr:nth-child(even):not(.negative-profit):not(.winner-row) {
+  background: #f0fdf4;
+}
+
+.race-table tbody tr:nth-child(even):not(.negative-profit):not(.winner-row):hover {
+  background: #dcfce7;
+}
+
+.race-table tbody tr.negative-profit {
+  background: #4988C4 !important;
+  color: white;
+}
+
+.race-table tbody tr.negative-profit td {
+  color: white;
+}
+
+.race-table tbody tr.negative-profit:hover {
+  background: #3a73a8 !important;
+}
+
+.horse-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.horse-name.strikethrough {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.books {
+  text-align: right;
+  color: #374151;
+  font-weight: 500;
+}
+
+.profit-loss {
+  text-align: right;
+  font-weight: 500;
+  color: #374151;
+}
+
+.profit-loss.positive {
+  color: #374151;
+}
+
+.profit-loss.negative {
+  color: #374151;
+}
+
+.avg {
+  text-align: right;
+  font-weight: 500;
+  color: #374151;
+}
+
+.race-table tbody tr.winner-row {
+  background: #f26a8d !important;
+  color: white;
+  font-weight: 600;
+}
+
+.race-table tbody tr.winner-row td {
+  color: white;
+}
+
+.race-table tbody tr.winner-row:hover {
+  background: #d55a7a !important;
+}
+
+/* Sidenav Styles */
+.sidenav-container {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+}
+
+.betslip-sidenav {
+  width: 350px;
+  padding: 1rem;
+  background: #f9fafb;
+  transition: background-color 0.3s ease;
+}
+
+.betslip-sidenav.purchase-bg {
+  background-color: #fee2e2;
+}
+
+.betslip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.betslip-content h3 {
+  margin: 0 0 0.25rem 0;
+  color: #1976d2;
+  font-size: 1.1rem;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.radio-group {
+  padding: 0;
+}
+
+.horse-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 2px;
+  overflow: visible;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.horse-btn {
+  min-width: 32px !important;
+  max-width: 36px !important;
+  height: 32px !important;
+  padding: 0 4px !important;
+  font-size: 0.875rem !important;
+  line-height: 32px !important;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+.horse-btn.selected {
+  background: #1976d2 !important;
+  color: white !important;
+  border-color: #1976d2;
+}
+
+.horse-name-display {
+  font-size: 0.9rem;
+  color: #374151;
+  padding: 0.25rem 0;
+  min-height: 1.5rem;
+  font-weight: 500;
+}
+
+.radio-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.client-btn {
+  background-color: #40E0D0 !important;
+  color: black !important;
+}
+
+.button-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.button-container button {
+  flex: 1;
+}
+
+::ng-deep .mat-mdc-form-field {
+  font-size: 0.9rem;
+  margin-bottom: 0 !important;
+  line-height: 1 !important;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  height: 38px !important;
+}
+
+::ng-deep .mat-mdc-form-field-infix {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}

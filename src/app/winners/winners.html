@@ -1,0 +1,48 @@
+<div class="winners-container">
+  <h3 class="winners-title">Select Winners</h3>
+  
+  <div *ngIf="loading" class="loading">Loading data...</div>
+  
+  <div *ngIf="!loading && raceGroups.length === 0" class="no-data">
+    No selected races found. Please select a meeting in the Init page first.
+  </div>
+  
+  <div *ngIf="!loading && raceGroups.length > 0">
+    @for (raceGroup of raceGroups; track raceGroup.raceNum) {
+      <div class="race-section">
+        <h4 class="race-title">Race {{ raceGroup.raceNum }}</h4>
+        <table mat-table [dataSource]="raceGroup.horses" class="winners-table">
+          <!-- Horse Number Column -->
+          <ng-container matColumnDef="horseNum">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let horse">{{ horse.horseNum }}</td>
+          </ng-container>
+          
+          <!-- Horse Name Column -->
+          <ng-container matColumnDef="horseName">
+            <th mat-header-cell *matHeaderCellDef>Horse Name</th>
+            <td mat-cell *matCellDef="let horse" 
+                [ngClass]="{'strikethrough': horse.hasSpecial || horse.hasRule4}">
+              {{ horse.horseName }}
+            </td>
+          </ng-container>
+          
+          <!-- Winner Column -->
+          <ng-container matColumnDef="winner">
+            <th mat-header-cell *matHeaderCellDef>Winner</th>
+            <td mat-cell *matCellDef="let horse">
+              <mat-checkbox 
+                [checked]="horse.winner"
+                (change)="toggleWinner(horse)"
+                [disabled]="horse.hasSpecial || horse.hasRule4">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+          
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    }
+  </div>
+</div>

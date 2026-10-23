@@ -1,0 +1,112 @@
+<div class="listdata-container">
+  <h3 class="listdata-title">Entries - {{ meetingName }}</h3>
+  <button type="button" class="print-btn" (click)="printList()">Print</button>
+  <div>Cancel bets are not shown on PRINT</div>
+  <!-- Name search input -->
+  <input
+    type="text"
+    class="listdata-search"
+    placeholder="Name"
+    [(ngModel)]="searchClientName"
+    style="width:100%;margin-bottom:0.5rem;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;font-size:1rem;"
+  />
+  <!-- Race and Horse search inputs -->
+  <div style="display:flex;gap:0.5rem;margin-bottom:0.7rem;">
+    <input
+      type="number"
+      class="listdata-search"
+      placeholder="Race #"
+      [(ngModel)]="searchRaceNum"
+      style="flex:1;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;font-size:1rem;"
+    />
+    <input
+      type="number"
+      class="listdata-search"
+      placeholder="Horse #"
+      [(ngModel)]="searchHorseNum"
+      style="flex:1;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;font-size:1rem;"
+    />
+  </div>
+  <ul class="listdata-list">
+    @for (item of filteredItems; track item._id) {
+      <li class="listdata-item">
+        <div class="listdata-row">
+          <span class="listdata-label">Name:</span>
+          <span class="listdata-value">{{ item.clientName }}</span>
+          <span class="listdata-label">Type:</span>
+          <span class="listdata-value" [ngClass]="{'purchase-type': item.stake < 0}">{{ item.stake < 0 ? 'Purchase' : 'Sales' }}</span>
+          <span class="listdata-date">
+            {{ (item.betTime || item.createdAt) | date:'dd/MM' }}
+            {{ (item.betTime || item.createdAt) | date:'HH:mm' }}
+          </span>
+        </div>
+        <div class="listdata-row">
+          <span class="listdata-label">Race:</span>
+          <span class="listdata-value">{{ item.raceNum }}</span>
+          <span class="listdata-label">Horse:</span>
+          <span class="listdata-value">{{ item.horseNum }}</span>
+          <span class="listdata-value" *ngIf="getHorseName(item.raceNum, item.horseNum)" [ngClass]="{'strikethrough': isHorseWithdrawn(item.raceNum, item.horseNum) || isBetBeforeSpecial(item) || isHorseRule4(item.raceNum, item.horseNum)}">( {{ getHorseName(item.raceNum, item.horseNum) }} )</span>
+          <span *ngIf="isBetBeforeSpecial(item)" class="special-void-label">Special-Void</span>
+          <span *ngIf="isHorseRule4(item.raceNum, item.horseNum)" class="rule4-void-label">Rule4-Void</span>
+          <span *ngIf="!isHorseRule4(item.raceNum, item.horseNum) && hasRule4Applies(item)" class="rule4-applies-label">Rule4 Applies</span>
+        </div>
+        <div class="listdata-row">
+          <span class="listdata-label">Books:</span>
+          <span class="listdata-value">{{ item.f500 == null ? '' : item.books }}</span>
+          <span class="listdata-label">F500:</span>
+          <span class="listdata-value">{{ item.f500 }}</span>
+          <span class="listdata-label">Odds:</span>
+          <span class="listdata-value">{{ item.odds100 }}</span>
+        </div>
+        <div class="listdata-row">
+          <span class="listdata-label">Stake:</span>
+          <span class="listdata-value" [ngClass]="{'strikethrough': isHorseWithdrawn(item.raceNum, item.horseNum) || isBetBeforeSpecial(item) || isHorseRule4(item.raceNum, item.horseNum)}">{{ item.stake | number:'1.0-0' }}</span>
+          <span class="listdata-label">Payout:</span>
+          <span class="listdata-value">{{ item.payout | number:'1.0-0' }}</span>
+          <span class="listdata-label">Tax:</span>
+          <span class="listdata-value">{{ item.tax }}</span>
+        </div>
+        <div class="listdata-row">
+          <span *ngIf="item.cancelled" class="cancel-label">Cancelled</span>
+          <button (click)="cancelBet(item)" class="cancel-btn print-hide">
+            {{ item.cancelled ? 'Uncancel' : 'Cancel' }}
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+
+  <!-- Print-only table -->
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Race</th>
+        <th>Horse</th>
+        <th>H.Name</th>
+        <th>Books</th>
+        <th>F500</th>
+        <th>Odds</th>
+        <th>Stake</th>
+        <th>Tax</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of filteredItems; track item._id) {
+        @if (!item.cancelled) {
+          <tr>
+            <td>{{ item.clientName }}</td>
+            <td>{{ item.raceNum }}</td>
+            <td>{{ item.horseNum }}</td>
+            <td>{{ getHorseName(item.raceNum, item.horseNum) }}</td>
+            <td>{{ item.f500 == 0 ? '' : item.books }}</td>
+            <td>{{ item.f500 }}</td>
+            <td>{{ item.odds100 < 0 ? '' : item.odds100 }}</td>
+            <td>{{ item.stake | number:'1.0-0' }}</td>
+            <td>{{ item.tax }}</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

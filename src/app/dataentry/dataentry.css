@@ -1,0 +1,400 @@
+.dataentry-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 8px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 2px;
+  color: #333;
+  font-size: 1.25rem;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+.betslip-card {
+  padding: 12px;
+  transition: background-color 0.3s ease;
+}
+
+.betslip-card.purchase-bg {
+  background-color: #fee2e2;
+}
+
+.betslip-card h3 {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  color: #1976d2;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.radio-group {
+  padding: 4px 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.radio-group label {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 500;
+  color: #666;
+}
+
+.horse-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  margin-bottom: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.horse-btn {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  font-size: 0.75rem !important;
+  line-height: 28px !important;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+  background: white;
+  color: rgb(34, 110, 35);
+  cursor: pointer;
+  min-width: 28px !important;
+  min-height: 28px !important;
+}
+
+::ng-deep .horse-btn {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .horse-btn .mat-mdc-button-touch-target {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .horse-btn .mdc-fab__ripple,
+::ng-deep .horse-btn .mat-mdc-fab-base {
+  padding: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .horse-btn .mat-icon {
+  font-size: 16px !important;
+}
+
+.horse-btn.selected {
+  background: rgb(34, 110, 35) !important;
+  color: white !important;
+  border-color: rgb(34, 110, 35);
+}
+
+.horse-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.horse-btn.winner-horse {
+  background: #1e3a8a !important;
+  color: white !important;
+  border-color: #1e3a8a;
+}
+
+.horse-name-display {
+  font-size: 2rem;
+  color: red;
+  font-weight: 500;
+  min-height: 20px;
+  text-align: center;
+}
+
+.client-btn {
+  background-color: #40E0D0 !important;
+  color: black !important;
+}
+
+.recent-clients-wrap {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.recent-client-btn {
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 18px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 32px;
+  text-transform: none;
+  white-space: nowrap;
+  background-color: #40E0D0 !important;
+  color: black !important;
+  border-color: #40E0D0 !important;
+}
+
+.recent-client-btn .mdc-button__label {
+  white-space: nowrap;
+}
+
+@media (max-width: 450px) {
+  .horse-buttons {
+    gap: 2px;
+  }
+  
+  .horse-btn {
+    min-width: 30px !important;
+    max-width: 34px !important;
+    height: 30px !important;
+    padding: 0 3px !important;
+    font-size: 0.8rem !important;
+    line-height: 30px !important;
+  }
+  
+  .horse-name-display {
+    font-size: 2rem;
+  }
+}
+
+.chip-section {
+  padding: 4px 0;
+}
+
+.chip-label {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+.race-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 2px;
+  justify-content: flex-start;
+}
+
+.race-btn {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  font-size: 0.75rem !important;
+  line-height: 28px !important;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  min-width: 28px !important;
+  min-height: 28px !important;
+}
+
+::ng-deep .race-btn {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .race-btn .mat-mdc-button-touch-target {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .race-btn .mdc-fab__ripple,
+::ng-deep .race-btn .mat-mdc-fab-base {
+  padding: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .race-btn .mat-icon {
+  font-size: 16px !important;
+}
+
+.race-btn.selected {
+  background: #1976d2 !important;
+  color: white !important;
+  border-color: #1976d2;
+}
+
+/* Mobile optimization for Samsung Galaxy A51 */
+@media (max-width: 450px) {
+  .dataentry-container {
+    padding: 4px;
+  }
+  
+  h2 {
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+  }
+  
+  .betslip-card {
+    padding: 8px;
+  }
+  
+  .form-grid {
+    gap: 6px;
+  }
+  
+  .chip-section {
+    padding: 2px 0;
+  }
+  
+  .race-buttons {
+    gap: 2px;
+  }
+  
+  .race-btn {
+    min-width: 30px !important;
+    max-width: 34px !important;
+    height: 30px !important;
+    padding: 0 3px !important;
+    font-size: 0.8rem !important;
+    line-height: 30px !important;
+  }
+  
+  .radio-group {
+    padding: 2px 0;
+  }
+}
+
+.radio-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.radio-buttons mat-radio-button {
+  white-space: nowrap;
+  display: inline-flex;
+}
+
+::ng-deep .radio-buttons mat-radio-button .mdc-form-field {
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+}
+
+::ng-deep .radio-buttons mat-radio-button .mdc-radio {
+  padding: 6px !important;
+}
+
+.radio-buttons.vertical {
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 450px) {
+  .radio-buttons {
+    gap: 6px;
+  }
+  
+  .radio-buttons mat-radio-button {
+    font-size: 0.85rem;
+  }
+  
+  .radio-buttons mat-radio-button ::ng-deep .mdc-label {
+    padding-left: 6px;
+  }
+}
+
+.option-group {
+  margin-top: 2px;
+}
+
+.option-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 2px;
+}
+
+.button-container button {
+  min-width: 120px;
+  height: 40px;
+  font-size: 15px;
+}
+
+::ng-deep .mat-mdc-form-field {
+  font-size: 0.9rem;
+  margin-bottom: 0 !important;
+  line-height: 1 !important;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  height: 38px !important;
+}
+
+::ng-deep .mat-mdc-form-field-infix {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}
+
+::ng-deep .mat-mdc-form-field {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .option-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Keep radio buttons horizontal on mobile */
+  .radio-buttons:not(.vertical) {
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+}
+
+@media (max-width: 450px) {
+  .button-container {
+    margin-top: 2px;
+  }
+  
+  .button-container button {
+    min-width: 100px;
+    height: 36px;
+    font-size: 14px;
+  }
+}

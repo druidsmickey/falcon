@@ -1,0 +1,74 @@
+.init-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.form-card {
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.race-card {
+  padding: 20px;
+  margin-bottom: 15px;
+  background-color: #f5f5f5;
+}
+
+.race-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #1976d2;
+}
+
+.race-fields {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 15px;
+}
+
+.button-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.checkbox-container {
+  margin-top: 15px;
+  padding: 10px 0;
+}
+
+.checkbox-hint {
+  margin: 5px 0 0 32px;
+  font-size: 12px;
+  color: #666;
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+button {
+  min-width: 150px;
+  height: 45px;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .race-fields {
+    grid-template-columns: 1fr;
+  }
+}

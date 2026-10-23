@@ -1,0 +1,217 @@
+.params-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .params-container {
+    margin: 8px auto;
+    padding: 8px;
+  }
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+.loading-state {
+  padding: 28px;
+}
+
+.loading-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 120px;
+}
+
+.race-section {
+  margin-bottom: 20px;
+}
+
+.race-section mat-card {
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .race-section {
+    margin-bottom: 12px;
+  }
+  
+  .race-section mat-card {
+    padding: 8px;
+  }
+}
+
+.race-section h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #1976d2;
+}
+
+.params-table {
+  width: 100%;
+}
+
+.params-table th {
+  font-weight: 600;
+  background-color: #f5f5f5;
+}
+
+.params-table mat-form-field {
+  width: 100%;
+}
+
+.params-table .mat-mdc-row:nth-child(even) {
+  background: #f0fdf4;
+}
+
+.small-field {
+  max-width: 60px;
+}
+
+.medium-field {
+  max-width: 200px;
+}
+
+.date-field {
+  max-width: 150px;
+}
+
+.time-field {
+  max-width: 100px;
+}
+
+.datetime-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.clear-btn {
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  padding: 0;
+  min-width: 32px;
+  color: #dc2626;
+  background: transparent;
+  border: 1px solid #dc2626;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.clear-btn:hover {
+  background: #fee2e2;
+}
+
+.button-container {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.button-container button {
+  min-width: 200px;
+  height: 45px;
+  font-size: 16px;
+}
+
+/* Reduce mat-form-field spacing in table */
+.params-table mat-form-field {
+  margin-bottom: 0;
+}
+
+.params-table .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .params-table {
+    font-size: 11px;
+  }
+  
+  .params-table th,
+  .params-table td {
+    padding: 4px 2px !important;
+  }
+  
+  .small-field {
+    max-width: 45px;
+  }
+  
+  .medium-field {
+    max-width: 120px;
+  }
+  
+  .date-field {
+    max-width: 110px;
+  }
+  
+  .time-field {
+    max-width: 75px;
+  }
+  
+  .datetime-container {
+    gap: 4px;
+  }
+  
+  .clear-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    line-height: 24px;
+  }
+  
+  h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  
+  .race-section h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  
+  ::ng-deep .mat-mdc-form-field {
+    font-size: 11px !important;
+  }
+  
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    padding: 0 4px !important;
+  }
+  
+  ::ng-deep .mat-mdc-form-field-infix {
+    padding: 4px 0 !important;
+    min-height: 32px !important;
+  }
+  
+  ::ng-deep .mat-mdc-text-field-wrapper.mdc-text-field--outlined .mat-mdc-form-field-infix {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+  
+  ::ng-deep .mat-mdc-input-element {
+    font-size: 11px !important;
+  }
+  
+  ::ng-deep .mat-datepicker-toggle {
+    transform: scale(0.8);
+  }
+}

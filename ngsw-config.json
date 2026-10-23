@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/**",
+          "/**/*.(png|jpg|jpeg|svg|webp|gif|ico)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api-cache",
+      "urls": [
+        "/api/**",
+        "http://localhost:3000/api/**",
+        "http://104.248.87.98/api-gambit/**",
+        "http://104.248.87.98/api-cumbre/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 100,
+        "maxAge": "6h",
+        "timeout": "5s"
+      }
+    }
+  ]
+}

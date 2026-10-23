@@ -1,0 +1,78 @@
+name: Auto Deploy Gambit & Cumbre
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        app:
+          - name: gambit
+            apiUrl: /api-gambit
+            baseHref: /Gambit/
+            port: 3000
+            target: /root/Gambit/itb
+            pm2: gambit-backend
+            mongo: GAMBIT_MONGODB_URI
+            jwt: GAMBIT_JWT_SECRET
+
+          - name: cumbre
+            apiUrl: /api-cumbre
+            baseHref: /Cumbre/
+            port: 3001
+            target: /root/Cumbre/itb
+            pm2: cumbre-backend
+            mongo: CUMBRE_MONGODB_URI
+            jwt: CUMBRE_JWT_SECRET
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Fix Angular animations dependency
+        run: |
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+          npm install @angular/animations@21 --save
+          npm install
+
+      - name: Build frontend (${{ matrix.app.name }})
+        run: |
+          sed -i "s|apiUrl:.*|apiUrl: '${{ matrix.app.apiUrl }}'|g" src/environments/environment.prod.ts
+          npm run build -- --configuration production --base-href ${{ matrix.app.baseHref }}
+
+      - name: Deploy ${{ matrix.app.name }} to server
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: ${{ matrix.app.target }}
+
+      - name: Configure backend (${{ matrix.app.name }})
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ matrix.app.target }}/backend
+
+            cat <<EOF > .env
+            PORT=${{ matrix.app.port }}
+            MONGODB_URI=${{ secrets[matrix.app.mongo] }}
+            JWT_SECRET=${{ secrets[matrix.app.jwt] }}
+            EOF
+
+            npm install
+            pm2 restart ${{ matrix.app.pm2 }} || pm2 start server.js --name ${{ matrix.app.pm2 }}
+            pm2 save
