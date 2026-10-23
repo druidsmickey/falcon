@@ -17,8 +17,8 @@ jobs:
             port: 3010
             target: /root/Gambit/itb/2027
             pm2: gambit-backend-2027
-            mongo: GAMBIT_MONGODB_URI
-            jwt: GAMBIT_JWT_SECRET
+            mongo: GAMBIT_2027_MONGODB_URI
+            jwt: GAMBIT_2027_JWT_SECRET
 
           - name: cumbre
             apiUrl: /api-cumbre-2027
@@ -26,8 +26,8 @@ jobs:
             port: 3011
             target: /root/Cumbre/itb/2027
             pm2: cumbre-backend-2027
-            mongo: CUMBRE_MONGODB_URI
-            jwt: CUMBRE_JWT_SECRET
+            mongo: CUMBRE_2027_MONGODB_URI
+            jwt: CUMBRE_2027_JWT_SECRET
 
     steps:
       - name: Checkout repo
