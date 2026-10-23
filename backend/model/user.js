@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
   },
   appScope: {
     type: String,
-    enum: ['gambit', 'cumbre', 'default'],
+    enum: ['phantom', 'detori', 'default'],
     default: 'default'
   },
   createdAt: {

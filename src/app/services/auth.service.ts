@@ -98,8 +98,8 @@ export class AuthService {
     }
 
     const source = `${window.location.hostname} ${window.location.href}`.toLowerCase();
-    if (source.includes('gambit')) return 'gambit';
-    if (source.includes('cumbre') || source.includes('cumber')) return 'cumbre';
+    if (source.includes('phantom')) return 'phantom';
+    if (source.includes('detori')) return 'detori';
     return localStorage.getItem('appContext') || 'default';
   }
 

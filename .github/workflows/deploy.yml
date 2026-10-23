@@ -1,4 +1,4 @@
-name: Auto Deploy Gambit & Cumbre
+name: Auto Deploy Phantom & Detori
 
 on:
   push:
@@ -11,19 +11,19 @@ jobs:
     strategy:
       matrix:
         app:
-          - name: gambit
-            apiUrl: /api-gambit-2027
-            baseHref: /Gambit/2027/
+          - name: phantom
+            apiUrl: /api-phantom-2027
+            baseHref: /Phantom/2027/
             port: 3010
-            target: /root/Gambit/itb/2027
-            pm2: gambit-backend-2027
+            target: /root/Phantom/itb/2027
+            pm2: phantom-backend-2027
 
-          - name: cumbre
-            apiUrl: /api-cumbre-2027
-            baseHref: /Cumbre/2027/
+          - name: detori
+            apiUrl: /api-detori-2027
+            baseHref: /Detori/2027/
             port: 3011
-            target: /root/Cumbre/itb/2027
-            pm2: cumbre-backend-2027
+            target: /root/Detori/itb/2027
+            pm2: detori-backend-2027
 
     steps:
       - name: Checkout repo

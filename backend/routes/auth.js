@@ -11,16 +11,16 @@ const router = express.Router();
 function normalizeContext(value) {
   const raw = String(value || '').toLowerCase();
   if (!raw) return null;
-  if (raw.includes('gambit')) return 'gambit';
-  if (raw.includes('cumbre') || raw.includes('cumber')) return 'cumbre';
+  if (raw.includes('phantom')) return 'phantom';
+  if (raw.includes('detori')) return 'detori';
   return null;
 }
 
 function contextFromUrl(urlLike) {
   if (!urlLike) return null;
   const text = String(urlLike).toLowerCase();
-  if (text.includes('gambit')) return 'gambit';
-  if (text.includes('cumbre') || text.includes('cumber')) return 'cumbre';
+  if (text.includes('phantom')) return 'phantom';
+  if (text.includes('detori')) return 'detori';
   return null;
 }
 

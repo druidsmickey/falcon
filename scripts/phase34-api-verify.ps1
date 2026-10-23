@@ -2,7 +2,7 @@ param(
   [string]$BaseUrl = "http://localhost:3000",
   [string]$Username = "admin",
   [string]$Password = "seong89",
-  [string]$AppContext = "gambit",
+  [string]$AppContext = "phantom",
   [string]$MeetingName = "PHASE34_TEST"
 )
 
