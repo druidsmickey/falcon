@@ -17,8 +17,6 @@ jobs:
             port: 3010
             target: /root/Gambit/itb/2027
             pm2: gambit-backend-2027
-            mongo: GAMBIT_2027_MONGODB_URI
-            jwt: GAMBIT_2027_JWT_SECRET
 
           - name: cumbre
             apiUrl: /api-cumbre-2027
@@ -26,8 +24,6 @@ jobs:
             port: 3011
             target: /root/Cumbre/itb/2027
             pm2: cumbre-backend-2027
-            mongo: CUMBRE_2027_MONGODB_URI
-            jwt: CUMBRE_2027_JWT_SECRET
 
     steps:
       - name: Checkout repo
@@ -67,12 +63,6 @@ jobs:
           script: |
             [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
             cd ${{ matrix.app.target }}/backend
-
-            cat <<EOF > .env
-            PORT=${{ matrix.app.port }}
-            MONGODB_URI=${{ secrets[matrix.app.mongo] }}
-            JWT_SECRET=${{ secrets[matrix.app.jwt] }}
-            EOF
 
             npm install
             pm2 restart ${{ matrix.app.pm2 }} || pm2 start server.js --name ${{ matrix.app.pm2 }}
