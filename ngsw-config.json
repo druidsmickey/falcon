@@ -32,8 +32,8 @@
       "urls": [
         "/api/**",
         "http://localhost:3000/api/**",
-        "http://104.248.87.98/api-gambit/**",
-        "http://104.248.87.98/api-cumbre/**"
+        "http://134.209.144.53/api-gambit/**",
+        "http://134.209.144.53/api-cumbre/**"
       ],
       "cacheConfig": {
         "strategy": "performance",
