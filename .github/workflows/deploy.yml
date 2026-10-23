@@ -15,7 +15,7 @@ jobs:
             apiUrl: /api-gambit
             baseHref: /Gambit/
             port: 3000
-            target: /root/Gambit/itb
+            target: /root/Gambit/itb/2027
             pm2: gambit-backend
             mongo: GAMBIT_MONGODB_URI
             jwt: GAMBIT_JWT_SECRET
@@ -24,7 +24,7 @@ jobs:
             apiUrl: /api-cumbre
             baseHref: /Cumbre/
             port: 3001
-            target: /root/Cumbre/itb
+            target: /root/Cumbre/itb/2027
             pm2: cumbre-backend
             mongo: CUMBRE_MONGODB_URI
             jwt: CUMBRE_JWT_SECRET
