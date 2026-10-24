@@ -1,18 +1,20 @@
 <div class="login-container">
   <div class="login-card">
-    <h2>Login</h2>
-    <form (ngSubmit)="onLogin()" #loginForm="ngForm">
-      <div class="form-group">
-        <label for="username">Username:</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          [(ngModel)]="username"
-          required
-          class="form-control"
-          [disabled]="isLoading"
-          />
+    @if (step === 'login') {
+      <h2>Login</h2>
+      <form (ngSubmit)="onLogin()" #loginForm="ngForm">
+        <div class="form-group">
+          <label for="username">Username:</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            [(ngModel)]="username"
+            required
+            autocomplete="username"
+            class="form-control"
+            [disabled]="isLoading"
+            />
         </div>
 
         <div class="form-group">
@@ -23,29 +25,69 @@
             name="password"
             [(ngModel)]="password"
             required
+            autocomplete="current-password"
             class="form-control"
             [disabled]="isLoading"
             />
+        </div>
+
+        @if (errorMessage) {
+          <div class="error-message">
+            {{ errorMessage }}
           </div>
+        }
 
-          @if (errorMessage) {
-            <div class="error-message">
-              {{ errorMessage }}
-            </div>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="!loginForm.form.valid || isLoading"
+          >
+          @if (isLoading) {
+            <span>Logging in...</span>
           }
+          @if (!isLoading) {
+            <span>Login</span>
+          }
+        </button>
+      </form>
+    } @else {
+      <h2>Previous password</h2>
+      <p class="notice">
+        Your password was changed somewhere else. The data saved on this device (including bets that have
+        not been sent yet) is still locked with the previous password.
+      </p>
+      <form (ngSubmit)="onContinueWithOldPassword()" #oldForm="ngForm">
+        <div class="form-group">
+          <label for="oldPassword">Previous password:</label>
+          <input
+            type="password"
+            id="oldPassword"
+            name="oldPassword"
+            [(ngModel)]="oldPassword"
+            required
+            autocomplete="off"
+            class="form-control"
+            [disabled]="isLoading"
+            />
+        </div>
 
-          <button
-            type="submit"
-            class="btn btn-primary"
-            [disabled]="!loginForm.form.valid || isLoading"
-            >
-            @if (isLoading) {
-              <span>Logging in...</span>
-            }
-            @if (!isLoading) {
-              <span>Login</span>
-            }
-          </button>
-        </form>
-      </div>
-    </div>
+        @if (errorMessage) {
+          <div class="error-message">
+            {{ errorMessage }}
+          </div>
+        }
+
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="!oldForm.form.valid || isLoading"
+          >
+          Continue
+        </button>
+        <button type="button" class="link-button" [disabled]="isLoading" (click)="onDiscardSavedData()">
+          I do not remember it: continue and give up the unsent bets
+        </button>
+      </form>
+    }
+  </div>
+</div>

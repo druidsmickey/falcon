@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
+import { DeviceWipeService } from '../security/device-wipe.service';
+import { VAULT_HEADER_KEY, VAULT_KDF, VaultService } from '../security/vault.service';
+import { OfflineStoreService } from './offline-store.service';
 
 const MINUTE = 60 * 1000;
 
@@ -12,9 +14,12 @@ function tokenExpiringIn(minutes: number): string {
   return `header.${payload}.signature`;
 }
 
+type Internals = { startSession(token: string | null, user: unknown, offline: boolean): void };
+
 describe('AuthService session rules', () => {
   let service: AuthService;
-  let navigated: unknown[][];
+  let vault: VaultService;
+  let toLogin: number;
   let listeners: [string, EventListenerOrEventListenerObject, unknown][];
   let focused: boolean;
   let visible: boolean;
@@ -22,11 +27,34 @@ describe('AuthService session rules', () => {
   // Moves the clock forward in steps, as the 15 second timer would run
   const wait = (minutes: number) => vi.advanceTimersByTime(minutes * MINUTE);
   const use = (event: string) => document.dispatchEvent(new Event(event));
+  const user = { id: '1', username: 'ann' };
 
-  beforeEach(() => {
+  // A fresh page: nothing in memory, the vault (made with a password earlier) is locked
+  function configure(): void {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: VAULT_KDF, useValue: { N: 1024, r: 8, p: 1 } },
+        { provide: HttpClient, useValue: {} },
+        { provide: DeviceWipeService, useValue: { wipeAndLeave: async () => undefined } },
+        { provide: OfflineStoreService, useValue: { countWaiting: async () => 0, deleteDatabase: async () => undefined } },
+      ],
+    });
+  }
+
+  // Logs in the way AuthService does after the server accepted the password
+  function login(token: string | null) {
+    (service as unknown as Internals).startSession(token, user, token === null);
+  }
+
+  beforeEach(async () => {
+    localStorage.clear();
+    configure();
+    vault = TestBed.inject(VaultService);
+    await vault.create('correct horse'); // real timers: the key derivation needs them
+
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-24T10:00:00'));
-    localStorage.clear();
     focused = true;
     visible = true;
     vi.spyOn(document, 'hasFocus').mockImplementation(() => focused);
@@ -40,8 +68,10 @@ describe('AuthService session rules', () => {
       original(type, fn, options);
     });
 
-    navigated = [];
-    login(60);
+    toLogin = 0;
+    vi.spyOn(AuthService.prototype as unknown as { goToLogin(): void }, 'goToLogin').mockImplementation(() => { toLogin++; });
+    service = TestBed.inject(AuthService);
+    login(tokenExpiringIn(60));
   });
 
   afterEach(() => {
@@ -50,26 +80,6 @@ describe('AuthService session rules', () => {
     vi.useRealTimers();
     localStorage.clear();
   });
-
-  // A fresh AuthService, as when the page is opened. The router only records where it is sent.
-  function createService(): AuthService {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [
-        AuthService,
-        { provide: HttpClient, useValue: {} },
-        { provide: Router, useValue: { navigate: (...args: unknown[]) => navigated.push(args) } },
-      ],
-    });
-    return TestBed.inject(AuthService);
-  }
-
-  // Logs in the way AuthService.login does, then creates the service for the page
-  function login(tokenMinutes: number) {
-    localStorage.setItem('token', tokenExpiringIn(tokenMinutes));
-    localStorage.setItem('lastActivity', Date.now().toString());
-    service = createService();
-  }
 
   it('stays logged in while the app is being used', () => {
     for (let i = 0; i < 12; i++) {
@@ -84,7 +94,7 @@ describe('AuthService session rules', () => {
     expect(service.isLoggedIn()).toBe(true);
     wait(1);
     expect(service.isLoggedIn()).toBe(false);
-    expect(navigated).toEqual([[['/login']]]);
+    expect(toLogin).toBe(1);
   });
 
   it('a hidden tab or minimised window is logged out after 4 minutes', () => {
@@ -136,15 +146,26 @@ describe('AuthService session rules', () => {
     expect(service.isLoggedIn()).toBe(false);
   });
 
-  it('opening the app again after more than 4 minutes needs a new login', () => {
-    vi.setSystemTime(Date.now() + 5 * MINUTE);
-    const reopened = createService();
+  it('opening the app again (a reload) needs a new login, however soon', () => {
+    configure();
+    const reopened = TestBed.inject(AuthService);
     expect(reopened.isLoggedIn()).toBe(false);
+    expect(reopened.getToken()).toBeNull();
   });
 
   it('logs out when the login has lasted its hour, even if the app is in constant use', () => {
-    localStorage.clear();
-    login(60);
+    for (let i = 0; i < 59; i++) {
+      wait(1);
+      use('click');
+    }
+    expect(service.isLoggedIn()).toBe(true);
+    wait(1.5);
+    use('click');
+    expect(service.isLoggedIn()).toBe(false);
+  });
+
+  it('a session without the server also ends after its hour', () => {
+    login(null);
     for (let i = 0; i < 59; i++) {
       wait(1);
       use('click');
@@ -156,16 +177,23 @@ describe('AuthService session rules', () => {
   });
 
   it('a token that cannot be read counts as expired', () => {
-    localStorage.setItem('token', 'not-a-token');
+    login('not-a-token');
     wait(0.5);
     expect(service.isLoggedIn()).toBe(false);
   });
 
-  it('logging out clears the saved data and goes to the login page', () => {
-    localStorage.setItem('currentUser', '{"id":"1"}');
+  it('the token is kept in memory only', () => {
+    expect(service.getToken()).not.toBeNull();
+    expect(JSON.stringify(Object.entries(localStorage))).not.toContain('header.');
+    expect(JSON.stringify(Object.entries(sessionStorage))).not.toContain('header.');
+  });
+
+  it('logging out locks the app and goes to the login page, but keeps the encrypted data', () => {
     service.logout();
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('currentUser')).toBeNull();
-    expect(navigated).toEqual([[['/login']]]);
+    expect(service.isLoggedIn()).toBe(false);
+    expect(service.getToken()).toBeNull();
+    expect(vault.isUnlocked()).toBe(false);
+    expect(localStorage.getItem(VAULT_HEADER_KEY)).not.toBeNull();
+    expect(toLogin).toBe(1);
   });
 });

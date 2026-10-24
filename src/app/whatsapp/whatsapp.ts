@@ -16,6 +16,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import * as QRCode from 'qrcode';
+import { VaultService } from '../security/vault.service';
 import { environment } from '../../environments/environment';
 
 interface Contact {
@@ -91,6 +92,7 @@ interface SentMessage {
 })
 export class Whatsapp implements OnInit, OnDestroy {
   private http = inject(HttpClient);
+  private vault = inject(VaultService);
   private apiUrl = environment.apiUrl;
   
   // The QR code is drawn here in the browser: the text that links a device to WhatsApp must not be
@@ -513,7 +515,7 @@ export class Whatsapp implements OnInit, OnDestroy {
         console.log('Loaded groups:', response.groups);
         this.groups.set(response.groups);
         // Restore selected group if it still exists
-        const savedGroupId = localStorage.getItem('selectedWhatsAppGroup');
+        const savedGroupId = this.vault.getItem<string>('whatsapp-group');
         if (savedGroupId && response.groups.some(g => g.id === savedGroupId)) {
           this.selectedGroup.set(savedGroupId);
           this.loadMessageHistory();
@@ -526,7 +528,7 @@ export class Whatsapp implements OnInit, OnDestroy {
   }
 
   protected loadSelectedGroup() {
-    const savedGroupId = localStorage.getItem('selectedWhatsAppGroup');
+    const savedGroupId = this.vault.getItem<string>('whatsapp-group');
     if (savedGroupId) {
       this.selectedGroup.set(savedGroupId);
     }
@@ -535,7 +537,7 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected saveSelectedGroup() {
     const groupId = this.selectedGroup();
     if (groupId) {
-      localStorage.setItem('selectedWhatsAppGroup', groupId);
+      this.vault.setItem('whatsapp-group', groupId);
       console.log('Saved selected group:', groupId);
       this.loadMessageHistory();
     }

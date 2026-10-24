@@ -1,0 +1,19 @@
+<main class="arcade">
+  <h1>PINBALL</h1>
+
+  <canvas #table class="table" aria-label="Pinball table"></canvas>
+
+  <div class="pads">
+    <button type="button" class="pad" aria-label="Left flipper"
+            (pointerdown)="press('left', true)" (pointerup)="press('left', false)"
+            (pointerleave)="press('left', false)" (pointercancel)="press('left', false)">&#9664;</button>
+    <button type="button" class="pad launch" aria-label="Launch"
+            (pointerdown)="press('launch', true)" (pointerup)="press('launch', false)"
+            (pointerleave)="press('launch', false)" (pointercancel)="press('launch', false)">LAUNCH</button>
+    <button type="button" class="pad" aria-label="Right flipper"
+            (pointerdown)="press('right', true)" (pointerup)="press('right', false)"
+            (pointerleave)="press('right', false)" (pointercancel)="press('right', false)">&#9654;</button>
+  </div>
+
+  <p class="hint">Keyboard: &larr; &rarr; flippers, space to launch</p>
+</main>

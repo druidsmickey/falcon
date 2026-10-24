@@ -107,7 +107,7 @@ More detail for the server and for WhatsApp: [DIGITAL_OCEAN_SETUP.md](DIGITAL_OC
 - You are logged out after **4 minutes without using the app** (no click, tap or typing; also when the tab is hidden, the window is minimised or left on another screen, or the computer sleeps). Details in [AUTHENTICATION.md](AUTHENTICATION.md).
 - Rows of the Params and Init pages are saved in place (found by race and horse number) and the database allows only one row per horse and per race, so two saves at the same time can never create duplicates. At start-up the server removes any duplicates left by older versions.
 - Wrong passwords are limited: after 10 failures for one user name from one address, or 100 from one address, login is refused for 15 minutes.
-- Logging out clears the data saved in the browser for offline use.
+- Everything the app saves in the browser is **encrypted with your login password**, and the key is kept in memory only: logging out, idle logout and reloading the page lock it. A **duress code** typed in the password field wipes the device and shows a pinball game. See [DEVICE_SECURITY.md](DEVICE_SECURITY.md).
 - Meetings older than **6 days** are deleted, with their bets, at the next login. This applies to every meeting, selected or not. The age counts from when the meeting was first input; saving its races again does not restart it. Print or export what you need before then.
 - The server checks every bet it receives: stake, books and payout must agree with the F500 or odds that were entered, and only known fields are stored.
 
@@ -115,7 +115,7 @@ More detail for the server and for WhatsApp: [DIGITAL_OCEAN_SETUP.md](DIGITAL_OC
 
 - **No HTTPS yet.** The apps are served over plain HTTP, so passwords and tokens travel unencrypted. Put a domain and a certificate in front of the server. HTTPS is also what makes the app installable on a phone and lets the offline app files work (see below). The server itself is locked down: firewall, SSH keys only, fail2ban (see [DIGITAL_OCEAN_SETUP.md](DIGITAL_OCEAN_SETUP.md)).
 - **No offline app files and no "install app" without HTTPS.** The service worker that keeps the app available offline only runs on HTTPS (or `localhost`). On the current HTTP address, bets queued offline are kept and sent later, but reloading or reopening the app while offline does not work.
-- **Offline use is limited by the login rules.** Logging in needs the server, and the app logs out after 4 minutes without use, so a device that goes offline and then sits idle cannot sign back in until it is online again.
+- **Offline use needs the password.** After a reload or the 4-minute logout the app is locked. With the server unreachable the same password opens the saved data on the device (only for the user last logged in there), and unsent bets are sent after the next login with the server reachable.
 - **11 `npm audit` findings remain in the backend**, all inside `whatsapp-web.js` and its Puppeteer (browser) dependency. They are not reachable from the web; the suggested fix is a downgrade that does not remove them.
 - **Every user can do everything.** There is one kind of user and no screen to add users.
 - Meetings of more than 6 days are removed automatically (see above).
@@ -125,6 +125,7 @@ More in [AUTHENTICATION.md](AUTHENTICATION.md) and [scripts/README-offline-pwa.m
 ## Other documents
 
 - [AUTHENTICATION.md](AUTHENTICATION.md): users, login and session rules
+- [DEVICE_SECURITY.md](DEVICE_SECURITY.md): encrypted data on the device, duress code, erase
 - [WHATSAPP-SETUP.md](WHATSAPP-SETUP.md): WhatsApp tab
 - [DIGITAL_OCEAN_SETUP.md](DIGITAL_OCEAN_SETUP.md): server setup and troubleshooting
 - [scripts/README-offline-pwa.md](scripts/README-offline-pwa.md): offline mode and sync

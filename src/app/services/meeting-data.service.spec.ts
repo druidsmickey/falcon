@@ -5,6 +5,10 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Bet, BetRequest } from '../models';
 import { MeetingDataService } from './meeting-data.service';
 import { OfflineStoreService } from './offline-store.service';
+import { AuthService } from './auth.service';
+import { VAULT_KDF, VaultService } from '../security/vault.service';
+
+const FAST_KDF = { provide: VAULT_KDF, useValue: { N: 1024, r: 8, p: 1 } };
 
 // The outbox in memory (the real one uses IndexedDB)
 class FakeOutbox {
@@ -28,16 +32,15 @@ describe('MeetingDataService: sending bets', () => {
   let outbox: FakeOutbox;
   let online: boolean;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
-    localStorage.setItem('token', 'x');
-    localStorage.setItem('itb-cache-v1:meetingName', JSON.stringify('M1'));
     online = true;
     vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
     outbox = new FakeOutbox();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: OfflineStoreService, useValue: outbox }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), FAST_KDF, { provide: OfflineStoreService, useValue: outbox }, { provide: AuthService, useValue: { hasToken: () => false } }],
     });
+    await TestBed.inject(VaultService).create('correct horse');
     service = TestBed.inject(MeetingDataService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -96,17 +99,17 @@ describe('MeetingDataService: bets read after the page was reloaded', () => {
   let http: HttpTestingController;
   let outbox: FakeOutbox;
 
-  function create(waiting: Bet[]) {
+  async function create(waiting: Bet[]) {
     localStorage.clear();
-    localStorage.setItem('token', 'x');
-    localStorage.setItem('itb-cache-v1:meetingName', JSON.stringify('M1'));
     outbox = new FakeOutbox();
     outbox.waiting = waiting;
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: OfflineStoreService, useValue: outbox }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), FAST_KDF, { provide: OfflineStoreService, useValue: outbox }, { provide: AuthService, useValue: { hasToken: () => true } }],
     });
+    await TestBed.inject(VaultService).create('correct horse');
     service = TestBed.inject(MeetingDataService);
+    (service as unknown as { _meetingName: string })._meetingName = 'M1'; // as after the races were read
     http = TestBed.inject(HttpTestingController);
   }
 
@@ -119,31 +122,31 @@ describe('MeetingDataService: bets read after the page was reloaded', () => {
   afterEach(() => localStorage.clear());
 
   it('bets waiting in the outbox are shown even when the server copy is old', async () => {
-    create([betRequest({ clientRequestId: 'queued-1' }) as Bet]);
+    await create([betRequest({ clientRequestId: 'queued-1' }) as Bet]);
     const bets = await read(req => req.flush([savedBet()]));
     expect(bets.map(b => b.clientRequestId)).toEqual(['queued-1', 'old']);
   });
 
   it('bets waiting in the outbox are shown when the server cannot be reached', async () => {
-    create([betRequest({ clientRequestId: 'queued-1' }) as Bet]);
+    await create([betRequest({ clientRequestId: 'queued-1' }) as Bet]);
     const bets = await read(req => req.error(new ProgressEvent('error')));
     expect(bets.map(b => b.clientRequestId)).toEqual(['queued-1']);
   });
 
   it('a bet that is both on the server and in the outbox is listed once', async () => {
-    create([betRequest({ clientRequestId: 'same' }) as Bet]);
+    await create([betRequest({ clientRequestId: 'same' }) as Bet]);
     const bets = await read(req => req.flush([savedBet({ clientRequestId: 'same' })]));
     expect(bets.filter(b => b.clientRequestId === 'same')).toHaveLength(1);
   });
 
   it('bets waiting for another meeting are not shown', async () => {
-    create([betRequest({ meetingName: 'OTHER', clientRequestId: 'elsewhere' }) as Bet]);
+    await create([betRequest({ meetingName: 'OTHER', clientRequestId: 'elsewhere' }) as Bet]);
     const bets = await read(req => req.flush([savedBet()]));
     expect(bets.map(b => b.clientRequestId)).toEqual(['old']);
   });
 
   it('waiting bets are listed newest first', async () => {
-    create([
+    await create([
       betRequest({ clientRequestId: 'early', betTime: new Date('2026-10-24T10:00:00Z') }) as Bet,
       betRequest({ clientRequestId: 'late', betTime: new Date('2026-10-24T11:00:00Z') }) as Bet,
     ]);
@@ -152,14 +155,14 @@ describe('MeetingDataService: bets read after the page was reloaded', () => {
   });
 
   it('the last bet is the newest one, including those still waiting', async () => {
-    create([betRequest({ clientRequestId: 'queued-late', betTime: new Date('2026-10-24T12:00:00Z') }) as Bet]);
+    await create([betRequest({ clientRequestId: 'queued-late', betTime: new Date('2026-10-24T12:00:00Z') }) as Bet]);
     const last = service.getLastBet();
     http.expectOne(r => r.url.endsWith('/bets/last')).flush(savedBet());
     expect((await last)?.clientRequestId).toBe('queued-late');
   });
 
   it('the last bet is the saved one when nothing is waiting', async () => {
-    create([]);
+    await create([]);
     const last = service.getLastBet();
     http.expectOne(r => r.url.endsWith('/bets/last')).flush(savedBet());
     expect((await last)?.clientRequestId).toBe('old');

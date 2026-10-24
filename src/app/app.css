@@ -139,3 +139,11 @@
 }
 
 
+
+.offline-session-banner {
+  padding: 8px 12px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.9rem;
+  text-align: center;
+}

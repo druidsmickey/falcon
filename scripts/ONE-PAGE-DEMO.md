@@ -40,7 +40,7 @@ Use this page to show that ITB keeps taking bets when the internet drops and cat
 
 1. Offline pages only work after the app was opened once online on that device.
 2. Entering bets, saving Params and saving Init work offline. Ticking winners, cancelling bets and WhatsApp need the internet.
-3. Clearing the browser's site data removes the saved copy and any unsent items. Logging out clears the saved copy of the data but not the unsent items.
+3. Clearing the browser's site data, the duress code or "Erase this device" removes the saved copy and any unsent items. Logging out or reloading only locks them: they are encrypted and open again with the password.
 4. The app decides it is online by contacting its own server. If the server cannot be reached (even though the internet works), it shows Offline and keeps the work in the queue.
 5. A conflict (the same Params or Init data was changed elsewhere) or a bet the server refuses is not retried and has no resolve screen: check the data and enter it again.
 

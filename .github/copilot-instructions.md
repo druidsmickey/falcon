@@ -5,7 +5,7 @@
 This is a full-stack betting/race management application:
 - **Frontend**: Angular 21 standalone components with Material Design, signals for state management
 - **Backend**: Express.js + MongoDB (Mongoose) REST API
-- **Authentication**: JWT tokens valid for 1 hour, plus an auto-logout after 4 minutes without use, stored in localStorage
+- **Authentication**: JWT tokens valid for 1 hour, plus an auto-logout after 4 minutes without use; the token and the data key live in memory only and everything saved in the browser is encrypted (see below)
 
 The app manages horse racing meetings, tracks bets (sales/purchases), calculates payouts, and generates reports.
 
@@ -48,16 +48,19 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 - Rule 4 deductions: use `applyRule4`, `rule4Applies`, `rule4Percentages` from [settlement.ts](../src/app/services/settlement.ts) rather than writing the loop again.
 - Templates use `@if`/`@for` and `[class.name]` bindings; services and components use `inject()`.
 - Sending a bet goes through `MeetingDataService.submitBet()`: it sends the bet, or queues it in the outbox when offline or when the server cannot be reached (status 0 or 5xx); only a 4xx is reported. Bets still in the outbox are merged into `getBets()` and `getLastBet()`, so every screen shows them. Do not post bets directly from a component.
-- The API data is fetched fresh: the service worker uses the `freshness` strategy for API calls (network first, saved copy only when offline).
+- The API data is fetched fresh from the server; the encrypted vault copy is used only when the server cannot be reached. The service worker (`ngsw-config.json`) caches only the app files, no API data.
 
 ## Authentication Flow
 
 **Critical**: the session rules are enforced client-side in [auth.service.ts](../src/app/services/auth.service.ts) and by the token expiry set in [auth.js](../backend/routes/auth.js):
 - The JWT is valid for **1 hour** (`expiresIn: "1h"`); the app reads its `exp` and logs out when it has passed
 - **4 minutes without use** logs out (`IDLE_LIMIT`): clicks, taps and key presses always count; mouse moves and scrolling only count while the window has focus. A hidden tab, minimised window, unfocused window or sleeping PC therefore times out too
-- The limits are checked before the activity time (`lastActivity` in localStorage) is refreshed, so the first touch after a long break logs out instead of extending the session
+- The limits are checked before the activity time (kept in memory) is refreshed, so the first touch after a long break logs out instead of extending the session
 - `interceptors/auth.interceptor.ts` sends the user back to login on a 401/403 (except for the `/auth/` calls)
-- Logging out runs `localStorage.clear()`, which also removes the offline data cache
+- Logging out locks the vault (`VaultService.lock()`) and does a hard navigation to `/login`, so nothing stays in memory; the encrypted data stays on the device
+- **Never call `localStorage` directly for data.** Everything goes through `VaultService` (`src/app/security/`): the login password derives the key (scrypt), values are XChaCha20-Poly1305 sealed and stored under hashed names. Only `appContext` and the duress check `itb-ui` are plain. Offline queue payloads are sealed too (`OfflineStoreService`). See [DEVICE_SECURITY.md](../DEVICE_SECURITY.md)
+- `AuthService.signIn()` first checks the **duress code** (`DuressService`): a match runs `DeviceWipeService.wipeAndLeave()` (destroy the vault key first, then storage, IndexedDB, caches, service worker) and goes to `/arcade` (pinball). Tests: `security/*.spec.ts`, `arcade/pinball-engine.spec.ts`
+- Without a token (server unreachable) the app works from the saved data (`isOfflineSession()`); `OfflineSyncService` sends the queue only when a token exists
 
 **Setup** (see [AUTHENTICATION.md](../AUTHENTICATION.md)):
 1. Create `backend/.env` with `MONGODB_URI`, `JWT_SECRET`, `PORT`
@@ -132,7 +135,7 @@ this.http.get<Race[]>(`${this.apiUrl}/meetings/${meetingName}/races`)
 ```
 
 ### Recent Clients Service
-[recent-clients.service.ts](../src/app/services/recent-clients.service.ts) manages localStorage for client name autocomplete:
+[recent-clients.service.ts](../src/app/services/recent-clients.service.ts) loads the client names for autocomplete from the API (the saved copy, used offline, is in the encrypted vault):
 ```typescript
 await this.recentClientsService.addClient(clientName);  // Adds to recent list
 this.recentClients = await this.recentClientsService.loadRecentClients();

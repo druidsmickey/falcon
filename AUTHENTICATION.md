@@ -21,8 +21,10 @@ How users, login and sessions work, and how to create the first user.
 "Not used" means no click, tap, key press or typing in the app. Moving the mouse or scrolling counts only while the window has focus. So all of these end the session after 4 minutes: sitting idle, a hidden tab, a minimised window, a window left on a second screen, the computer sleeping, or the browser being closed and reopened. The first click after such a break logs you out; it does not extend the session.
 
 Things to know:
-- Logging out clears the data the browser saved for offline use (cached races, params and bets). Bets queued in the offline outbox (IndexedDB) are kept and sent after the next login.
-- Because the login lasts 1 hour, the app cannot be used offline for longer than about an hour after logging in.
+- The login token is kept **in memory only**. Logging out (or the idle or hour limit, or reloading the page) locks the app: the data saved in the browser stays, but it is encrypted with the login password and only opens after you type it again. See [DEVICE_SECURITY.md](DEVICE_SECURITY.md).
+- With the server unreachable, the password still opens the saved data on the device and you can keep entering bets; they are sent after the next login with the server reachable.
+- Typing the **duress code** in the password field wipes the device and opens a pinball game.
+- A session started without the server also ends after 1 hour or 4 minutes without use, then asks for the password again.
 - Watching races without touching the app for 4 minutes logs you out.
 
 ## Creating the first user

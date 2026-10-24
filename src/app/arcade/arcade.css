@@ -1,0 +1,66 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #05070f;
+}
+
+.arcade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 16px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+h1 {
+  margin: 0;
+  color: #e2e8f0;
+  font: 700 1.1rem/1.2 sans-serif;
+  letter-spacing: 0.4em;
+}
+
+.table {
+  height: min(70vh, 700px);
+  aspect-ratio: 400 / 700;
+  max-width: 100%;
+  border: 2px solid #1e293b;
+  border-radius: 12px;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);
+}
+
+.pads {
+  display: flex;
+  gap: 10px;
+  width: min(92vw, 420px);
+}
+
+.pad {
+  flex: 1;
+  min-height: 60px;
+  border: none;
+  border-radius: 12px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font: 700 1.2rem sans-serif;
+  touch-action: none;
+}
+
+.pad:active {
+  background: #334155;
+}
+
+.launch {
+  flex: 1.4;
+  background: #b45309;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+}
+
+.hint {
+  margin: 0;
+  color: #64748b;
+  font: 0.8rem sans-serif;
+}

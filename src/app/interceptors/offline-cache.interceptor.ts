@@ -1,29 +1,18 @@
 import { HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest, HttpResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { Observable, catchError, of, tap, throwError } from 'rxjs';
+import { VaultService } from '../security/vault.service';
 
-const CACHE_PREFIX = 'itb-offline-http-v1';
+// The copies of the answers are kept in the encrypted vault, under a name made from the address. While
+// the vault is locked nothing is saved or read.
+const cacheName = (req: HttpRequest<unknown>): string => `http:${req.urlWithParams}`;
 
-function cacheKey(req: HttpRequest<unknown>): string {
-  return `${CACHE_PREFIX}:${req.urlWithParams}`;
+function writeCache(vault: VaultService, req: HttpRequest<unknown>, body: unknown): void {
+  vault.setItem(cacheName(req), body);
 }
 
-function writeCache(req: HttpRequest<unknown>, body: unknown): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    localStorage.setItem(cacheKey(req), JSON.stringify(body));
-  } catch {
-    // Ignore quota/private mode failures, app will still use memory/network path.
-  }
-}
-
-function readCache(req: HttpRequest<unknown>): unknown | null {
-  if (typeof localStorage === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(cacheKey(req));
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+function readCache(vault: VaultService, req: HttpRequest<unknown>): unknown | null {
+  return vault.getItem<unknown>(cacheName(req));
 }
 
 function shouldTryOfflineFallback(error: unknown): boolean {
@@ -34,6 +23,7 @@ function shouldTryOfflineFallback(error: unknown): boolean {
 }
 
 export const offlineCacheInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> => {
+  const vault = inject(VaultService);
   const isApiGet = req.method === 'GET' && req.url.includes('/api/');
 
   if (!isApiGet) {
@@ -43,7 +33,7 @@ export const offlineCacheInterceptor: HttpInterceptorFn = (req: HttpRequest<unkn
   return next(req).pipe(
     tap((event) => {
       if (event instanceof HttpResponse) {
-        writeCache(req, event.body);
+        writeCache(vault, req, event.body);
       }
     }),
     catchError((error) => {
@@ -51,7 +41,7 @@ export const offlineCacheInterceptor: HttpInterceptorFn = (req: HttpRequest<unkn
         return throwError(() => error);
       }
 
-      const cachedBody = readCache(req);
+      const cachedBody = readCache(vault, req);
       if (cachedBody === null) {
         return throwError(() => error);
       }

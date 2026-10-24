@@ -88,3 +88,22 @@
 }
 
 /* No top margin present in this file. No changes needed. */
+
+.notice {
+  margin: 0 0 12px;
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.link-button {
+  display: block;
+  margin: 14px auto 0;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: #1976d2;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+}

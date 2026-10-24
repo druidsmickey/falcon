@@ -3,6 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Bet, BetRequest, HorseParam, SelectedRace } from '../models';
+import { VaultService } from '../security/vault.service';
+import { AuthService } from './auth.service';
 import { OfflineStoreService } from './offline-store.service';
 
 /** What happened to a bet that was sent with submitBet(). */
@@ -24,40 +26,29 @@ export class MeetingDataService {
   private http = inject(HttpClient);
   private offlineStore = inject(OfflineStoreService);
   private apiUrl = `${environment.apiUrl}/api`;
-  private cachePrefix = 'itb-cache-v1';
+  private vault = inject(VaultService);
+  private auth = inject(AuthService);
 
   // Cached promises – multiple callers share the same in-flight request
   private _selectedRaces: Promise<SelectedRace[]> | null = null;
   private _params: Promise<HorseParam[]> | null = null;
   private _bets: Promise<Bet[]> | null = null;
   private _lastBet: Promise<Bet | null> | null = null;
-  private _meetingName = this.readCache<string>('meetingName') || '';
+  // set when the races are read (the saved copy is encrypted and cannot be read before the login)
+  private _meetingName = '';
 
-  private cacheKey(name: string): string {
-    return `${this.cachePrefix}:${name}`;
-  }
-
+  // The saved copy of the data lives in the encrypted vault, so it can only be read after logging in.
   private writeCache(name: string, value: unknown): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(this.cacheKey(name), JSON.stringify(value));
-    } catch {
-      // Ignore storage quota/private mode errors; memory cache still works.
-    }
+    this.vault.setItem(`cache:${name}`, value);
   }
 
   private readCache<T>(name: string): T | null {
-    if (typeof localStorage === 'undefined') return null;
-    try {
-      const raw = localStorage.getItem(this.cacheKey(name));
-      return raw ? (JSON.parse(raw) as T) : null;
-    } catch {
-      return null;
-    }
+    return this.vault.getItem<T>(`cache:${name}`);
   }
 
+  /** True when the server can be used (a login token exists). Without one, only the saved copy is used. */
   private isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+    return this.auth.hasToken();
   }
 
   /** Selected races (cached). */

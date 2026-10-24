@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { OfflineStoreService } from './offline-store.service';
+import { AuthService } from './auth.service';
 import { MeetingDataService } from './meeting-data.service';
 
 @Injectable({ providedIn: 'root' })
@@ -9,6 +10,7 @@ export class OfflineSyncService {
   private http = inject(HttpClient);
   private store = inject(OfflineStoreService);
   private meetingData = inject(MeetingDataService);
+  private auth = inject(AuthService);
   private apiUrl = `${environment.apiUrl}/api`;
   private isSyncing = false;
   private syncState = signal({
@@ -60,6 +62,12 @@ export class OfflineSyncService {
 
   async syncOnce(): Promise<void> {
     if (this.isSyncing) return;
+    // Sending needs the login token. After working offline from the saved data the waiting items are sent
+    // once the user has logged in again with the server reachable.
+    if (!this.auth.hasToken()) {
+      await this.refreshState();
+      return;
+    }
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
     this.isSyncing = true;

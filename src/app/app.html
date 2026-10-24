@@ -1,3 +1,11 @@
+@if (auth.isOfflineSession()) {
+  <div class="offline-session-banner" role="status">
+    The server cannot be reached: you are working from the data saved on this device. Bets and changes are
+    kept and sent after you log in again with the server reachable.
+  </div>
+}
+
+@for (key of [refreshKey()]; track key) {
 <mat-tab-group [disablePagination]="true">
   <mat-tab label="Entry">
     <ng-template matTabContent>
@@ -52,6 +60,7 @@
   <mat-tab label="Password">
     <ng-template matTabContent>
       <app-change-password></app-change-password>
+      <app-device-security></app-device-security>
     </ng-template>
   </mat-tab>
   <mat-tab label="">
@@ -104,3 +113,4 @@
     </ng-template>
   </mat-tab>
 </mat-tab-group>
+}

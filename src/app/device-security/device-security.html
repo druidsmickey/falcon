@@ -1,0 +1,46 @@
+<div class="device-security">
+  <h2>This device</h2>
+
+  <section class="block">
+    <h3>Duress code</h3>
+    <p class="help">
+      If you are ever forced to unlock this device, type this code instead of your password on the login
+      page. The app then <strong>erases everything stored on the device</strong> and shows a game. The data
+      on the server is not touched: logging in again with your real password brings it back.
+    </p>
+    <p class="status">
+      Status: <strong>{{ duressIsSet() ? 'set' : 'not set' }}</strong>
+    </p>
+
+    <form [formGroup]="form" (ngSubmit)="saveDuressCode()">
+      <label for="duress-code">{{ duressIsSet() ? 'New duress code' : 'Duress code' }}</label>
+      <input id="duress-code" type="password" formControlName="code" autocomplete="off" class="field">
+
+      <label for="duress-confirm">Repeat the code</label>
+      <input id="duress-confirm" type="password" formControlName="confirm" autocomplete="off" class="field">
+
+      <button type="submit" class="primary" [disabled]="busy()">
+        {{ duressIsSet() ? 'Change duress code' : 'Set duress code' }}
+      </button>
+      @if (duressIsSet()) {
+        <button type="button" class="secondary" [disabled]="busy()" (click)="removeDuressCode()">Remove duress code</button>
+      }
+    </form>
+  </section>
+
+  <section class="block">
+    <h3>Erase data on this device</h3>
+    <p class="help">
+      Removes the saved data, the login and everything waiting to be sent from this device. Use it before
+      giving the device to someone else. The data on the server is not touched.
+    </p>
+    <button type="button" class="danger" [disabled]="busy()" (click)="eraseDevice()">Erase this device</button>
+  </section>
+
+  @if (message()) {
+    <div class="message" role="status">{{ message() }}</div>
+  }
+  @if (error()) {
+    <div class="error" role="alert">{{ error() }}</div>
+  }
+</div>

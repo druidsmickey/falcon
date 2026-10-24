@@ -1,10 +1,16 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import Dexie, { Table } from 'dexie';
 import { Bet } from '../models';
+import { VaultService } from '../security/vault.service';
 
 export type OutboxType = 'create-bet' | 'save-params' | 'save-meeting-races';
 export type OutboxStatus = 'pending' | 'conflict' | 'failed';
 
+/**
+ * One waiting save. Everything that says what was saved (`payload`) is encrypted with the vault; the
+ * rest (kind, status, counts) is needed to show the sync state while the vault is locked and says nothing
+ * about the data.
+ */
 export interface OutboxItem {
   id?: number;
   type: OutboxType;
@@ -14,6 +20,9 @@ export interface OutboxItem {
   status: OutboxStatus;
   lastError?: string;
 }
+
+/** The name the outbox payloads are sealed under (they are bound to it, like every vault value). */
+const PAYLOAD_NAME = 'outbox';
 
 class OfflineDb extends Dexie {
   outbox!: Table<OutboxItem, number>;
@@ -32,6 +41,7 @@ class OfflineDb extends Dexie {
 @Injectable({ providedIn: 'root' })
 export class OfflineStoreService {
   private db = new OfflineDb();
+  private vault = inject(VaultService);
 
   generateRequestId(): string {
     if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -41,10 +51,10 @@ export class OfflineStoreService {
     return `req_${Date.now()}_${rand}`;
   }
 
-  async queueBet(payload: unknown): Promise<void> {
+  private async queue(type: OutboxType, payload: unknown): Promise<void> {
     const item: OutboxItem = {
-      type: 'create-bet',
-      payload,
+      type,
+      payload: this.vault.seal(PAYLOAD_NAME, payload),
       createdAt: new Date().toISOString(),
       attempts: 0,
       status: 'pending'
@@ -52,41 +62,44 @@ export class OfflineStoreService {
     await this.db.outbox.add(item);
   }
 
-  async queueParams(payload: unknown): Promise<void> {
-    const item: OutboxItem = {
-      type: 'save-params',
-      payload,
-      createdAt: new Date().toISOString(),
-      attempts: 0,
-      status: 'pending'
-    };
-    await this.db.outbox.add(item);
+  queueBet(payload: unknown): Promise<void> {
+    return this.queue('create-bet', payload);
   }
 
-  async queueMeetingRaces(payload: unknown): Promise<void> {
-    const item: OutboxItem = {
-      type: 'save-meeting-races',
-      payload,
-      createdAt: new Date().toISOString(),
-      attempts: 0,
-      status: 'pending'
-    };
-    await this.db.outbox.add(item);
+  queueParams(payload: unknown): Promise<void> {
+    return this.queue('save-params', payload);
   }
 
+  queueMeetingRaces(payload: unknown): Promise<void> {
+    return this.queue('save-meeting-races', payload);
+  }
+
+  /**
+   * The waiting items with their payload opened. Items that cannot be opened (the vault is locked, or the
+   * item is damaged) are left out. Items written by an older version in plain text are encrypted now.
+   */
   async getPendingItems(): Promise<OutboxItem[]> {
     const items: OutboxItem[] = await this.db.outbox.toArray();
-    return items
-      .filter((item: OutboxItem) => item.status === 'pending' || item.status === 'failed')
-      .sort((a: OutboxItem, b: OutboxItem) => a.createdAt.localeCompare(b.createdAt));
+    const result: OutboxItem[] = [];
+
+    for (const item of items.filter(i => i.status === 'pending' || i.status === 'failed')) {
+      if (typeof item.payload === 'string') {
+        const payload = this.vault.open<unknown>(PAYLOAD_NAME, item.payload);
+        if (payload !== null) result.push({ ...item, payload });
+      } else if (item.payload !== undefined && this.vault.isUnlocked() && item.id !== undefined) {
+        // written in plain text by an older version
+        await this.db.outbox.update(item.id, { payload: this.vault.seal(PAYLOAD_NAME, item.payload) });
+        result.push(item);
+      }
+    }
+
+    return result.sort((a: OutboxItem, b: OutboxItem) => a.createdAt.localeCompare(b.createdAt));
   }
 
   /** Bets queued while offline that have not reached the server yet (rejected ones are not included). */
   async getPendingBets(): Promise<Bet[]> {
-    const items: OutboxItem[] = await this.db.outbox.toArray();
-    return items
-      .filter((item: OutboxItem) => item.type === 'create-bet' && (item.status === 'pending' || item.status === 'failed'))
-      .map((item: OutboxItem) => item.payload as Bet);
+    const items = await this.getPendingItems();
+    return items.filter(item => item.type === 'create-bet').map(item => item.payload as Bet);
   }
 
   async markSynced(id: number): Promise<void> {
@@ -113,6 +126,7 @@ export class OfflineStoreService {
     });
   }
 
+  /** The counts need no key, so they can be shown while the vault is locked. */
   async getStats(): Promise<{ pending: number; conflict: number; failed: number }> {
     const [pending, conflict, failed] = await Promise.all([
       this.db.outbox.where('status').equals('pending').count(),
@@ -120,5 +134,15 @@ export class OfflineStoreService {
       this.db.outbox.where('status').equals('failed').count(),
     ]);
     return { pending, conflict, failed };
+  }
+
+  /** How many saves still wait to be sent (whatever their state), without needing a key. */
+  async countWaiting(): Promise<number> {
+    return this.db.outbox.count();
+  }
+
+  /** Removes the whole queue from the device. */
+  async deleteDatabase(): Promise<void> {
+    await this.db.delete();
   }
 }

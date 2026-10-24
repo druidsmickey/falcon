@@ -11,6 +11,7 @@ import { Params } from './params/params';
 import { Init } from './init/init';
 import { Merge } from './merge/merge';
 import { ChangePassword } from './change-password/change-password';
+import { DeviceSecurity } from './device-security/device-security';
 import { Whatsapp } from './whatsapp/whatsapp';
 import { AuthService } from './services/auth.service';
 import { OfflineSyncService } from './services/offline-sync.service';
@@ -18,7 +19,7 @@ import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword],
+  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword, DeviceSecurity],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -26,7 +27,10 @@ export class App {
   protected readonly title = signal('itb');
   protected readonly isOnline = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
   protected readonly checkingConnection = signal(false);
-  private auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
+  // Raising this number builds all the tabs again, so that they show the data that was just synced. A
+  // page reload cannot be used for that: it would lock the app (the key lives in memory only).
+  protected readonly refreshKey = signal(0);
   private offlineSync = inject(OfflineSyncService);
   protected readonly syncState = this.offlineSync.state;
   private connectivityTimer: ReturnType<typeof setInterval> | null = null;
@@ -47,8 +51,8 @@ export class App {
       }, 10000);
 
       window.addEventListener('itb-sync-refresh-needed', () => {
-        // Reload once after successful push+pull so all tabs render latest server data.
-        window.location.reload();
+        // After a successful push and pull build the tabs again so that they render the latest server data.
+        this.refreshKey.update(key => key + 1);
       });
     }
 
