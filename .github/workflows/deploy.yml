@@ -37,7 +37,14 @@ jobs:
       - name: Install dependencies
         run: |
           rm -rf node_modules package-lock.json
-          npm install --no-audit --no-fund
+          set +e
+          out=$( { node -v; npm -v; npm install --no-audit --no-fund; } 2>&1 )
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "::error title=npm-install failed::$(echo "$out" | tail -40 | sed -e :a -e N -e "$!ba" -e "s/
+/%0A/g")"
+          fi
+          exit $code
 
       - name: Build frontend (${{ matrix.app.name }})
         run: |
