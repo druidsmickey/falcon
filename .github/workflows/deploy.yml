@@ -41,8 +41,7 @@ jobs:
           out=$( { node -v; npm -v; npm install --no-audit --no-fund; } 2>&1 )
           code=$?
           if [ $code -ne 0 ]; then
-            echo "::error title=npm-install failed::$(echo "$out" | tail -40 | sed -e :a -e N -e "$!ba" -e "s/
-/%0A/g")"
+            echo "::error title=npm-install failed::$(echo "$out" | tail -40 | awk 'BEGIN{ORS="%0A"}{print}')"
           fi
           exit $code
 
