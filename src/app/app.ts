@@ -14,6 +14,7 @@ import { ChangePassword } from './change-password/change-password';
 import { Whatsapp } from './whatsapp/whatsapp';
 import { AuthService } from './services/auth.service';
 import { OfflineSyncService } from './services/offline-sync.service';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -68,22 +69,23 @@ export class App {
     this.checkingConnection.set(false);
   }
 
+  // Online means the app can reach its own server (the one it saves to and syncs with), not just
+  // the wider internet. ngsw-bypass keeps the service worker from answering with a saved copy.
   private async probeInternet(): Promise<boolean> {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
 
-      await fetch('https://www.gstatic.com/generate_204', {
+    try {
+      const response = await fetch(`${environment.apiUrl}/health?ngsw-bypass=true`, {
         method: 'GET',
         cache: 'no-store',
-        mode: 'no-cors',
         signal: controller.signal,
       });
-
-      clearTimeout(timeout);
-      return true;
+      return response.ok;
     } catch {
       return false;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

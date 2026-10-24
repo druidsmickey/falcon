@@ -15,6 +15,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import * as QRCode from 'qrcode';
 import { environment } from '../../environments/environment';
 
 interface Contact {
@@ -78,6 +79,11 @@ export class Whatsapp implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
   
+  // The QR code is drawn here in the browser: the text that links a device to WhatsApp must not be
+  // sent to an outside website.
+  protected qrImage = signal('');
+  private lastQrText: string | null = null;
+
   protected status = signal<WhatsAppStatus>({ status: 'disconnected', isReady: false, qrCode: null });
   protected contacts = signal<Contact[]>([]);
   protected selectedContacts = signal<Set<string>>(new Set());
@@ -133,6 +139,7 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.http.get<WhatsAppStatus>(`${this.apiUrl}/api/whatsapp/status`).subscribe({
       next: (status) => {
         this.status.set(status);
+        this.updateQrImage(status.qrCode);
       },
       error: (error) => {
         console.error('Error checking status:', error);
@@ -375,13 +382,21 @@ export class Whatsapp implements OnInit, OnDestroy {
     }
   }
 
-  protected getQrCodeUrl(): string {
-    const qrCode = this.status().qrCode;
-    if (!qrCode) return '';
-    
-    // Properly encode the QR code data for the URL
-    const encodedQrCode = encodeURIComponent(qrCode);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedQrCode}`;
+  private updateQrImage(qrText: string | null) {
+    if (qrText === this.lastQrText) return;
+    this.lastQrText = qrText;
+
+    if (!qrText) {
+      this.qrImage.set('');
+      return;
+    }
+
+    QRCode.toDataURL(qrText, { width: 300, margin: 1 })
+      .then(image => {
+        // Ignore the result if a newer code arrived while this one was being drawn
+        if (this.lastQrText === qrText) this.qrImage.set(image);
+      })
+      .catch(error => console.error('Error drawing the QR code:', error));
   }
 
   protected fetchWhatsAppContacts() {

@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { environment } from '../../environments/environment';
+import { applyRule4, rule4Applies, rule4Percentages } from '../services/settlement';
 
 interface ClientReport {
   clientName: string;
@@ -215,11 +216,7 @@ export class Merge implements OnInit {
         // Apply rule4 deductions that occurred AFTER this bet was placed
         const raceKey = `${bet.meetingName}-${bet.raceNum}`;
         const rule4s = this.rule4Info.get(raceKey) || [];
-        rule4s.forEach(r4 => {
-          if (betTime < r4.date) {
-            payout = payout * (1 - r4.deduct / 100);
-          }
-        });
+        payout = applyRule4(payout, betTime, rule4s);
         
         // Adjust for dead heat
         const winnerCount = this.allParams.filter(p => 
@@ -434,11 +431,7 @@ export class Merge implements OnInit {
         const raceKey = `${bet.meetingName}-${bet.raceNum}`;
         const rule4s = this.rule4Info.get(raceKey) || [];
         
-        rule4s.forEach(r4 => {
-          if (betTime < r4.date) {
-            payout = payout * (1 - r4.deduct / 100);
-          }
-        });
+        payout = applyRule4(payout, betTime, rule4s);
         
         // Adjust for dead heat
         const winnerCount = this.allParams.filter(p => 
@@ -479,11 +472,7 @@ export class Merge implements OnInit {
         const raceKey = `${bet.meetingName}-${bet.raceNum}`;
         const rule4s = this.rule4Info.get(raceKey) || [];
         
-        rule4s.forEach(r4 => {
-          if (betTime < r4.date) {
-            payout = payout * (1 - r4.deduct / 100);
-          }
-        });
+        payout = applyRule4(payout, betTime, rule4s);
         
         // Adjust for dead heat
         const winnerCount = this.allParams.filter(p => 
@@ -662,11 +651,7 @@ export class Merge implements OnInit {
     const raceKey = `${bet.meetingName}-${bet.raceNum}`;
     const rule4s = this.rule4Info.get(raceKey) || [];
     
-    rule4s.forEach(r4 => {
-      if (betTime < r4.date) {
-        payout = payout * (1 - r4.deduct / 100);
-      }
-    });
+    payout = applyRule4(payout, betTime, rule4s);
     
     return payout;
   }
@@ -676,7 +661,7 @@ export class Merge implements OnInit {
     const raceKey = `${bet.meetingName}-${bet.raceNum}`;
     const rule4s = this.rule4Info.get(raceKey) || [];
     
-    return rule4s.some(r4 => betTime < r4.date);
+    return rule4Applies(betTime, rule4s);
   }
 
   getRule4Deductions(bet: any): string {
@@ -684,9 +669,7 @@ export class Merge implements OnInit {
     const raceKey = `${bet.meetingName}-${bet.raceNum}`;
     const rule4s = this.rule4Info.get(raceKey) || [];
     
-    const deductions = rule4s
-      .filter(r4 => betTime < r4.date)
-      .map(r4 => `${r4.deduct}%`);
+    const deductions = rule4Percentages(betTime, rule4s).map(deduct => `${deduct}%`);
     
     return deductions.length > 0 ? `(${deductions.join(' ')})` : '';
   }

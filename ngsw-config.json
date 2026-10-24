@@ -36,10 +36,10 @@
         "http://104.248.87.98/api-detori-2027/**"
       ],
       "cacheConfig": {
-        "strategy": "performance",
+        "strategy": "freshness",
         "maxSize": 100,
         "maxAge": "6h",
-        "timeout": "5s"
+        "timeout": "8s"
       }
     }
   ]

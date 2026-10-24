@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { environment } from '../../environments/environment';
 import { MeetingDataService } from '../services/meeting-data.service';
+import { applyRule4, rule4Applies, rule4Percentages } from '../services/settlement';
 
 interface ClientReport {
   clientName: string;
@@ -269,11 +270,7 @@ export class Reports implements OnInit {
         
         // Apply rule4 deductions that occurred AFTER this bet was placed
         const rule4s = this.rule4Info.get(bet.raceNum) || [];
-        rule4s.forEach(r4 => {
-          if (betTime < r4.date) {
-            payout = payout * (1 - r4.deduct / 100);
-          }
-        });
+        payout = applyRule4(payout, betTime, rule4s);
         
         // Adjust for dead heat
         const winnerCount = this.winnerCountByRace.get(bet.raceNum) || 0;
@@ -350,11 +347,7 @@ export class Reports implements OnInit {
           payout = payout / winnerCount;
         }
         
-        rule4s.forEach(r4 => {
-          if (betTime < r4.date) {
-            payout = payout * (1 - r4.deduct / 100);
-          }
-        });
+        payout = applyRule4(payout, betTime, rule4s);
         
         totalPayout += payout;
       }
@@ -479,11 +472,7 @@ export class Reports implements OnInit {
     const betTime = new Date(bet.betTime || bet.createdAt);
     const rule4s = this.rule4Info.get(bet.raceNum) || [];
     
-    rule4s.forEach(r4 => {
-      if (betTime < r4.date) {
-        payout = payout * (1 - r4.deduct / 100);
-      }
-    });
+    payout = applyRule4(payout, betTime, rule4s);
     
     return payout;
   }
@@ -493,7 +482,7 @@ export class Reports implements OnInit {
     const rule4s = this.rule4Info.get(bet.raceNum) || [];
     
     // Check if any rule4 deduction applies (bet was before rule4 date)
-    return rule4s.some(r4 => betTime < r4.date);
+    return rule4Applies(betTime, rule4s);
   }
 
   getRule4Deductions(bet: any): string {
@@ -501,9 +490,7 @@ export class Reports implements OnInit {
     const rule4s = this.rule4Info.get(bet.raceNum) || [];
     
     // Get all applicable deductions
-    const deductions = rule4s
-      .filter(r4 => betTime < r4.date)
-      .map(r4 => `${r4.deduct}%`);
+    const deductions = rule4Percentages(betTime, rule4s).map(deduct => `${deduct}%`);
     
     return deductions.length > 0 ? `(${deductions.join(' ')})` : '';
   }

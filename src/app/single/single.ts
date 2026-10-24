@@ -12,6 +12,7 @@ import { RecentClientsService } from '../services/recent-clients.service';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
 import { environment } from '../../environments/environment';
+import { applyRule4 } from '../services/settlement';
 
 interface Horse {
   horseNum: number;
@@ -249,11 +250,7 @@ export class Single implements OnInit {
           const betTime = new Date(b.betTime || b.createdAt);
           
           // Apply rule4 deductions that occurred AFTER this bet was placed
-          rule4Info.forEach(r4 => {
-            if (betTime < r4.date) {
-              adjustedBooks = adjustedBooks * (1 - r4.deduct / 100);
-            }
-          });
+          adjustedBooks = applyRule4(adjustedBooks, betTime, rule4Info);
           
           horse.books += adjustedBooks;
         }
@@ -273,11 +270,7 @@ export class Single implements OnInit {
           const betTime = new Date(bet.betTime || bet.createdAt);
           
           // Apply only rule4 deductions that occurred AFTER this bet was placed
-          rule4Info.forEach(r4 => {
-            if (betTime < r4.date) {
-              payout = payout * (1 - r4.deduct / 100);
-            }
-          });
+          payout = applyRule4(payout, betTime, rule4Info);
           
           totalPayout += payout;
         });

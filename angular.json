@@ -17,6 +17,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "allowedCommonJsDependencies": ["qrcode"],
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "serviceWorker": "ngsw-config.json",

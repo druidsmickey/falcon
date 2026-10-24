@@ -108,7 +108,8 @@ export class OfflineSyncService {
           const status = error?.status;
           const message = error?.error?.error || error?.message || 'Sync failed';
           if (item.id != null) {
-            if (status === 409) {
+            // 409: changed elsewhere. 400: the server rejected the data. Neither is fixed by sending it again.
+            if (status === 409 || status === 400) {
               await this.store.markConflict(item.id, message);
               conflictCount += 1;
             } else {
