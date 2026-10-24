@@ -9,6 +9,7 @@ const multer = require('multer');
 const WhatsappContact = require('../models/whatsappContact');
 const WhatsappGroup = require('../models/whatsappGroup');
 const WhatsappMessage = require('../models/whatsappMessage');
+const whatsappInbox = require('../lib/whatsappInbox');
 
 // Configure multer for memory storage with 50MB limit
 const upload = multer({ 
@@ -160,6 +161,9 @@ function initializeClient() {
     }),
     puppeteer: puppeteerConfig
   });
+
+  // read the bets sent by the contacts that were chosen (they wait in the inbox until confirmed)
+  whatsappInbox.attach(client);
 
   console.log('WhatsApp client created with config:', {
     hasExecutablePath: !!chromePath,

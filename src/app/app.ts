@@ -13,13 +13,14 @@ import { Merge } from './merge/merge';
 import { ChangePassword } from './change-password/change-password';
 import { DeviceSecurity } from './device-security/device-security';
 import { Whatsapp } from './whatsapp/whatsapp';
+import { WhatsappInbox } from './whatsapp-inbox/whatsapp-inbox';
 import { AuthService } from './services/auth.service';
 import { OfflineSyncService } from './services/offline-sync.service';
 import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword, DeviceSecurity],
+  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword, DeviceSecurity, WhatsappInbox],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

@@ -1,0 +1,126 @@
+<div class="inbox">
+  <header class="top">
+    <h2>WhatsApp inbox</h2>
+    <button type="button" class="ghost" (click)="refresh()">Refresh</button>
+  </header>
+
+  @if (odds(); as list) {
+    <p class="context">
+      Odds list received: <strong>race {{ list.raceNum }}</strong>, {{ list.runners }} runners
+      <span class="time">({{ list.sentAt | date: 'HH:mm' }})</span>
+    </p>
+  } @else {
+    <p class="context warn">No odds list received yet, so the race of a bet is not known. Send the odds list to see it here.</p>
+  }
+
+  @if (error()) {
+    <p class="banner" role="alert">{{ error() }}</p>
+  }
+
+  <details class="listen">
+    <summary>Who I listen to ({{ listened() }})</summary>
+    @if (contacts().length === 0) {
+      <p class="hint">No contacts saved yet. Import them in the WhatsApp tab first.</p>
+    }
+    @for (contact of contacts(); track contact.id) {
+      <div class="contact">
+        <label class="check">
+          <input type="checkbox" [checked]="contact.listen" (change)="setListen(contact, $any($event.target).checked)">
+          <span>{{ contact.name }}</span>
+        </label>
+        <input class="nick" type="text" placeholder="Nickname (else the name is used)" [value]="contact.nickname"
+               maxlength="100" (change)="setNickname(contact, $event)" [attr.aria-label]="'Nickname for ' + contact.name">
+      </div>
+    }
+  </details>
+
+  @if (loaded() && drafts().length === 0 && !error()) {
+    <p class="empty">Nothing waiting. Bets sent by the contacts you listen to will appear here.</p>
+  }
+
+  @for (draft of drafts(); track draft.id) {
+    <article class="card" [class.unsure]="draft.unsure">
+      <div class="head">
+        <input class="client" type="text" [value]="draft.clientName" (input)="setClient(draft, $event)"
+               [class.missing]="has(draft, 'client name')" aria-label="Client name">
+        <span class="time">{{ draft.sentAt | date: 'HH:mm' }}</span>
+      </div>
+
+      <blockquote class="said">{{ draft.text }}</blockquote>
+
+      @if (draft.issues.length > 0) {
+        <ul class="issues">
+          @for (issue of draft.issues; track issue) {
+            <li>{{ issue }}</li>
+          }
+        </ul>
+      }
+
+      <div class="row">
+        <label>Race
+          <input type="text" inputmode="numeric" [value]="shown(draft.raceNum)" (input)="setNumber(draft, 'raceNum', $event)"
+                 [class.missing]="has(draft, 'race')">
+        </label>
+        <label>Horse
+          <input type="text" inputmode="numeric" [value]="shown(draft.horseNum)" (input)="setNumber(draft, 'horseNum', $event)"
+                 [class.missing]="has(draft, 'horse') || has(draft, 'horse is not in this race')">
+        </label>
+        <span class="horse" [class.bad]="has(draft, 'horse is not in this race')">
+          @if (has(draft, 'horse is not in this race')) { not in this race } @else { {{ horseName(draft) }} }
+        </span>
+      </div>
+
+      <div class="kind" role="group" aria-label="Books or stake">
+        <button type="button" [class.on]="draft.kind === 'books'" [class.missing]="has(draft, 'books or stake')" (click)="setKind(draft, 'books')">Books</button>
+        <button type="button" [class.on]="draft.kind === 'stake'" [class.missing]="has(draft, 'books or stake')" (click)="setKind(draft, 'stake')">Stake</button>
+        @if (draft.kind === null && draft.amount !== null) {
+          <span class="amount">{{ draft.amount }} is books or a stake?</span>
+        }
+      </div>
+
+      @if (draft.kind === 'books') {
+        <div class="row">
+          <label>Books
+            <input type="text" inputmode="decimal" [value]="shown(draft.books)" (input)="setNumber(draft, 'books', $event)" [class.missing]="has(draft, 'books')">
+          </label>
+          <label>F500
+            <input type="text" inputmode="decimal" [value]="shown(draft.f500)" (input)="setNumber(draft, 'f500', $event)" [class.missing]="has(draft, 'F500')">
+          </label>
+        </div>
+      }
+      @if (draft.kind === 'stake') {
+        <div class="row">
+          <label>Stake
+            <input type="text" inputmode="decimal" [value]="shown(draft.stake)" (input)="setNumber(draft, 'stake', $event)" [class.missing]="has(draft, 'stake')">
+          </label>
+          <label>Odds
+            <input type="text" inputmode="decimal" [value]="shown(draft.odds100)" (input)="setNumber(draft, 'odds100', $event)" [class.missing]="has(draft, 'odds')">
+          </label>
+          @if (listOdds(draft) !== null && draft.odds100 !== listOdds(draft)) {
+            <button type="button" class="ghost small" (click)="useListOdds(draft)">List: {{ listOdds(draft) }}</button>
+          }
+        </div>
+      }
+
+      <div class="row">
+        <label>Tax
+          <input type="text" inputmode="decimal" [value]="shown(draft.tax)" (input)="setNumber(draft, 'tax', $event)" [class.missing]="has(draft, 'tax')">
+        </label>
+      </div>
+
+      @if (itemErrors()[draft.id]) {
+        <p class="banner" role="alert">{{ itemErrors()[draft.id] }}</p>
+      }
+
+      <div class="actions">
+        <button type="button" class="confirm" [disabled]="missing(draft).length > 0 || isBusy(draft)" (click)="confirm(draft)">
+          {{ isBusy(draft) ? 'Saving...' : 'Confirm' }}
+        </button>
+        <button type="button" class="ghost" [disabled]="isBusy(draft)" (click)="dismiss(draft)">Dismiss</button>
+      </div>
+      @if (missing(draft).length > 0) {
+        <p class="needs">Needs: {{ missing(draft).join(', ') }}</p>
+      }
+    </article>
+  }
+</div>

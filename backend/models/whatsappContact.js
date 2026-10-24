@@ -10,6 +10,18 @@ const whatsappContactSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  // the name bets from this contact are entered under (the contact name is used when empty)
+  nickname: {
+    type: String,
+    default: '',
+    trim: true,
+    maxlength: 100
+  },
+  // read the bets this contact sends
+  listen: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

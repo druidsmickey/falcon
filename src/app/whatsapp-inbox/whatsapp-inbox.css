@@ -1,0 +1,250 @@
+.inbox {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 8px 12px 80px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+h2 {
+  margin: 8px 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.context {
+  margin: 4px 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.9rem;
+}
+
+.context.warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.time {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.banner {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.empty,
+.hint {
+  color: #6b7280;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.hint {
+  padding: 6px 0;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  font: 600 0.95rem sans-serif;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ghost {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.ghost.small {
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 0.85rem;
+}
+
+.confirm {
+  flex: 1;
+  background: #16a34a;
+  color: #fff;
+}
+
+input[type='text'] {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input.missing,
+.kind button.missing {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.listen {
+  margin: 8px 0 14px;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.listen summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 160px;
+  min-height: 44px;
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+}
+
+.nick {
+  flex: 1 1 200px;
+}
+
+.card {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-left: 5px solid #16a34a;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.card.unsure {
+  border-left-color: #f59e0b;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.client {
+  font-weight: 700;
+}
+
+.said {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.issues {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: #b45309;
+  font-size: 0.85rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.row label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 90px;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.horse {
+  flex: 2 1 120px;
+  align-self: center;
+  font-weight: 600;
+  color: #334155;
+}
+
+.horse.bad {
+  color: #dc2626;
+}
+
+.kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.kind button {
+  flex: 0 0 auto;
+  min-width: 90px;
+  background: #e5e7eb;
+  border: 1px solid transparent;
+}
+
+.kind button.on {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.amount {
+  color: #b45309;
+  font-size: 0.85rem;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.needs {
+  margin: 6px 0 0;
+  color: #b45309;
+  font-size: 0.85rem;
+}
