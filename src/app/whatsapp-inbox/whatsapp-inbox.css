@@ -130,19 +130,23 @@ button.ghost:disabled {
 /* ---------------------------------------------------------------- saved bets (as the last bet of the Entry page) */
 
 .saved {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin: 8px 0 14px;
 }
 
 .saved-bet {
-  padding: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background: #f0f9ff;
   font-size: 0.975rem;
-  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .saved-bet.purchase {
@@ -179,20 +183,42 @@ button.ghost:disabled {
 /* ---------------------------------------------------------------- the message that was read */
 
 .read {
-  margin: 14px 0 4px;
   padding: 8px 10px;
   border-left: 5px solid #16a34a;
   border-radius: 8px;
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .read.unsure {
   border-left-color: #f59e0b;
 }
 
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 1.35rem;
+}
+
+.who {
+  color: #0f172a;
+}
+
+.said {
+  flex: 1;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.line .time {
+  font-size: 1rem;
+}
+
 .demo {
   display: inline-block;
-  margin-bottom: 4px;
+  margin-top: 4px;
   padding: 2px 8px;
   border-radius: 6px;
   background: #e0e7ff;
@@ -201,26 +227,11 @@ button.ghost:disabled {
   font-weight: 700;
 }
 
-.from {
-  font-weight: 600;
-  color: #334155;
-}
-
-.said {
-  margin: 4px 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: #e2e8f0;
-  font-family: ui-monospace, monospace;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .issues {
   margin: 4px 0 0;
   padding-left: 18px;
   color: #b45309;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 /* ---------------------------------------------------------------- the betslip (the same as the Entry page) */

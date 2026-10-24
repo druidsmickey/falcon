@@ -42,18 +42,15 @@
     <section class="saved" aria-label="Saved bets">
       @for (bet of saved(); track bet.id) {
         <div class="saved-bet" [class.purchase]="bet.stake < 0 || bet.books < 0">
-          <div><strong class="client">{{ bet.clientName }}</strong>
-            @if (bet.queued) { <span class="tag">queued, will be sent</span> }
-            @if (bet.demo) { <span class="tag demo-tag">demo, nothing saved</span> }
-          </div>
-          <div><strong class="horse-line">R{{ bet.raceNum }} H{{ bet.horseNum }} {{ bet.horseName }}</strong></div>
-          <div>
-            @if (bet.f500) {
-              <strong>{{ bet.books < 0 ? -bet.books : bet.books }} x {{ bet.f500 }}</strong>
-            } @else {
-              <strong>{{ bet.stake < 0 ? -bet.stake : bet.stake }} @ <span class="odds">{{ bet.odds100 }}</span></strong>
-            }
-          </div>
+          <strong class="client">{{ bet.clientName }}</strong>
+          <strong class="horse-line">R{{ bet.raceNum }} H{{ bet.horseNum }} {{ bet.horseName }}</strong>
+          @if (bet.f500) {
+            <strong>{{ bet.books < 0 ? -bet.books : bet.books }} x {{ bet.f500 }}</strong>
+          } @else {
+            <strong>{{ bet.stake < 0 ? -bet.stake : bet.stake }} @ <span class="odds">{{ bet.odds100 }}</span></strong>
+          }
+          @if (bet.queued) { <span class="tag">queued, will be sent</span> }
+          @if (bet.demo) { <span class="tag demo-tag">demo, nothing saved</span> }
         </div>
       }
     </section>
@@ -64,22 +61,6 @@
   }
 
   @for (draft of drafts(); track draft.id) {
-    <!-- the message as it was written, and what was read from it -->
-    <div class="read" [class.unsure]="draft.unsure">
-      @if (draft.demo) {
-        <span class="demo">DEMO: saving this saves nothing</span>
-      }
-      <div class="from">{{ draft.contactName }} <span class="time">{{ draft.sentAt | date: 'HH:mm' }}</span></div>
-      <blockquote class="said">{{ draft.text }}</blockquote>
-      @if (draft.issues.length > 0) {
-        <ul class="issues">
-          @for (issue of draft.issues; track issue) {
-            <li>{{ issue }}</li>
-          }
-        </ul>
-      }
-    </div>
-
     <!-- the same betslip as the Entry page, filled in from the message -->
     <mat-card class="betslip-card" [class.purchase-bg]="draft.purchase">
       <div class="form-grid">
@@ -136,6 +117,25 @@
             <mat-label>Tax</mat-label>
             <input matInput type="number" [value]="shown(draft.tax)" (input)="setNumber(draft, 'tax', $event)" [class.missing]="has(draft, 'tax')">
           </mat-form-field>
+        </div>
+
+        <!-- the message as it was written, on one line: who, what, when; and what was read from it -->
+        <div class="read" [class.unsure]="draft.unsure">
+          <div class="line">
+            <strong class="who">{{ draft.clientName }}</strong>
+            <span class="said">{{ draft.text }}</span>
+            <span class="time">{{ draft.sentAt | date: 'HH:mm' }}</span>
+          </div>
+          @if (draft.demo) {
+            <span class="demo">DEMO: saving this saves nothing</span>
+          }
+          @if (draft.issues.length > 0) {
+            <ul class="issues">
+              @for (issue of draft.issues; track issue) {
+                <li>{{ issue }}</li>
+              }
+            </ul>
+          }
         </div>
 
         @if (draft.kind === 'stake' && listOdds(draft) !== null && draft.odds100 !== listOdds(draft)) {
