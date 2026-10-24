@@ -1,119 +1,137 @@
-<div class="params-container">
-  <h2>{{ meetingName || 'Race Parameters' }}</h2>
+<div class="params-page">
+  <h2 class="page-title">{{ meetingName || 'Race Parameters' }}</h2>
 
-  <mat-card *ngIf="loading" class="loading-state">
-    <div class="loading-wrapper">
-      <mat-spinner diameter="42"></mat-spinner>
-      <p>Loading parameters...</p>
-    </div>
-  </mat-card>
+  @if (loading) {
+    <mat-card class="state-card">
+      <div class="loading-wrapper">
+        <mat-spinner diameter="42"></mat-spinner>
+        <p>Loading parameters...</p>
+      </div>
+    </mat-card>
+  }
 
-  <mat-card *ngIf="!loading && dataSource.length === 0" class="empty-state">
-    <p>No selected races found. Please select a meeting in the Init page first.</p>
-  </mat-card>
+  @if (!loading && dataSource.length === 0) {
+    <mat-card class="state-card">
+      <p>No selected races found. Please select a meeting in the Init page first.</p>
+    </mat-card>
+  }
 
-  <ng-container *ngIf="!loading">
-    <div *ngFor="let raceNum of raceNumbers" class="race-section">
-      <mat-card>
-        <h3>Race {{ raceNum }}</h3>
-        
-        <table mat-table [dataSource]="getRaceData(raceNum)" class="params-table">
-        
-        <!-- Horse Number Column -->
-        <ng-container matColumnDef="horseNum">
-          <th mat-header-cell *matHeaderCellDef>Horse #</th>
-          <td mat-cell *matCellDef="let row">
-            <mat-form-field appearance="outline" class="small-field">
-              <input matInput type="number" [(ngModel)]="row.horseNum" readonly>
-            </mat-form-field>
-          </td>
-        </ng-container>
+  @if (!loading && dataSource.length > 0) {
+    <p class="help">
+      Type the horse names (press Enter to go to the next one). If a horse is withdrawn, set its
+      <strong>Special</strong> or <strong>Rule 4</strong> time with <em>Now</em> or pick it, and
+      enter the Rule 4 deduction %.
+    </p>
 
-        <!-- Horse Name Column -->
-        <ng-container matColumnDef="horseName">
-          <th mat-header-cell *matHeaderCellDef>Horse Name</th>
-          <td mat-cell *matCellDef="let row; let i = index">
-            <mat-form-field appearance="outline" class="medium-field">
-              <input matInput 
-                     [(ngModel)]="row.horseName" 
-                     [id]="'horseName-' + row.rowIndex"
-                     (input)="onHorseNameInput(row)"
-                     (keydown)="onHorseNameKeydown($event, row.rowIndex)"
-                     placeholder="Enter horse name"
-                     class="uppercase-input">
-            </mat-form-field>
-          </td>
-        </ng-container>
+    <nav class="race-nav" aria-label="Jump to a race">
+      @for (raceNum of raceNumbers; track raceNum) {
+        <button type="button" class="race-chip" (click)="scrollToRace(raceNum)">R{{ raceNum }}</button>
+      }
+    </nav>
 
-        <!-- Special Date Column -->
-        <ng-container matColumnDef="special">
-          <th mat-header-cell *matHeaderCellDef>Special</th>
-          <td mat-cell *matCellDef="let row; let i = index">
-            <div class="datetime-container">
-              <mat-form-field appearance="outline" class="date-field">
-                <input matInput [matDatepicker]="specialPicker" [(ngModel)]="row.special" placeholder="Select date">
-                <mat-datepicker-toggle matSuffix [for]="specialPicker"></mat-datepicker-toggle>
-                <mat-datepicker #specialPicker></mat-datepicker>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="time-field">
-                <input matInput type="time" [ngModel]="getTimeString(row.special)" 
-                       (ngModelChange)="setTime(row, 'special', $event)" placeholder="Time">
-              </mat-form-field>
-              <button mat-icon-button (click)="clearDateTime(row, 'special')" 
-                      *ngIf="row.special" 
-                      class="clear-btn" 
-                      title="Clear special date/time">
-                C
+    @for (raceNum of raceNumbers; track raceNum) {
+      <mat-card class="race-card" [id]="'race-' + raceNum">
+        <h3 class="race-title">
+          Race {{ raceNum }}
+          <span class="race-meta">{{ countNamed(raceNum) }}/{{ getRaceData(raceNum).length }} named</span>
+        </h3>
+
+        @for (row of getRaceData(raceNum); track row.rowIndex) {
+          <div class="horse" [class.is-special]="!!row.special" [class.is-rule4]="!!row.rule4" [class.open]="isOpen(row)">
+            <span class="horse-num" aria-hidden="true">{{ row.horseNum }}</span>
+
+            <input
+              class="field horse-name"
+              type="text"
+              [id]="'horseName-' + row.rowIndex"
+              [attr.aria-label]="'Horse ' + row.horseNum + ' name, race ' + raceNum"
+              placeholder="Horse name"
+              autocomplete="off"
+              autocapitalize="characters"
+              enterkeyhint="next"
+              [(ngModel)]="row.horseName"
+              (input)="onHorseNameInput(row)"
+              (ngModelChange)="markDirty()"
+              (keydown.enter)="onHorseNameEnter($event, row.rowIndex)">
+
+            @if (!row.special && !row.rule4) {
+              <button
+                type="button"
+                class="toggle"
+                [attr.aria-expanded]="isOpen(row)"
+                [attr.aria-controls]="'withdrawals-' + row.rowIndex"
+                (click)="toggleRow(row)">
+                Withdrawal
               </button>
+            }
+
+            <div class="withdrawals" [id]="'withdrawals-' + row.rowIndex">
+              <div class="time-group">
+                <label class="group-label" [for]="'special-' + row.rowIndex">Special</label>
+                <div class="time-control">
+                  <input
+                    class="field"
+                    type="datetime-local"
+                    [id]="'special-' + row.rowIndex"
+                    [ngModel]="toInputValue(row.special)"
+                    (ngModelChange)="onDateTimeChange(row, 'special', $event)">
+                  <button type="button" class="mini" (click)="setNow(row, 'special')">Now</button>
+                  @if (row.special) {
+                    <button type="button" class="mini clear" aria-label="Clear special time" (click)="clearDateTime(row, 'special')">&#10005;</button>
+                  }
+                </div>
+              </div>
+
+              <div class="time-group">
+                <label class="group-label" [for]="'rule4-' + row.rowIndex">Rule 4</label>
+                <div class="time-control">
+                  <input
+                    class="field"
+                    type="datetime-local"
+                    [id]="'rule4-' + row.rowIndex"
+                    [ngModel]="toInputValue(row.rule4)"
+                    (ngModelChange)="onDateTimeChange(row, 'rule4', $event)">
+                  <button type="button" class="mini" (click)="setNow(row, 'rule4')">Now</button>
+                  @if (row.rule4) {
+                    <button type="button" class="mini clear" aria-label="Clear rule 4 time" (click)="clearDateTime(row, 'rule4')">&#10005;</button>
+                  }
+                </div>
+              </div>
+
+              @if (row.rule4) {
+                <div class="time-group deduct">
+                  <label class="group-label" [for]="'deduct-' + row.rowIndex">Deduct %</label>
+                  <input
+                    class="field"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    max="100"
+                    placeholder="e.g. 10"
+                    [class.needs-value]="!row.rule4deduct"
+                    [id]="'deduct-' + row.rowIndex"
+                    [ngModel]="row.rule4deduct"
+                    (ngModelChange)="onDeductChange(row, $event)">
+                </div>
+              }
             </div>
-          </td>
-        </ng-container>
 
-        <!-- Rule4 Date Column -->
-        <ng-container matColumnDef="rule4">
-          <th mat-header-cell *matHeaderCellDef>Rule 4</th>
-          <td mat-cell *matCellDef="let row; let i = index">
-            <div class="datetime-container">
-              <mat-form-field appearance="outline" class="date-field">
-                <input matInput [matDatepicker]="rule4Picker" [(ngModel)]="row.rule4" placeholder="Select date">
-                <mat-datepicker-toggle matSuffix [for]="rule4Picker"></mat-datepicker-toggle>
-                <mat-datepicker #rule4Picker></mat-datepicker>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="time-field">
-                <input matInput type="time" [ngModel]="getTimeString(row.rule4)" 
-                       (ngModelChange)="setTime(row, 'rule4', $event)" placeholder="Time">
-              </mat-form-field>
-              <button mat-icon-button (click)="clearDateTime(row, 'rule4')" 
-                      *ngIf="row.rule4" 
-                      class="clear-btn" 
-                      title="Clear rule4 date/time">
-                C
-              </button>
-            </div>
-          </td>
-        </ng-container>
-
-        <!-- Rule4 Deduct Column -->
-        <ng-container matColumnDef="rule4deduct">
-          <th mat-header-cell *matHeaderCellDef>Rule 4 Deduct</th>
-          <td mat-cell *matCellDef="let row">
-            <mat-form-field appearance="outline" class="small-field">
-              <input matInput type="number" [(ngModel)]="row.rule4deduct" placeholder="0">
-            </mat-form-field>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="['horseNum', 'horseName', 'special', 'rule4', 'rule4deduct']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['horseNum', 'horseName', 'special', 'rule4', 'rule4deduct'];"></tr>
-        </table>
+            @if (row.special) {
+              <span class="badge special">Withdrawn: Special</span>
+            }
+            @if (row.rule4) {
+              <span class="badge rule4">Withdrawn: Rule 4</span>
+            }
+          </div>
+        }
       </mat-card>
-    </div>
-  </ng-container>
+    }
 
-  <!-- Save Button -->
-  <div class="button-container" *ngIf="!loading && dataSource.length > 0">
-    <button mat-raised-button color="primary" (click)="saveParams()">
-      Save Parameters
-    </button>
-  </div>
+    <div class="save-bar">
+      <span class="save-status" [class.dirty]="dirty()" role="status" aria-live="polite">{{ statusText() }}</span>
+      <button mat-flat-button color="primary" class="save-btn" [disabled]="saving()" (click)="saveParams()">
+        {{ saving() ? 'Saving...' : 'Save parameters' }}
+      </button>
+    </div>
+  }
 </div>
