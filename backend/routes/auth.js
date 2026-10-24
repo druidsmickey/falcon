@@ -5,6 +5,7 @@ const Init = require("../models/init");
 const Params = require("../models/params");
 const Bets = require("../models/bets");
 const Report = require("../model/report");
+const { createLoginLimiters } = require("../lib/ratelimit");
 
 const router = express.Router();
 
@@ -39,16 +40,18 @@ async function purgeExpiredMeetings() {
   try {
     const cutoff = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
 
-    // Find the earliest createdAt per meetingName
+    // Find the earliest createdAt per meetingName. The selected meeting is the one in use,
+    // so it is never removed.
     const meetings = await Init.aggregate([
       {
         $group: {
           _id: "$meetingName",
-          firstCreated: { $min: "$createdAt" }
+          firstCreated: { $min: "$createdAt" },
+          selected: { $max: "$selected" }
         }
       },
       {
-        $match: { firstCreated: { $lt: cutoff } }
+        $match: { firstCreated: { $lt: cutoff }, selected: { $ne: true } }
       }
     ]);
 
@@ -70,9 +73,16 @@ async function purgeExpiredMeetings() {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
+// No built-in fallback: a fixed secret would let anyone create valid logins.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("JWT_SECRET is not set. Add it to backend/.env and start again.");
+  process.exit(1);
+}
 
-router.post("/login", async (req, res) => {
+const loginLimiters = createLoginLimiters();
+
+router.post("/login", ...loginLimiters, async (req, res) => {
   try {
     const { username, password } = req.body;
     const requestContext = detectRequestContext(req);

@@ -16,6 +16,9 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
+// Group names are compared as text, so characters that mean something in a pattern are escaped
+const escapeRegex = text => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 let client = null;
 let isReady = false;
 let qrCodeData = null;
@@ -946,7 +949,7 @@ router.post('/groups', async (req, res) => {
     }
 
     // Check if group name already exists
-    const existingGroup = await WhatsappGroup.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    const existingGroup = await WhatsappGroup.findOne({ name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') } });
     if (existingGroup) {
       return res.status(400).json({ error: 'Group name already exists' });
     }
@@ -1010,7 +1013,7 @@ router.put('/groups/:id', async (req, res) => {
       // Check if new name conflicts with another group
       const duplicate = await WhatsappGroup.findOne({ 
         _id: { $ne: id },
-        name: { $regex: new RegExp(`^${name}$`, 'i') }
+        name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') }
       });
       if (duplicate) {
         return res.status(400).json({ error: 'Group name already exists' });

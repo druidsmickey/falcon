@@ -12,9 +12,22 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(compression()); // Gzip compress all responses
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.disable('x-powered-by');
+// Behind nginx: use the client address that nginx passes on (needed for the login rate limit)
+app.set('trust proxy', 1);
+// The apps call the API from their own address (through nginx), so browsers send no cross-site
+// requests. Any other origin, such as the dev server, must be listed in CORS_ORIGINS.
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4200')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // MongoDB Connection with optimized settings
 mongoose.connect(process.env.MONGODB_URI, {
@@ -42,7 +55,8 @@ const Params = require('./models/params');
 const Bets = require('./models/bets');
 const Report = require('./model/report');
 const SyncAudit = require('./models/syncAudit');
-const { keepWinners } = require('./lib/params');
+const { keepWinners, pickParamUpdate } = require('./lib/params');
+const { validateBet } = require('./lib/bets');
 
 async function logSyncEvent(req, event) {
   try {
@@ -218,6 +232,10 @@ app.post('/api/meetings/races', async (req, res) => {
       );
     }
     
+    // The races are replaced below. Keep the meeting's original creation time, so its age (used by
+    // the automatic clean-up at login) does not start again on every save.
+    const firstRace = await Init.findOne({ meetingName }).sort({ createdAt: 1 }).select('createdAt').lean();
+
     // Delete existing races for this meeting
     await Init.deleteMany({ meetingName });
     
@@ -231,6 +249,11 @@ app.post('/api/meetings/races', async (req, res) => {
         selected: selected || false
       }))
     );
+
+    if (firstRace?.createdAt) {
+      // Written with the driver directly: Mongoose does not let createdAt be changed by an update
+      await Init.collection.updateMany({ meetingName }, { $set: { createdAt: firstRace.createdAt } });
+    }
     
     // Invalidate all init/race caches
     cacheInvalidate('meetings', 'races:', 'selected-races');
@@ -455,6 +478,22 @@ app.get('/api/bets', async (req, res) => {
 // Save a bet
 app.post('/api/bets', async (req, res) => {
   try {
+    // The app works out stake, books and payout itself. Check they agree and keep only known fields.
+    const checked = validateBet(req.body);
+    if (checked.error) {
+      if (req.body?.clientRequestId) {
+        await logSyncEvent(req, {
+          operation: 'create-bet',
+          status: 'failed',
+          clientRequestId: req.body.clientRequestId,
+          meetingName: req.body.meetingName,
+          message: `Bet rejected: ${checked.error}`,
+          payloadSummary: { raceNum: req.body.raceNum, horseNum: req.body.horseNum, clientName: req.body.clientName }
+        });
+      }
+      return res.status(400).json({ error: checked.error });
+    }
+
     if (req.body?.clientRequestId) {
       const existing = await Bets.findOne({ clientRequestId: req.body.clientRequestId }).lean();
       if (existing) {
@@ -474,7 +513,7 @@ app.post('/api/bets', async (req, res) => {
       }
     }
 
-    const bet = new Bets(req.body);
+    const bet = new Bets(checked.value);
     const savedBet = await bet.save();
     cacheInvalidate('bets:', 'recent-clients');
 
@@ -532,11 +571,17 @@ app.get('/api/sync/audit', async (req, res) => {
 app.patch('/api/bets/:id/cancel', async (req, res) => {
   try {
     const { cancelled } = req.body;
+    if (!mongoose.isValidObjectId(req.params.id) || typeof cancelled !== 'boolean') {
+      return res.status(400).json({ error: 'A valid bet id and cancelled (true or false) are required' });
+    }
     const bet = await Bets.findByIdAndUpdate(
       req.params.id,
       { cancelled },
       { new: true }
     );
+    if (!bet) {
+      return res.status(404).json({ error: 'Bet not found' });
+    }
     cacheInvalidate('bets:');
     res.json({ success: true, bet });
   } catch (error) {
@@ -547,11 +592,19 @@ app.patch('/api/bets/:id/cancel', async (req, res) => {
 // Update params (for winner, special, rule4 etc)
 app.patch('/api/params/:id', async (req, res) => {
   try {
+    // Only the fields of a horse that can be changed on their own are accepted
+    const picked = pickParamUpdate(req.body);
+    if (!mongoose.isValidObjectId(req.params.id) || picked.error) {
+      return res.status(400).json({ error: picked.error || 'A valid id is required' });
+    }
     const param = await Params.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      picked.update,
       { new: true }
     );
+    if (!param) {
+      return res.status(404).json({ error: 'Horse not found' });
+    }
     cacheInvalidate('params:');
     res.json({ success: true, param });
   } catch (error) {
@@ -562,6 +615,9 @@ app.patch('/api/params/:id', async (req, res) => {
 // Delete a bet
 app.delete('/api/bets/:id', async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'A valid bet id is required' });
+    }
     await Bets.findByIdAndDelete(req.params.id);
     cacheInvalidate('bets:', 'recent-clients');
     res.json({ success: true });
