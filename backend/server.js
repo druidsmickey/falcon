@@ -42,6 +42,7 @@ const Params = require('./models/params');
 const Bets = require('./models/bets');
 const Report = require('./model/report');
 const SyncAudit = require('./models/syncAudit');
+const { keepWinners } = require('./lib/params');
 
 async function logSyncEvent(req, event) {
   try {
@@ -340,13 +341,18 @@ app.post('/api/params', async (req, res) => {
       }
     }
     
+    // The rows are replaced below, so remember the winners to keep them
+    const existingWinners = meetingName
+      ? await Params.find({ meetingName, winner: true }).select('raceNum horseNum').lean()
+      : [];
+
     if (meetingName) {
       // Delete only params for this meeting
       await Params.deleteMany({ meetingName });
     }
-    
-    // Insert new params
-    const savedParams = await Params.insertMany(params);
+
+    // Insert new params, keeping the winners already chosen
+    const savedParams = await Params.insertMany(keepWinners(params, existingWinners));
     
     cacheInvalidate('params:');
 
