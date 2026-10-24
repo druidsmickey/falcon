@@ -34,12 +34,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Fix Angular animations dependency
-        run: |
-          rm -rf node_modules package-lock.json
-          npm cache clean --force
-          npm install @angular/animations@21 --save
-          npm install
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build frontend (${{ matrix.app.name }})
         run: |
@@ -53,6 +49,7 @@ jobs:
           REMOTE_HOST: ${{ secrets.SSH_HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
           TARGET: ${{ matrix.app.target }}
+          EXCLUDE: "/node_modules/, /.git/"
 
       - name: Configure backend (${{ matrix.app.name }})
         uses: appleboy/ssh-action@v0.1.9
