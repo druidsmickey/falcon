@@ -35,11 +35,14 @@ const paramsSchema = new mongoose.Schema({
     required: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  // the indexes are built at start-up, after leftover duplicates were removed (see lib/db.js)
+  autoIndex: false
 });
 
 // Indexes for query performance
-paramsSchema.index({ meetingName: 1, raceNum: 1, horseNum: 1 });
+// one row per horse of a race
+paramsSchema.index({ meetingName: 1, raceNum: 1, horseNum: 1 }, { unique: true });
 paramsSchema.index({ meetingName: 1 });
 
 module.exports = mongoose.model('Params', paramsSchema);

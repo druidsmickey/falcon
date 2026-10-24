@@ -43,6 +43,8 @@ const syncAuditSchema = new mongoose.Schema({
 });
 
 syncAuditSchema.index({ createdAt: -1 });
+// the log is only kept for 60 days
+syncAuditSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 24 * 60 * 60 });
 syncAuditSchema.index({ clientRequestId: 1 });
 syncAuditSchema.index({ operation: 1, status: 1, createdAt: -1 });
 

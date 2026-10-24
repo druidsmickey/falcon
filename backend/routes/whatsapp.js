@@ -19,6 +19,14 @@ const upload = multer({
 // Group names are compared as text, so characters that mean something in a pattern are escaped
 const escapeRegex = text => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+let unreadSyncTimer = null;
+function stopUnreadSync() {
+  if (unreadSyncTimer) {
+    clearInterval(unreadSyncTimer);
+    unreadSyncTimer = null;
+  }
+}
+
 let client = null;
 let isReady = false;
 let qrCodeData = null;
@@ -199,8 +207,11 @@ function initializeClient() {
       initializationTimeout = null;
     }
     
-    // Sync unread chats periodically (every 30 seconds)
-    setInterval(async () => {
+    // Sync unread chats periodically (every 30 seconds). Only one timer may run, however often the
+    // client reconnects.
+    stopUnreadSync();
+    unreadSyncTimer = setInterval(async () => {
+      if (!client) return;
       try {
         const chats = await client.getChats();
         for (const chat of chats) {
@@ -222,6 +233,7 @@ function initializeClient() {
 
   client.on('auth_failure', (msg) => {
     console.error('❌ WhatsApp authentication failure:', msg);
+    stopUnreadSync();
     clientStatus = 'auth_failure';
     qrCodeData = null;
     if (initializationTimeout) {
@@ -239,6 +251,7 @@ function initializeClient() {
 
   client.on('disconnected', (reason) => {
     console.log('⚠️  WhatsApp Client disconnected:', reason);
+    stopUnreadSync();
     isReady = false;
     clientStatus = 'disconnected';
     client = null;
@@ -351,6 +364,7 @@ router.post('/initialize', (req, res) => {
 // POST: Disconnect WhatsApp client
 router.post('/disconnect', async (req, res) => {
   try {
+    stopUnreadSync();
     if (initializationTimeout) {
       clearTimeout(initializationTimeout);
       initializationTimeout = null;
@@ -372,6 +386,7 @@ router.post('/disconnect', async (req, res) => {
 router.post('/reset', async (req, res) => {
   try {
     console.log('Force reset requested - clearing session...');
+    stopUnreadSync();
     
     if (initializationTimeout) {
       clearTimeout(initializationTimeout);
@@ -458,14 +473,7 @@ router.get('/test-puppeteer', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message,
-      stack: error.stack,
-      suggestion: suggestion,
-      triedPaths: [
-        '/usr/bin/chromium-browser',
-        '/usr/bin/chromium',
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable'
-      ]
+      suggestion: suggestion
     });
   }
 });

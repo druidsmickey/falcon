@@ -62,13 +62,16 @@ jobs:
           npm run build -- --configuration production --base-href ${{ matrix.app.baseHref }}
 
       - name: Deploy ${{ matrix.app.name }} to server
-        uses: easingthemes/ssh-deploy@main
+        # pinned to a release (v6.0.1): this action receives the SSH key, so it must not change by itself
+        uses: easingthemes/ssh-deploy@5d8aeab1a56041e269567e67a08ce00df324a617
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           REMOTE_HOST: ${{ secrets.SSH_HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
           TARGET: ${{ matrix.app.target }}
           EXCLUDE: "/node_modules/, /backend/node_modules/, /.git/"
+          # copy and update only; never delete files that exist only on the server (backend/.env, WhatsApp session)
+          ARGS: "-rlgoDzvc -i"
 
       - name: Configure backend (${{ matrix.app.name }})
         uses: appleboy/ssh-action@v0.1.9
@@ -80,6 +83,6 @@ jobs:
             [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
             cd ${{ matrix.app.target }}/backend
 
-            npm install
+            npm install --omit=dev
             pm2 restart ${{ matrix.app.pm2 }} || pm2 start server.js --name ${{ matrix.app.pm2 }}
             pm2 save

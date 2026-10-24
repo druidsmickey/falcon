@@ -9,6 +9,8 @@ const whatsappRouter = require('./routes/whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Only nginx on the same machine talks to the backend; it must not be reachable from the internet
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Middleware
 app.use(compression()); // Gzip compress all responses
@@ -37,8 +39,14 @@ mongoose.connect(process.env.MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   heartbeatFrequencyMS: 10000,
 })
-.then(() => {
+.then(async () => {
   console.log('âœ… Successfully connected to MongoDB');
+  try {
+    const result = await ensureUniqueRows({ Params, Init });
+    console.log('Rows checked:', JSON.stringify(result));
+  } catch (err) {
+    console.error('Could not make the rows unique:', err.message);
+  }
 })
 .catch((err) => {
   console.error('âŒ MongoDB connection error:', err);
@@ -55,7 +63,9 @@ const Params = require('./models/params');
 const Bets = require('./models/bets');
 const Report = require('./model/report');
 const SyncAudit = require('./models/syncAudit');
-const { keepWinners, pickParamUpdate } = require('./lib/params');
+const { pickParamUpdate } = require('./lib/params');
+const { buildParamSave, buildRaceSave } = require('./lib/save');
+const { ensureUniqueRows } = require('./lib/db');
 const { validateBet } = require('./lib/bets');
 
 async function logSyncEvent(req, event) {
@@ -224,6 +234,12 @@ app.post('/api/meetings/races', async (req, res) => {
       }
     }
     
+    // Check the races before anything is changed
+    const built = buildRaceSave(meetingName, races, selected);
+    if (built.error) {
+      return res.status(400).json({ error: built.error });
+    }
+
     // If selected is true, set all other meetings to false
     if (selected) {
       await Init.updateMany(
@@ -232,28 +248,15 @@ app.post('/api/meetings/races', async (req, res) => {
       );
     }
     
-    // The races are replaced below. Keep the meeting's original creation time, so its age (used by
-    // the automatic clean-up at login) does not start again on every save.
-    const firstRace = await Init.findOne({ meetingName }).sort({ createdAt: 1 }).select('createdAt').lean();
+    // Each race is written in place (found by its number), so saving twice at the same time gives
+    // the same result as saving once, and a meeting keeps the time it was first input (used by the
+    // automatic clean-up at login).
+    await Init.bulkWrite(built.ops, { ordered: false });
 
-    // Delete existing races for this meeting
-    await Init.deleteMany({ meetingName });
-    
-    // Insert new races
-    const savedRaces = await Init.insertMany(
-      races.map(race => ({
-        meetingName,
-        raceNum: race.raceNum,
-        raceName: race.raceName,
-        numHorse: race.numHorse,
-        selected: selected || false
-      }))
-    );
+    // races that are no longer in the list
+    await Init.deleteMany({ meetingName, $nor: built.keys });
 
-    if (firstRace?.createdAt) {
-      // Written with the driver directly: Mongoose does not let createdAt be changed by an update
-      await Init.collection.updateMany({ meetingName }, { $set: { createdAt: firstRace.createdAt } });
-    }
+    const savedRaces = await Init.find({ meetingName }).sort({ raceNum: 1 }).lean();
     
     // Invalidate all init/race caches
     cacheInvalidate('meetings', 'races:', 'selected-races');
@@ -330,12 +333,12 @@ app.post('/api/params', async (req, res) => {
   try {
     const { params, clientRequestId, syncBaseUpdatedAt } = req.body;
     
-    if (!params || !Array.isArray(params)) {
-      return res.status(400).json({ error: 'Params array is required' });
+    // Check the rows before anything is changed
+    const built = buildParamSave(params);
+    if (built.error) {
+      return res.status(400).json({ error: built.error });
     }
-    
-    // Get meetingName from first param
-    const meetingName = params.length > 0 ? params[0].meetingName : null;
+    const meetingName = built.meetingName;
 
     if (await isDuplicateSyncRequest('save-params', clientRequestId)) {
       await logSyncEvent(req, {
@@ -364,18 +367,17 @@ app.post('/api/params', async (req, res) => {
       }
     }
     
-    // The rows are replaced below, so remember the winners to keep them
-    const existingWinners = meetingName
-      ? await Params.find({ meetingName, winner: true }).select('raceNum horseNum').lean()
-      : [];
-
+    // Each horse is written in place (found by race and horse number). Saving twice at the same time
+    // gives the same result as saving once, and the winner flag, which this page does not send, is left alone.
+    let savedParams = [];
     if (meetingName) {
-      // Delete only params for this meeting
-      await Params.deleteMany({ meetingName });
-    }
+      await Params.bulkWrite(built.ops, { ordered: false });
 
-    // Insert new params, keeping the winners already chosen
-    const savedParams = await Params.insertMany(keepWinners(params, existingWinners));
+      // horses that are no longer in the list
+      await Params.deleteMany({ meetingName, $nor: built.keys });
+
+      savedParams = await Params.find({ meetingName }).sort({ raceNum: 1, horseNum: 1 }).lean();
+    }
     
     cacheInvalidate('params:');
 
@@ -577,7 +579,7 @@ app.patch('/api/bets/:id/cancel', async (req, res) => {
     const bet = await Bets.findByIdAndUpdate(
       req.params.id,
       { cancelled },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!bet) {
       return res.status(404).json({ error: 'Bet not found' });
@@ -600,7 +602,7 @@ app.patch('/api/params/:id', async (req, res) => {
     const param = await Params.findByIdAndUpdate(
       req.params.id,
       picked.update,
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!param) {
       return res.status(404).json({ error: 'Horse not found' });
@@ -675,7 +677,7 @@ app.post('/api/reports/addon', authenticateToken, async (req, res) => {
     const result = await Report.findOneAndUpdate(
       { meetingName, clientName },
       { meetingName, clientName, stake: stake || 0, horseName: 'AddOn', betTime: new Date() },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     res.json(result);
   } catch (error) {
@@ -696,8 +698,8 @@ app.delete('/api/reports/addon/:meetingName/:clientName', authenticateToken, asy
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`ðŸš€ Server is running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`ðŸš€ Server is running on ${HOST}:${PORT}`);
   console.log(`ðŸ“ API URL: ${process.env.API_URL}`);
 });
 

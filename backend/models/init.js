@@ -22,11 +22,14 @@ const initSchema = new mongoose.Schema({
     default: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  // the indexes are built at start-up, after leftover duplicates were removed (see lib/db.js)
+  autoIndex: false
 });
 
 // Indexes for query performance
-initSchema.index({ meetingName: 1, raceNum: 1 });
+// one row per race of a meeting
+initSchema.index({ meetingName: 1, raceNum: 1 }, { unique: true });
 initSchema.index({ selected: 1, raceNum: 1 });
 
 module.exports = mongoose.model('Init', initSchema);
