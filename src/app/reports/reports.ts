@@ -236,17 +236,9 @@ export class Reports implements OnInit {
         return; // Ignore all bets in race before special withdrawal
       }
       
-      const key = `${bet.raceNum}-${bet.horseNum}`;
-      // Check if horse has rule4
-      const hasRule4 = this.rule4HorseSet.has(key);
-      
-      // If horse withdrawn due to rule4 with betTime before rule4 date, ignore
-      if (hasRule4) {
-        const rule4s = this.rule4Info.get(bet.raceNum) || [];
-        const firstRule4 = rule4s[0];
-        if (firstRule4 && betTime < firstRule4.date) {
-          return; // Ignore bets placed before rule4 (horse withdrawn)
-        }
+      // All bets on a rule4 horse are ignored, whenever they were placed
+      if (this.rule4HorseSet.has(`${bet.raceNum}-${bet.horseNum}`)) {
+        return;
       }
       
       const clientName = bet.clientName || 'Unknown';
