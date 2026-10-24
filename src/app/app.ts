@@ -11,14 +11,13 @@ import { Params } from './params/params';
 import { Init } from './init/init';
 import { Merge } from './merge/merge';
 import { ChangePassword } from './change-password/change-password';
-import { Email } from './email/email';
 import { Whatsapp } from './whatsapp/whatsapp';
 import { AuthService } from './services/auth.service';
 import { OfflineSyncService } from './services/offline-sync.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword, Email],
+  imports: [CommonModule, MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

@@ -638,13 +638,19 @@ export class Merge implements OnInit {
   }
 
   isRule4(bet: any): boolean {
-    // Check if the specific horse has rule4 flag set
-    return this.allParams.some(p => 
+    // The horse must have the rule4 flag set...
+    const hasRule4 = this.allParams.some(p =>
       p.meetingName === bet.meetingName &&
-      p.raceNum === bet.raceNum && 
-      p.horseNum === bet.horseNum && 
+      p.raceNum === bet.raceNum &&
+      p.horseNum === bet.horseNum &&
       p.rule4 != null
     );
+    if (!hasRule4) return false;
+
+    // ...and the bet only counts as With-R4 if it was placed before the first rule4 time of the race
+    const firstRule4 = (this.rule4Info.get(`${bet.meetingName}-${bet.raceNum}`) || [])[0];
+    const betTime = new Date(bet.betTime || bet.createdAt);
+    return !!firstRule4 && betTime < firstRule4.date;
   }
 
   isWinner(bet: any): boolean {
