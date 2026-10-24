@@ -102,7 +102,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
       phone.addEventListener('change', event => this.compact.set(event.matches));
     }
     await Promise.all([this.refresh(), this.loadContacts(), this.loadMeeting()]);
-    this.timer = setInterval(() => void this.refresh(), 10000);
+    this.timer = setInterval(() => void this.refresh(), 5000);
   }
 
   ngOnDestroy(): void {

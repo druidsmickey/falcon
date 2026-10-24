@@ -1,15 +1,18 @@
 <div class="inbox-container" [class.compact]="compact()">
-  <header class="top">
-    <h2>WhatsApp inbox
-      @if (drafts().length > 0) {
-        <span class="counter">{{ drafts().length }} to approve</span>
-      }
-    </h2>
-    <span class="tools">
-      <button type="button" class="ghost" (click)="loadDemo()">Load demo</button>
-      <button type="button" class="ghost" (click)="refresh()">Refresh</button>
-    </span>
-  </header>
+  <!-- on a phone the title, counter and buttons are left out: the tab shows the counter and bets arrive on their own -->
+  @if (!compact()) {
+    <header class="top">
+      <h2>WhatsApp inbox
+        @if (drafts().length > 0) {
+          <span class="counter">{{ drafts().length }} to approve</span>
+        }
+      </h2>
+      <span class="tools">
+        <button type="button" class="ghost" (click)="loadDemo()">Load demo</button>
+        <button type="button" class="ghost" (click)="refresh()">Refresh</button>
+      </span>
+    </header>
+  }
 
   @if (odds(); as list) {
     <p class="context">
