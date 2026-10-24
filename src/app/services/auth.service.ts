@@ -17,7 +17,11 @@ export interface LoginResponse {
   user: User;
 }
 
-const AUTH_TOKEN_TTL = 2 * 60 * 1000;
+// Logged out when the app has not been in front of the user for this long
+const AWAY_LIMIT = 4 * 60 * 1000;
+// How often the app records that it is being used, and checks the limits
+const HEARTBEAT_INTERVAL = 15 * 1000;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -28,67 +32,72 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {
     this.initializeAuth();
-    this.setupActivityTracking();
+    this.setupSessionTracking();
   }
 
   private initializeAuth(): void {
-    const token = this.getToken();
-    const lastActivity = localStorage.getItem('lastActivity');
+    if (!this.getToken()) return;
 
-    if (token && lastActivity) {
-      const timeDiff = Date.now() - parseInt(lastActivity);
-
-      if (timeDiff > AUTH_TOKEN_TTL) {
-        this.logout();
-      } else {
-        const userStr = localStorage.getItem('currentUser');
-        if (userStr) {
-          this.currentUserSubject.next(JSON.parse(userStr));
-        }
-        this.updateActivity();
-      }
+    if (this.isSessionOver()) {
+      this.logout();
+      return;
     }
-  }
 
-  private lastUpdateTime = 0;
-  private readonly UPDATE_THROTTLE = 10000; // Only update activity every 10 seconds
-
-  private setupActivityTracking(): void {
-    const throttledUpdate = () => {
-      const now = Date.now();
-      if (now - this.lastUpdateTime > this.UPDATE_THROTTLE) {
-        this.updateActivity();
-        this.lastUpdateTime = now;
-      }
-    };
-
-    // Use passive listeners for better scroll/mouse performance
-    window.addEventListener('focus', throttledUpdate);
-
-    document.addEventListener('mousemove', throttledUpdate, { passive: true });
-    document.addEventListener('keypress', throttledUpdate, { passive: true });
-    document.addEventListener('click', throttledUpdate, { passive: true });
-    document.addEventListener('scroll', throttledUpdate, { passive: true });
-
-    setInterval(() => this.checkActivity(), 30000); // Check every 30 seconds
-  }
-
-  private updateActivity(): void {
-    if (this.isLoggedIn()) {
-      localStorage.setItem('lastActivity', Date.now().toString());
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      this.currentUserSubject.next(JSON.parse(userStr));
     }
+    this.markSeen();
   }
 
-  private checkActivity(): void {
+  private setupSessionTracking(): void {
+    document.addEventListener('visibilitychange', () => this.heartbeat());
+    window.addEventListener('focus', () => this.heartbeat());
+    setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL);
+  }
+
+  // Runs on a timer and whenever the user comes back to the app. The limits are checked
+  // before the "last seen" time is refreshed, so coming back after a long absence
+  // (hidden tab, sleeping PC) ends the session instead of extending it.
+  private heartbeat(): void {
     if (!this.isLoggedIn()) return;
 
-    const lastActivity = localStorage.getItem('lastActivity');
-    if (lastActivity) {
-      const timeDiff = Date.now() - parseInt(lastActivity);
+    if (this.isSessionOver()) {
+      this.logout();
+      return;
+    }
 
-      if (timeDiff > AUTH_TOKEN_TTL) {
-        this.logout();
-      }
+    if (document.visibilityState === 'visible') {
+      this.markSeen();
+    }
+  }
+
+  // Session is over when the login has expired (1 hour) or the app was not in use for AWAY_LIMIT
+  private isSessionOver(): boolean {
+    return this.isTokenExpired() || this.hasBeenAwayTooLong();
+  }
+
+  private markSeen(): void {
+    if (this.isLoggedIn()) {
+      localStorage.setItem('lastSeen', Date.now().toString());
+    }
+  }
+
+  private hasBeenAwayTooLong(): boolean {
+    const lastSeen = parseInt(localStorage.getItem('lastSeen') || '', 10);
+    return !Number.isNaN(lastSeen) && Date.now() - lastSeen > AWAY_LIMIT;
+  }
+
+  // The server stamps the token with an expiry time (1 hour after login)
+  private isTokenExpired(): boolean {
+    const token = this.getToken();
+    if (!token) return true;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now();
+    } catch {
+      return true;
     }
   }
 
@@ -116,7 +125,7 @@ export class AuthService {
           localStorage.setItem('token', response.token);
           localStorage.setItem('currentUser', JSON.stringify(response.user));
           localStorage.setItem('appContext', response.user?.appScope || appContext);
-          this.updateActivity();
+          this.markSeen();
           this.currentUserSubject.next(response.user);
         })
       );
