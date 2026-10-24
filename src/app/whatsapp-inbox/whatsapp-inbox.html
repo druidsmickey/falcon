@@ -16,8 +16,6 @@
       Odds list received: <strong>race {{ list.raceNum }}</strong>, {{ list.runners }} runners
       <span class="time">({{ list.sentAt | date: 'HH:mm' }})</span>
     </p>
-  } @else {
-    <p class="context warn">No odds list received yet, so the race of a bet is not known. Send the odds list to see it here.</p>
   }
 
   @if (error()) {

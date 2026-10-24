@@ -55,11 +55,6 @@ h2 {
   font-size: 0.9rem;
 }
 
-.context.warn {
-  background: #fffbeb;
-  color: #92400e;
-}
-
 .time {
   color: #6b7280;
   font-size: 0.85rem;
