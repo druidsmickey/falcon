@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import Dexie, { Table } from 'dexie';
+import { Bet } from '../models';
 
 export type OutboxType = 'create-bet' | 'save-params' | 'save-meeting-races';
 export type OutboxStatus = 'pending' | 'conflict' | 'failed';
@@ -78,6 +79,14 @@ export class OfflineStoreService {
     return items
       .filter((item: OutboxItem) => item.status === 'pending' || item.status === 'failed')
       .sort((a: OutboxItem, b: OutboxItem) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  /** Bets queued while offline that have not reached the server yet (rejected ones are not included). */
+  async getPendingBets(): Promise<Bet[]> {
+    const items: OutboxItem[] = await this.db.outbox.toArray();
+    return items
+      .filter((item: OutboxItem) => item.type === 'create-bet' && (item.status === 'pending' || item.status === 'failed'))
+      .map((item: OutboxItem) => item.payload as Bet);
   }
 
   async markSynced(id: number): Promise<void> {

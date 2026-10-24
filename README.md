@@ -113,6 +113,7 @@ More detail for the server and for WhatsApp: [DIGITAL_OCEAN_SETUP.md](DIGITAL_OC
 ## Known issues
 
 - **No HTTPS yet.** The apps are served over plain HTTP, so passwords and tokens travel unencrypted. Put a domain and a certificate in front of the server.
+- **No offline app files without HTTPS.** The service worker that keeps the app available offline only runs on HTTPS (or `localhost`). On the current HTTP address, bets queued offline are kept and sent later, but reloading or reopening the app while offline does not work.
 - **Offline use is limited by the login rules.** Logging in needs the server, and the app logs out after 4 minutes without use, so a device that goes offline and then sits idle cannot sign back in until it is online again.
 - **11 `npm audit` findings remain in the backend**, all inside `whatsapp-web.js` and its Puppeteer (browser) dependency. They are not reachable from the web; the suggested fix is a downgrade that does not remove them.
 - **Every user can do everything.** There is one kind of user and no screen to add users.

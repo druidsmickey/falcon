@@ -1,7 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -12,7 +11,6 @@ import { MatChipsModule } from '@angular/material/chips';
 import { RecentClientsService } from '../services/recent-clients.service';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
-import { environment } from '../../environments/environment';
 import { Bet, BetRequest, BetslipHorse, HorseParam } from '../models';
 
 interface Race {
@@ -47,13 +45,10 @@ interface Horse {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dataentry implements OnInit {
-  private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
   private recentClientsService = inject(RecentClientsService);
 
-  private apiUrl = `${environment.apiUrl}/api`;
-  
-  races: Race[] = [];
+races: Race[] = [];
   horses: Horse[] = [];
   meetingName: string = '';
   
@@ -242,25 +237,20 @@ export class Dataentry implements OnInit {
       betData.payout = (this.stakeBooks * 500) * multiplier;
     }
     
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.resetForm();
-      this.offlineStore.queueBet(betData).then(() => {
-        this.meetingData.addLocalBet(betData);
-        alert('Saved offline. Will sync when online.');
-      });
-      return;
-    }
-
     this.resetForm();
-    this.http.post(`${this.apiUrl}/bets`, betData).subscribe({
-      next: async () => {
-        this.meetingData.invalidateBets();
+    this.meetingData.submitBet(betData).then(async result => {
+      if (result.status === 'rejected') {
+        alert(`Error saving bet: ${result.message}`);
+        return;
+      }
+
+      // the recent clients come from the server, so they are only refreshed when it was reached
+      if (result.status === 'saved') {
         await this.loadRecentClients();
-        await this.loadLastBet();
-       },
-      error: (error) => {
-        console.error('Error saving bet:', error);
-        alert('Error saving bet. Please try again.');
+      }
+      await this.loadLastBet();
+      if (result.status === 'queued') {
+        alert('Saved offline. Will sync when online.');
       }
     });
   }

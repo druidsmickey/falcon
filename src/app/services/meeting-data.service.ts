@@ -1,8 +1,15 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Bet, BetRequest, HorseParam, SelectedRace } from '../models';
+import { OfflineStoreService } from './offline-store.service';
+
+/** What happened to a bet that was sent with submitBet(). */
+export type BetSubmitResult =
+  | { status: 'saved' }
+  | { status: 'queued' }
+  | { status: 'rejected'; message: string };
 
 /**
  * Shared data service that caches selectedRaces, params, and bets
@@ -15,6 +22,7 @@ import { Bet, BetRequest, HorseParam, SelectedRace } from '../models';
 @Injectable({ providedIn: 'root' })
 export class MeetingDataService {
   private http = inject(HttpClient);
+  private offlineStore = inject(OfflineStoreService);
   private apiUrl = `${environment.apiUrl}/api`;
   private cachePrefix = 'itb-cache-v1';
 
@@ -113,7 +121,7 @@ export class MeetingDataService {
     if (!this._bets) {
       const key = `bets:${this._meetingName || 'default'}`;
       if (!this.isAuthenticated()) {
-        return this.readCache<Bet[]>(key) || [];
+        return this.withPendingBets(this.readCache<Bet[]>(key) || []);
       }
       this._bets = firstValueFrom(
         this.http.get<Bet[]>(
@@ -121,11 +129,12 @@ export class MeetingDataService {
         )
       ).then(b => {
         const result = b || [];
+        // only what the server sent is saved; bets still waiting to be sent are added when reading
         this.writeCache(key, result);
         return result;
       }).catch(() => {
         return this.readCache<Bet[]>(key) || [];
-      });
+      }).then(list => this.withPendingBets(list));
     }
     return this._bets;
   }
@@ -134,7 +143,7 @@ export class MeetingDataService {
   getLastBet(): Promise<Bet | null> {
     if (!this._lastBet) {
       if (!this.isAuthenticated()) {
-        return Promise.resolve(this.readCache<Bet | null>('lastBet'));
+        return this.latestWithPending(this.readCache<Bet | null>('lastBet'));
       }
       this._lastBet = firstValueFrom(
         this.http.get<Bet | null>(`${this.apiUrl}/bets/last`)
@@ -143,7 +152,7 @@ export class MeetingDataService {
         return value;
       }).catch(() => {
         return this.readCache<Bet | null>('lastBet');
-      });
+      }).then(value => this.latestWithPending(value));
     }
     return this._lastBet;
   }
@@ -159,23 +168,78 @@ export class MeetingDataService {
     this._lastBet = null;
   }
 
-  /** Add a local bet to cache for offline mode. */
+  /**
+   * Show a bet that is waiting to be sent in the lists and charts straight away.
+   * It is not written to the saved copy: while it waits it is read from the outbox (see withPendingBets).
+   */
   addLocalBet(newBet: BetRequest): void {
     // the entry screens have filled in books, stake and payout before the bet is saved
     const bet = newBet as Bet;
-    if (this._bets) {
-      this._bets = this._bets.then(list => {
-        const next = [bet, ...(list || [])];
-        this.writeCache(`bets:${this._meetingName || 'default'}`, next);
-        return next;
-      });
-    } else {
-      const next = [bet];
-      this.writeCache(`bets:${this._meetingName || 'default'}`, next);
-      this._bets = Promise.resolve(next);
-    }
-    this.writeCache('lastBet', bet);
+    const others = (list: Bet[]) => list.filter(b => !b.clientRequestId || b.clientRequestId !== bet.clientRequestId);
+
+    const current = this._bets ?? this.withPendingBets(this.readCache<Bet[]>(`bets:${this._meetingName || 'default'}`) || []);
+    this._bets = current.then(list => [bet, ...others(list || [])]);
     this._lastBet = Promise.resolve(bet);
+    this.writeCache('lastBet', bet);
+  }
+
+  /**
+   * Send a bet. If the server cannot be reached, or answers with a server fault, the bet is kept
+   * in the outbox and sent later (the request id stops it being stored twice). A bet the server
+   * refuses as invalid (4xx) is reported, because sending it again would not help.
+   */
+  async submitBet(bet: BetRequest): Promise<BetSubmitResult> {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await this.queueBet(bet);
+      return { status: 'queued' };
+    }
+
+    try {
+      await firstValueFrom(this.http.post(`${this.apiUrl}/bets`, bet));
+      this.invalidateBets();
+      return { status: 'saved' };
+    } catch (error) {
+      const failure = error as HttpErrorResponse;
+      if (failure.status === 0 || failure.status >= 500) {
+        await this.queueBet(bet);
+        return { status: 'queued' };
+      }
+      return { status: 'rejected', message: failure.error?.error || failure.message };
+    }
+  }
+
+  private async queueBet(bet: BetRequest): Promise<void> {
+    await this.offlineStore.queueBet(bet);
+    this.addLocalBet(bet);
+  }
+
+  /** The saved bets of the current meeting plus the ones still waiting in the outbox, newest first. */
+  private async withPendingBets(list: Bet[]): Promise<Bet[]> {
+    try {
+      const pending = (await this.offlineStore.getPendingBets()).filter(b => b.meetingName === this._meetingName);
+      if (pending.length === 0) return list;
+
+      const known = new Set(list.map(b => b.clientRequestId).filter(Boolean));
+      const waiting = pending
+        .filter(b => !b.clientRequestId || !known.has(b.clientRequestId))
+        .sort((x, y) => new Date(y.betTime).getTime() - new Date(x.betTime).getTime());
+      return [...waiting, ...list];
+    } catch {
+      return list;
+    }
+  }
+
+  /** The newest of the last saved bet and the bets still waiting in the outbox. */
+  private async latestWithPending(saved: Bet | null): Promise<Bet | null> {
+    try {
+      const pending = await this.offlineStore.getPendingBets();
+      return pending.reduce<Bet | null>(
+        (latest, bet) => (!latest || new Date(bet.betTime).getTime() > new Date(latest.betTime).getTime() ? bet : latest),
+        saved
+      );
+    } catch {
+      return saved;
+    }
   }
 
   /** Invalidate params cache (call after saving params or toggling winner). */

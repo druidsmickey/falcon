@@ -1,7 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, ViewChild, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,7 +10,6 @@ import { MatSidenav } from '@angular/material/sidenav';
 import { RecentClientsService } from '../services/recent-clients.service';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
-import { environment } from '../../environments/environment';
 import { applyRule4 } from '../services/settlement';
 import { Bet, BetRequest, BetslipHorse, HorseParam, betTimeOf } from '../models';
 
@@ -48,13 +46,10 @@ interface Race {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Single implements OnInit {
-  private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
   private recentClientsService = inject(RecentClientsService);
 
-  private apiUrl = `${environment.apiUrl}/api`;
-  
-  @ViewChild('sidenav') sidenav!: MatSidenav;
+@ViewChild('sidenav') sidenav!: MatSidenav;
   
   races: Race[] = [];
   selectedRaceNum: number | null = null;
@@ -381,32 +376,22 @@ export class Single implements OnInit {
       betData.payout = (this.stakeBooks * 500) * multiplier;
     }
     
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.resetBetslipForm();
-      this.offlineStore.queueBet(betData).then(async () => {
-        this.meetingData.addLocalBet(betData);
-        this.cachedBets = await this.meetingData.getBets();
-        this.loadRaceData();
-        alert('Saved offline. Will sync when online.');
-      });
-      return;
-    }
-
     this.resetBetslipForm();
-    this.http.post(`${this.apiUrl}/bets`, betData).subscribe({
-      next: async () => {
-        this.meetingData.invalidateBets();
+    this.meetingData.submitBet(betData).then(async result => {
+      if (result.status === 'rejected') {
+        alert(`Error saving bet: ${result.message}`);
+        return;
+      }
+
+      // the recent clients come from the server, so they are only refreshed when it was reached
+      if (result.status === 'saved') {
         await this.loadRecentClients();
-        await this.loadLastBet();
-        
-        // Reload cached bets to update chart
-        this.cachedBets = await this.meetingData.getBets();
-        
-        this.loadRaceData();
-      },
-      error: (error) => {
-        console.error('Error saving bet:', error);
-        alert('Error saving bet. Please try again.');
+      }
+      await this.loadLastBet();
+      this.cachedBets = await this.meetingData.getBets();
+      this.loadRaceData();
+      if (result.status === 'queued') {
+        alert('Saved offline. Will sync when online.');
       }
     });
   }

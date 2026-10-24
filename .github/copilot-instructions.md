@@ -47,6 +47,7 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 - Shared data shapes (`Bet`, `HorseParam`, `SelectedRace`, `BetRequest`, ...) are in [models.ts](../src/app/models.ts). Use them instead of `any`; the project has none.
 - Rule 4 deductions: use `applyRule4`, `rule4Applies`, `rule4Percentages` from [settlement.ts](../src/app/services/settlement.ts) rather than writing the loop again.
 - Templates use `@if`/`@for` and `[class.name]` bindings; services and components use `inject()`.
+- Sending a bet goes through `MeetingDataService.submitBet()`: it sends the bet, or queues it in the outbox when offline or when the server cannot be reached (status 0 or 5xx); only a 4xx is reported. Bets still in the outbox are merged into `getBets()` and `getLastBet()`, so every screen shows them. Do not post bets directly from a component.
 - The API data is fetched fresh: the service worker uses the `freshness` strategy for API calls (network first, saved copy only when offline).
 
 ## Authentication Flow
