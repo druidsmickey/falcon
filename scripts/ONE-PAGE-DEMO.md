@@ -50,6 +50,7 @@ Use this page to show that ITB keeps taking bets when the internet drops and cat
 |---|---|
 | Production API address set | Done by the deploy workflow (`/api-phantom-2027`, `/api-detori-2027`) |
 | Secrets kept out of the repository | `backend/.env` lives on the server only; GitHub secrets hold the SSH key |
+| Server hardening | Done: firewall (22, 80, 443 only), SSH keys only, fail2ban, backends on 127.0.0.1, log rotation |
 | HTTPS for the web address and API | **Not done.** Passwords and tokens travel unencrypted until a domain and certificate are added |
 | Login attempts limited | Done: 10 wrong passwords per user and address, 100 per address, then 15 minutes |
 | Database backups | Confirm the backup policy of the MongoDB cluster |

@@ -13,7 +13,8 @@ How the apps are laid out on the server, how to restart and check them, and how 
 | Web address | `/Phantom/2027/` | `/Detori/2027/` |
 | API address | `/api-phantom-2027/` | `/api-detori-2027/` |
 
-- **nginx** is configured in `/etc/nginx/sites-enabled/apps`. For each 2027 app it (a) redirects the address without the closing slash to the one with it, (b) sends `Cache-Control: no-cache` for `index.html`, `ngsw.json` and the service-worker files, so a new version is picked up at once, and (c) passes the visitor's real address on to the backend (`X-Forwarded-For`), which the login rate limit depends on. It serves `<folder>/dist/itb/browser/` for each web address and forwards each API address to the backend port. The older apps (Gambit, Cumbre) use the same file, with their own paths and ports 3000 and 3001. **Do not change or reuse those.**
+- **The backends listen only on `127.0.0.1`** (the `HOST` setting, default `127.0.0.1`), so they can be reached only through nginx, which proxies to `http://127.0.0.1:<port>/`. The two older backends (ports 3000 and 3001) listen on all addresses, but the firewall keeps them private.
+- **nginx** is configured in `/etc/nginx/sites-enabled/apps`. For each 2027 app it (a) redirects the address without the closing slash to the one with it, (b) sends `Cache-Control: no-cache` for `index.html`, `ngsw.json` and the service-worker files, so a new version is picked up at once, and (c) passes the visitor's real address on to the backend (`X-Forwarded-For`), which the login rate limit depends on, and (d) adds the security headers in `/etc/nginx/snippets/security-headers.conf` (`X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`, `frame-ancestors 'none'`) to the app pages. The manifest is served as `application/manifest+json`. It serves `<folder>/dist/itb/browser/` for each web address and forwards each API address to the backend port. The older apps (Gambit, Cumbre) use the same file, with their own paths and ports 3000 and 3001. **Do not change or reuse those.**
 - A deploy (push to `main`) copies the project into the folders above, runs `npm install` in `backend/` and restarts the PM2 process. It does **not** write `.env` and does not delete `backend/.wwebjs_auth/`.
 - Node.js and PM2 are on the server's path through the normal login shell.
 - Before building, the workflow runs the frontend and backend tests; a failing test stops the deploy.
@@ -117,13 +118,45 @@ In `pm2 logs <process>`:
 
 Each WhatsApp session runs its own Chrome and needs roughly 300 to 500 MB on top of the Node processes. Everything on the server shares the memory (the older apps and any other site hosted there), so check `free -m` before connecting WhatsApp in a second app. A 1 GB droplet is too small for several apps with WhatsApp; 2 GB or more is comfortable.
 
-## Firewall
+## Server security
 
-Only ports 80 (web) and 22 (SSH) are needed. The backend ports (3010, 3011 and the older 3000, 3001) are used only through nginx on the same machine and should not be opened:
+These were set up once; this is what is in place and how to work with it.
+
+### Firewall (ufw)
+
+Only SSH (22), web (80) and HTTPS (443) are open. Everything else is refused, including the backend ports 3000, 3001, 3010, 3011.
 
 ```bash
-sudo ufw status
+ufw status verbose
+ufw allow <port>/tcp      # open another port, only if really needed
 ```
+
+Never run `ufw enable` or change the rules without `ufw allow 22/tcp` in place: it would cut off SSH (the DigitalOcean web console is the way back in).
+
+### SSH: keys only
+
+`/etc/ssh/sshd_config.d/00-hardening.conf` turns off password logins completely (root and all other users) and allows 3 tries per connection. Only keys in `~/.ssh/authorized_keys` can log in. To add or replace a key, use the DigitalOcean web console (Droplet, Access, Launch console) and append the public key to `/root/.ssh/authorized_keys`. After any change to the SSH settings run `sshd -t` first, reload with `systemctl reload ssh`, and test a **new** login before closing the current one.
+
+### fail2ban
+
+Bans an address for one day after 4 failed SSH logins within 10 minutes. The address the server is administered from is exempt (`ignoreip` in `/etc/fail2ban/jail.d/sshd-local.conf`; update it if that address changes).
+
+```bash
+fail2ban-client status sshd                    # who is banned
+fail2ban-client set sshd unbanip <address>     # lift a ban
+```
+
+### Log rotation
+
+The `pm2-logrotate` module rotates the PM2 logs at 10 MB and midnight, keeps 7 old files and compresses them (`pm2 conf pm2-logrotate`). Without it the logs grow without limit.
+
+### Updates and restarts
+
+Security updates install automatically (`unattended-upgrades`). Some, such as a new kernel, need a restart: `ls /var/run/reboot-required` shows whether one is pending. Before restarting, run `pm2 save` (so PM2 starts all processes again; `pm2-root.service` does that at boot), and expect all apps to be unavailable for about a minute. Afterwards check `pm2 list`, the health addresses and `ufw status`.
+
+### Not in use
+
+The printing service (CUPS) was switched off (`snap stop --disable cups`); it is not needed here.
 
 ## Environment file
 

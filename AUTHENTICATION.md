@@ -98,3 +98,5 @@ JWT_SECRET=a-long-random-string
 - The server will not start without a `JWT_SECRET`.
 - The server checks every bet (the amounts must agree with the F500 or odds entered) and stores only known fields; single-horse updates accept only the fields they are meant to change.
 - New users get a random password, never a published default.
+- The backend listens only on `127.0.0.1`; the firewall allows only SSH, web and HTTPS, so the login limit cannot be bypassed by calling the backend directly with a made-up client address.
+- The server allows SSH logins by key only, and bans addresses that keep guessing (see [DIGITAL_OCEAN_SETUP.md](DIGITAL_OCEAN_SETUP.md)).

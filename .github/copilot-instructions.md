@@ -21,7 +21,7 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 - **Entry**: `server.js` - Express server with MongoDB connection
 - **Models**: `models/bets.js` (bet records), `models/init.js` (meetings/races), `models/params.js` (horse parameters), `models/syncAudit.js` (offline sync log), `models/whatsapp*.js` (contacts, groups, messages), `model/user.js` (authentication), `model/report.js` (client add-ons)
 - **Routes**: `routes/auth.js` (login, password change), `routes/whatsapp.js` (WhatsApp client, contacts, groups, sending)
-- **Helpers and tests**: `lib/params.js` (keeps winners when params are saved; checks single-horse updates), `lib/bets.js` (checks every incoming bet: amounts must agree with the F500 or odds), `lib/ratelimit.js` (login attempt limits), `test/` (run with `npm test` in `backend/`)
+- **Helpers and tests**: `lib/save.js` (checks the rows of the Params and Init pages and prepares the in-place writes; the winner flag is simply not touched), `lib/db.js` (removes leftover duplicate rows and builds the unique indexes at start-up), `lib/params.js` (checks single-horse updates), `lib/bets.js` (checks every incoming bet: amounts must agree with the F500 or odds), `lib/ratelimit.js` (login attempt limits), `test/` (run with `npm test` in `backend/`)
 - **API Base**: All endpoints prefixed with `/api/` except `/auth/`
 
 ### Data Flow
@@ -163,7 +163,7 @@ Main theme: [material-theme.scss](../src/material-theme.scss) defines custom Mat
 ### Winner Management
 - [winners/winners.ts](../src/app/winners/winners.ts): Mark horse as winner → triggers payout calculations
 - Several winners are allowed (dead heat): each payout is divided by the number of winners
-- Saving Params keeps the winners (the server copies the flag over, see `backend/lib/params.js`)
+- Saving Params keeps the winners: rows are written in place and the page does not send `winner` (see `backend/lib/save.js`). Never go back to delete-then-insert: two saves at the same time then create duplicate rows, and a duplicated winner row makes Reports see a dead heat
 - Affects all bets for that race
 
 ## Common Pitfalls
@@ -178,5 +178,5 @@ Main theme: [material-theme.scss](../src/material-theme.scss) defines custom Mat
 ## Testing Notes
 
 - Frontend: `npm test -- --watch=false` runs Vitest. The specs cover the Rule 4 calculation (`services/settlement.spec.ts`) and the session rules (`services/auth.service.spec.ts`). The screens (components) have no tests, so after changing a calculation compare Reports, Merge, Chart and Single on real data.
-- Backend: `cd backend && npm test` runs the built-in Node test runner on `backend/test/*.test.js` (bet checks, single-horse update fields, winner keeping, login rate limit). The deploy workflow runs both suites before building.
+- Backend: `cd backend && npm test` runs the built-in Node test runner on `backend/test/*.test.js`: unit tests (bet checks, row saving, update fields, login rate limit) and `integration.test.js`, which starts the real server against an in-memory MongoDB (simultaneous saves, duplicate clean-up, 6 day clean-up, loopback only). The deploy workflow runs both suites before building.
 - The settlement rules are written out in [README.md](../README.md). The Rule 4 deduction lives in one place, `src/app/services/settlement.ts`; special withdrawals, dead heats and the rest are still written out in reports, merge, chart and single and must be kept in step.
