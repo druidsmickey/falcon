@@ -39,6 +39,24 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST: sample bets so that the screen can be tried (they save nothing when confirmed)
+router.post('/demo', async (req, res) => {
+  try {
+    res.json({ success: true, added: await inbox.createDemo() });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE: remove the sample bets
+router.delete('/demo', async (req, res) => {
+  try {
+    res.json({ success: true, removed: await inbox.clearDemo() });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 for (const [action, status] of [['confirm', 'confirmed'], ['dismiss', 'dismissed']]) {
   router.post(`/:id/${action}`, async (req, res) => {
     if (!validId(req.params.id)) return res.status(400).json({ error: 'invalid id' });

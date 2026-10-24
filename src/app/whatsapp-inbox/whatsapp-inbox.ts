@@ -203,7 +203,8 @@ export class WhatsappInbox implements OnInit, OnDestroy {
     this.setBusy(draft.id, true);
     this.setItemError(draft.id, '');
     try {
-      const result = await this.meetingData.submitBet(bet);
+      // a demo bet goes through the same checks on screen, but nothing is sent
+      const result = draft.demo ? { status: 'saved' as const } : await this.meetingData.submitBet(bet);
       if (result.status === 'rejected') {
         this.setItemError(draft.id, `The server refused this bet: ${result.message}`);
         return;
@@ -215,6 +216,15 @@ export class WhatsappInbox implements OnInit, OnDestroy {
       this.setItemError(draft.id, 'The bet was sent, but this list could not be updated. Press Refresh; it will not be entered twice.');
     } finally {
       this.setBusy(draft.id, false);
+    }
+  }
+
+  protected async loadDemo(): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${this.api}/demo`, {}));
+      await this.refresh();
+    } catch {
+      this.error.set('The demo could not be loaded.');
     }
   }
 

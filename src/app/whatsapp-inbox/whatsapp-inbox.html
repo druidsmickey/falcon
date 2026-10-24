@@ -1,7 +1,10 @@
 <div class="inbox">
   <header class="top">
     <h2>WhatsApp inbox</h2>
-    <button type="button" class="ghost" (click)="refresh()">Refresh</button>
+    <span class="tools">
+      <button type="button" class="ghost" (click)="loadDemo()">Load demo</button>
+      <button type="button" class="ghost" (click)="refresh()">Refresh</button>
+    </span>
   </header>
 
   @if (odds(); as list) {
@@ -40,6 +43,9 @@
 
   @for (draft of drafts(); track draft.id) {
     <article class="card" [class.unsure]="draft.unsure">
+      @if (draft.demo) {
+        <p class="demo">DEMO: confirming this saves nothing</p>
+      }
       <div class="head">
         <input class="client" type="text" [value]="draft.clientName" (input)="setClient(draft, $event)"
                [class.missing]="has(draft, 'client name')" aria-label="Client name">

@@ -8,6 +8,8 @@ export interface InboxItem {
   clientName: string;
   sentAt: string;
   unreadable: boolean;
+  /** A sample from the demo button: confirming it saves nothing. */
+  demo?: boolean;
   raceNum: number | null;
   horseNum: number | null;
   mode: 'f500' | 'odds' | null;
@@ -31,6 +33,7 @@ export interface Draft {
   contactName: string;
   clientName: string;
   unreadable: boolean;
+  demo: boolean;
   unsure: boolean;
   issues: string[];
   raceNum: number | null;
@@ -57,6 +60,7 @@ export function draftFrom(item: InboxItem): Draft {
     contactName: item.contactName,
     clientName: item.clientName,
     unreadable: item.unreadable,
+    demo: !!item.demo,
     unsure: item.unsure,
     issues: item.issues,
     raceNum: item.raceNum,

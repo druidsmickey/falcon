@@ -13,6 +13,8 @@ const whatsappInboxSchema = new mongoose.Schema({
   text: { type: String, required: true },
   sentAt: { type: Date, required: true },
 
+  // a sample bet from the demo button: confirming it saves nothing
+  demo: { type: Boolean, default: false },
   unreadable: { type: Boolean, default: false },
   raceNum: { type: Number, default: null },
   horseNum: { type: Number, default: null },

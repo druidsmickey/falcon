@@ -148,3 +148,31 @@ test('a bet that names its horse is matched against the horses of the selected m
   assert.equal(items[2].horseNum, null);
   assert.equal(items[2].unsure, true);
 });
+
+test('the demo adds sample bets that the real parser read, and they can be removed', async () => {
+  await Init.create({ meetingName: 'ASCOT', raceNum: 1, numHorse: 3, raceName: 'R1', selected: true });
+  await Params.create([
+    { meetingName: 'ASCOT', raceNum: 1, horseNum: 1, horseName: 'Dambuster' },
+    { meetingName: 'ASCOT', raceNum: 1, horseNum: 2, horseName: 'Captain Magpie' },
+    { meetingName: 'ASCOT', raceNum: 1, horseNum: 3, horseName: 'Lux Star' },
+  ]);
+  assert.equal(await inbox.createDemo(), 6);
+  const { items } = await inbox.listPending();
+  assert.equal(items.length, 6);
+  assert.ok(items.every(i => i.demo && i.clientName === 'DEMO'));
+  assert.equal(items[4].text, 'cap mag 500x90');
+  assert.deepEqual([items[4].horseNum, items[4].books], [2, 500]);
+  assert.equal(items[5].unreadable, true);
+  assert.equal(new Set(items.map(i => i.clientRequestId)).size, 6);
+
+  // trying it twice never collides, and no real contact or odds list is created
+  assert.equal(await inbox.createDemo(), 6);
+  assert.equal(await WhatsappOdds.countDocuments(), 0);
+  assert.equal(await inbox.clearDemo(), 12);
+  assert.equal((await inbox.listPending()).items.length, 0);
+});
+
+test('the demo works before any meeting exists', async () => {
+  assert.equal(await inbox.createDemo(), 5);
+  assert.equal((await inbox.listPending()).items.length, 5);
+});

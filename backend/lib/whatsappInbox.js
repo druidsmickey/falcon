@@ -121,6 +121,7 @@ const toItem = doc => ({
   clientName: doc.clientName,
   sentAt: doc.sentAt,
   unreadable: doc.unreadable,
+  demo: !!doc.demo,
   raceNum: doc.raceNum,
   horseNum: doc.horseNum,
   mode: doc.mode,
@@ -177,4 +178,58 @@ async function updateContact(id, { nickname, listen }) {
   return contact;
 }
 
-module.exports = { handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+/** A word shortened the way people type it: "captain magpie" becomes "cap mag". */
+const shorten = name => String(name).trim().split(/\s+/).map(w => w.slice(0, 3)).join(' ').toLowerCase();
+
+/**
+ * Puts a few sample messages in the inbox so that the screen can be tried. They are read by the real parser,
+ * come from a made-up contact, and confirming them saves nothing. Uses the horses of the selected meeting
+ * when there are any, so that the names match.
+ */
+async function createDemo() {
+  const horses = await selectedHorses();
+  const race = horses.length > 0 ? Math.min(...horses.map(h => h.raceNum)) : 1;
+  const inRace = horses.filter(h => h.raceNum === race).sort((a, b) => a.horseNum - b.horseNum);
+  const runners = inRace.length > 0 ? Math.max(...inRace.map(h => h.horseNum)) : 6;
+  const context = { raceNum: race, runners, horses };
+
+  const named = inRace[1] || inRace[0];
+  const lines = [
+    '11 500x90',
+    '2 5000@2000',
+    '3 5k',
+    '1 500',
+    ...(named ? [shorten(named.horseName) + ' 500x90'] : []),
+    'put 500 on the grey one',
+  ];
+
+  const stamp = Date.now();
+  const sentAt = new Date();
+  let added = 0;
+  for (const [index, text] of lines.entries()) {
+    const entry = parseBetMessage(text, context)[0];
+    const key = `demo-${stamp}:${index}`;
+    const doc = {
+      key, messageId: `demo-${stamp}-${index}`, contactNumber: 'demo', contactName: 'Demo contact', clientName: 'DEMO',
+      text, sentAt: new Date(sentAt.getTime() + index * 1000), clientRequestId: requestIdFor(key), demo: true,
+      unreadable: !!entry.unreadable, issues: entry.issues || [], unsure: !!entry.unreadable || !!entry.unsure,
+    };
+    if (!entry.unreadable) {
+      Object.assign(doc, {
+        raceNum: entry.raceNum, horseNum: entry.horseNum, mode: entry.mode, amountKind: entry.amountKind,
+        amount: entry.amountKind === '?' ? entry.amount : null, books: entry.books, f500: entry.f500, stake: entry.stake, odds100: entry.odds100,
+      });
+    }
+    await WhatsappInbox.create(doc);
+    added += 1;
+  }
+  return added;
+}
+
+/** Removes the sample bets that are still waiting. */
+async function clearDemo() {
+  const result = await WhatsappInbox.deleteMany({ demo: true });
+  return result.deletedCount;
+}
+
+module.exports = { createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
