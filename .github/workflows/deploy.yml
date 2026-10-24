@@ -45,6 +45,17 @@ jobs:
           fi
           exit $code
 
+      - name: Frontend tests
+        run: npx ng test --watch=false
+
+      - name: Backend tests
+        working-directory: backend
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true' # the tests do not need a browser
+        run: |
+          npm ci
+          npm test
+
       - name: Build frontend (${{ matrix.app.name }})
         run: |
           sed -i "s|apiUrl:.*|apiUrl: '${{ matrix.app.apiUrl }}'|g" src/environments/environment.prod.ts
@@ -57,7 +68,7 @@ jobs:
           REMOTE_HOST: ${{ secrets.SSH_HOST }}
           REMOTE_USER: ${{ secrets.USERNAME }}
           TARGET: ${{ matrix.app.target }}
-          EXCLUDE: "/node_modules/, /.git/"
+          EXCLUDE: "/node_modules/, /backend/node_modules/, /.git/"
 
       - name: Configure backend (${{ matrix.app.name }})
         uses: appleboy/ssh-action@v0.1.9
