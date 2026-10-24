@@ -17,10 +17,13 @@ export interface LoginResponse {
   user: User;
 }
 
-// Logged out when the app has not been in front of the user for this long
-const AWAY_LIMIT = 4 * 60 * 1000;
-// How often the app records that it is being used, and checks the limits
-const HEARTBEAT_INTERVAL = 15 * 1000;
+// Logged out after this long without the app being used (idle, hidden tab, minimised,
+// window left on another screen, PC asleep, browser closed...)
+const IDLE_LIMIT = 4 * 60 * 1000;
+// How often the limits are checked
+const CHECK_INTERVAL = 15 * 1000;
+// Activity is recorded at most this often
+const ACTIVITY_THROTTLE = 5 * 1000;
 
 @Injectable({
   providedIn: 'root',
@@ -47,45 +50,66 @@ export class AuthService {
     if (userStr) {
       this.currentUserSubject.next(JSON.parse(userStr));
     }
-    this.markSeen();
+    this.markActive();
   }
+
+  private lastRecorded = 0;
 
   private setupSessionTracking(): void {
-    document.addEventListener('visibilitychange', () => this.heartbeat());
-    window.addEventListener('focus', () => this.heartbeat());
-    setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL);
+    // Real use of the app: a click, tap, key press... always counts because it focuses the window.
+    // Moving the mouse or scrolling only counts while the window has focus, so a window left
+    // visible on a second screen is not kept alive by the pointer passing over it.
+    const always = ['pointerdown', 'mousedown', 'click', 'keydown', 'touchstart', 'input'];
+    const onlyWithFocus = ['mousemove', 'wheel', 'scroll', 'touchmove'];
+
+    always.forEach(name => document.addEventListener(name, () => this.onActivity(), { passive: true, capture: true }));
+    onlyWithFocus.forEach(name =>
+      document.addEventListener(name, () => { if (document.hasFocus()) this.onActivity(); }, { passive: true, capture: true })
+    );
+
+    // Coming back (tab shown, window focused, PC woken) only checks the limits, it never extends the session
+    document.addEventListener('visibilitychange', () => this.checkSession());
+    window.addEventListener('focus', () => this.checkSession());
+    setInterval(() => this.checkSession(), CHECK_INTERVAL);
   }
 
-  // Runs on a timer and whenever the user comes back to the app. The limits are checked
-  // before the "last seen" time is refreshed, so coming back after a long absence
-  // (hidden tab, sleeping PC) ends the session instead of extending it.
-  private heartbeat(): void {
+  private onActivity(): void {
     if (!this.isLoggedIn()) return;
 
+    // The limits are checked before the activity time is refreshed, so the first touch after a
+    // long absence ends the session instead of extending it.
     if (this.isSessionOver()) {
       this.logout();
       return;
     }
 
-    if (document.visibilityState === 'visible') {
-      this.markSeen();
+    if (Date.now() - this.lastRecorded > ACTIVITY_THROTTLE) {
+      this.markActive();
     }
   }
 
-  // Session is over when the login has expired (1 hour) or the app was not in use for AWAY_LIMIT
+  private checkSession(): void {
+    if (this.isLoggedIn() && this.isSessionOver()) {
+      this.logout();
+    }
+  }
+
+  // Session is over when the login has expired (1 hour) or the app was not used for IDLE_LIMIT
   private isSessionOver(): boolean {
-    return this.isTokenExpired() || this.hasBeenAwayTooLong();
+    return this.isTokenExpired() || this.hasBeenIdleTooLong();
   }
 
-  private markSeen(): void {
+  private markActive(): void {
     if (this.isLoggedIn()) {
-      localStorage.setItem('lastSeen', Date.now().toString());
+      this.lastRecorded = Date.now();
+      localStorage.setItem('lastActivity', this.lastRecorded.toString());
     }
   }
 
-  private hasBeenAwayTooLong(): boolean {
-    const lastSeen = parseInt(localStorage.getItem('lastSeen') || '', 10);
-    return !Number.isNaN(lastSeen) && Date.now() - lastSeen > AWAY_LIMIT;
+  private hasBeenIdleTooLong(): boolean {
+    const last = parseInt(localStorage.getItem('lastActivity') || '', 10);
+    // No record at all counts as idle: a token without activity cannot be trusted
+    return Number.isNaN(last) || Date.now() - last > IDLE_LIMIT;
   }
 
   // The server stamps the token with an expiry time (1 hour after login)
@@ -125,7 +149,7 @@ export class AuthService {
           localStorage.setItem('token', response.token);
           localStorage.setItem('currentUser', JSON.stringify(response.user));
           localStorage.setItem('appContext', response.user?.appScope || appContext);
-          this.markSeen();
+          this.markActive();
           this.currentUserSubject.next(response.user);
         })
       );
