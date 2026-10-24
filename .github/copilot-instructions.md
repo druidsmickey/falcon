@@ -21,7 +21,7 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 - **Entry**: `server.js` - Express server with MongoDB connection
 - **Models**: `models/bets.js` (bet records), `models/init.js` (meetings/races), `models/params.js` (horse parameters), `models/syncAudit.js` (offline sync log), `models/whatsapp*.js` (contacts, groups, messages), `model/user.js` (authentication), `model/report.js` (client add-ons)
 - **Routes**: `routes/auth.js` (login, password change), `routes/whatsapp.js` (WhatsApp client, contacts, groups, sending)
-- **Helpers and tests**: `lib/params.js` (keeps winners when params are saved), `test/` (run with `npm test` in `backend/`)
+- **Helpers and tests**: `lib/params.js` (keeps winners when params are saved; checks single-horse updates), `lib/bets.js` (checks every incoming bet: amounts must agree with the F500 or odds), `lib/ratelimit.js` (login attempt limits), `test/` (run with `npm test` in `backend/`)
 - **API Base**: All endpoints prefixed with `/api/` except `/auth/`
 
 ### Data Flow
@@ -42,6 +42,13 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 - **Host bindings**: Use `host: {}` in decorator, not `@HostBinding`/`@HostListener`
 - **Styling**: Use class/style bindings directly, not `ngClass`/`ngStyle`
 
+## Types and data
+
+- Shared data shapes (`Bet`, `HorseParam`, `SelectedRace`, `BetRequest`, ...) are in [models.ts](../src/app/models.ts). Use them instead of `any`; the project has none.
+- Rule 4 deductions: use `applyRule4`, `rule4Applies`, `rule4Percentages` from [settlement.ts](../src/app/services/settlement.ts) rather than writing the loop again.
+- Templates use `@if`/`@for` and `[class.name]` bindings; services and components use `inject()`.
+- The API data is fetched fresh: the service worker uses the `freshness` strategy for API calls (network first, saved copy only when offline).
+
 ## Authentication Flow
 
 **Critical**: the session rules are enforced client-side in [auth.service.ts](../src/app/services/auth.service.ts) and by the token expiry set in [auth.js](../backend/routes/auth.js):
@@ -53,7 +60,7 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 
 **Setup** (see [AUTHENTICATION.md](../AUTHENTICATION.md)):
 1. Create `backend/.env` with `MONGODB_URI`, `JWT_SECRET`, `PORT`
-2. Run `cd backend && APP_SCOPE=phantom npm run create-user` to create `Admin` (default password `admin123@`, change it at once)
+2. Run `cd backend && APP_SCOPE=phantom npm run create-user` to create `Admin` with a random password that is printed once (change it at once in the Password tab)
 3. Start backend: `cd backend && npm start` (port 3000)
 4. Start frontend: `npm start` (port 4200)
 
@@ -169,6 +176,6 @@ Main theme: [material-theme.scss](../src/material-theme.scss) defines custom Mat
 
 ## Testing Notes
 
-- Frontend: `*.spec.ts` files (Vitest through `ng test`). `npm test` currently fails to compile because `list.spec.ts` imports a class that does not exist; the other specs are the generated "should create" stubs. The settlement rules (special, Rule 4, dead heat) have no automated tests yet.
-- Backend: `cd backend && npm test` runs the built-in Node test runner on `backend/test/*.test.js` (currently the winner-keeping helper).
-- The settlement rules are written out in [README.md](../README.md). They exist in four places (reports, merge, chart, single) and must be kept in step.
+- Frontend: `npm test -- --watch=false` runs Vitest. The specs cover the Rule 4 calculation (`services/settlement.spec.ts`) and the session rules (`services/auth.service.spec.ts`). The screens (components) have no tests, so after changing a calculation compare Reports, Merge, Chart and Single on real data.
+- Backend: `cd backend && npm test` runs the built-in Node test runner on `backend/test/*.test.js` (bet checks, single-horse update fields, winner keeping, login rate limit). The deploy workflow runs both suites before building.
+- The settlement rules are written out in [README.md](../README.md). The Rule 4 deduction lives in one place, `src/app/services/settlement.ts`; special withdrawals, dead heats and the rest are still written out in reports, merge, chart and single and must be kept in step.

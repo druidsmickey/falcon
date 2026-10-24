@@ -71,10 +71,14 @@ You need Node.js 22 and a MongoDB database (a free Atlas cluster is fine).
 
 ```bash
 npm run build            # production build of the frontend
-cd backend && npm test   # backend tests (Node's built-in test runner)
+npm test -- --watch=false   # frontend tests (Vitest)
+cd backend && npm test      # backend tests (Node's built-in test runner)
 ```
 
-The frontend unit tests (`npm test` in the project root) do not run yet: `src/app/list/list.spec.ts` imports a class that does not exist, and the other spec files are the generated "should create" stubs. The settlement rules have no automated tests yet.
+- **Frontend tests** cover the Rule 4 calculation (`src/app/services/settlement.spec.ts`) and the login session rules, including the 4-minute and 1-hour limits (`auth.service.spec.ts`).
+- **Backend tests** cover the check of incoming bets, the single-horse update fields, the winner-keeping on a Params save, and the login rate limit (`backend/test/`).
+- The deploy workflow runs both before it builds anything; a failing test stops the deploy.
+- The screens themselves (components) have no automated tests. After changing a calculation, compare Reports, Merge, Chart and Single on real data before deploying.
 
 ## Deployment
 
@@ -89,7 +93,7 @@ Pushing to `main` of this repository runs `.github/workflows/deploy.yml`, which 
 | PM2 process | `phantom-backend-2027` | `detori-backend-2027` |
 
 - nginx (`/etc/nginx/sites-enabled/apps`) serves `dist/itb/browser/` of each folder and forwards the API paths to the ports above. Use the address **with the trailing slash**; without it nginx answers 404.
-- Each app's backend reads `backend/.env` **on the server**. The workflow does not write it and does not overwrite it. To change a database or secret, edit that file and run `pm2 restart <process>`.
+- Each app's backend reads `backend/.env` **on the server**. The workflow does not write it and does not overwrite it. To change a database or secret, edit that file and run `pm2 restart <process>`. The file needs `PORT`, `MONGODB_URI` and `JWT_SECRET`; the server **refuses to start without `JWT_SECRET`**. `CORS_ORIGINS` (a comma-separated list of web addresses) is only needed if the app is ever opened from an address other than the one the API is on; it defaults to `http://localhost:4200` for local development.
 - GitHub secrets needed in the repository settings: `SSH_HOST`, `USERNAME`, `SSH_PRIVATE_KEY`.
 - The workflow installs npm 11.6.3 (the version in `package.json`); the npm that comes with the GitHub runner crashes on this dependency tree.
 - The earlier Gambit and Cumbre apps run beside these under other names and ports, from another repository. Never reuse their process names, ports or folders.
@@ -101,12 +105,20 @@ More detail for the server and for WhatsApp: [DIGITAL_OCEAN_SETUP.md](DIGITAL_OC
 
 - A login lasts **1 hour**, then you log in again.
 - You are logged out after **4 minutes without using the app** (no click, tap or typing; also when the tab is hidden, the window is minimised or left on another screen, or the computer sleeps). Details in [AUTHENTICATION.md](AUTHENTICATION.md).
+- Wrong passwords are limited: after 10 failures for one user name from one address, or 100 from one address, login is refused for 15 minutes.
 - Logging out clears the data saved in the browser for offline use.
-- Meetings older than **6 days** are deleted, with their bets, at the next login. Print or export what you need before then.
+- Meetings older than **6 days** are deleted, with their bets, at the next login. The age counts from when the meeting was first created (saving it again does not restart it) and the **selected meeting is never deleted**. Print or export what you need before then.
+- The server checks every bet it receives: stake, books and payout must agree with the F500 or odds that were entered, and only known fields are stored.
 
 ## Known issues
 
-See "Recommendations" in [AUTHENTICATION.md](AUTHENTICATION.md) and the notes in [scripts/README-offline-pwa.md](scripts/README-offline-pwa.md).
+- **No HTTPS yet.** The apps are served over plain HTTP, so passwords and tokens travel unencrypted. Put a domain and a certificate in front of the server.
+- **Offline use is limited by the login rules.** Logging in needs the server, and the app logs out after 4 minutes without use, so a device that goes offline and then sits idle cannot sign back in until it is online again.
+- **11 `npm audit` findings remain in the backend**, all inside `whatsapp-web.js` and its Puppeteer (browser) dependency. They are not reachable from the web; the suggested fix is a downgrade that does not remove them.
+- **Every user can do everything.** There is one kind of user and no screen to add users.
+- Meetings of more than 6 days are removed automatically (see above).
+
+More in [AUTHENTICATION.md](AUTHENTICATION.md) and [scripts/README-offline-pwa.md](scripts/README-offline-pwa.md).
 
 ## Other documents
 

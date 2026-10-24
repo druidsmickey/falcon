@@ -41,8 +41,8 @@ Use this page to show that ITB keeps taking bets when the internet drops and cat
 1. Offline pages only work after the app was opened once online on that device.
 2. Entering bets, saving Params and saving Init work offline. Ticking winners, cancelling bets and WhatsApp need the internet.
 3. Clearing the browser's site data removes the saved copy and any unsent items. Logging out clears the saved copy of the data but not the unsent items.
-4. The app decides it is online by contacting a Google address as well; on a network that blocks Google it can show Offline while the server is reachable.
-5. A conflict (the same Params or Init data was changed elsewhere) is not retried and has no resolve screen: check the data and enter it again.
+4. The app decides it is online by contacting its own server. If the server cannot be reached (even though the internet works), it shows Offline and keeps the work in the queue.
+5. A conflict (the same Params or Init data was changed elsewhere) or a bet the server refuses is not retried and has no resolve screen: check the data and enter it again.
 
 ## Go-live checklist
 
@@ -51,7 +51,7 @@ Use this page to show that ITB keeps taking bets when the internet drops and cat
 | Production API address set | Done by the deploy workflow (`/api-phantom-2027`, `/api-detori-2027`) |
 | Secrets kept out of the repository | `backend/.env` lives on the server only; GitHub secrets hold the SSH key |
 | HTTPS for the web address and API | **Not done.** Passwords and tokens travel unencrypted until a domain and certificate are added |
-| Login attempts limited | **Not done** |
+| Login attempts limited | Done: 10 wrong passwords per user and address, 100 per address, then 15 minutes |
 | Database backups | Confirm the backup policy of the MongoDB cluster |
 | Monitoring | `pm2 list` and the `/health` addresses; consider an uptime monitor |
 | Automatic deletion | Meetings older than 6 days are deleted at login. Confirm this is wanted |

@@ -30,7 +30,7 @@ Buttons on Connection:
 - **Reset & New QR:** delete the saved session and show a new QR code. Use this if the connection is stuck or authentication fails.
 - **Test Server:** checks that Chrome can start on the server and shows the version or the problem.
 
-The QR code image is drawn by an outside website (`api.qrserver.com`), which receives the QR text. The code is only valid for a short time, but this is something to be aware of; the server also prints the QR code in its own log.
+The QR code image is drawn in your browser. The text that links a device to your WhatsApp is not sent to any outside website. The server also prints the QR code in its own log.
 
 ## Contacts
 
@@ -76,6 +76,9 @@ All paths start with `/api/whatsapp`.
 - The status must be **Connected**.
 - Check the number: country code, digits only, and it must be registered on WhatsApp.
 - Look at the server log (`pm2 logs <process>`).
+
+**"A group with that name already exists" for a name you have not used**
+- Group names are compared ignoring capitals, as plain text. Check the list of groups for the same name.
 
 **The session ended**
 - WhatsApp can unlink a device (for example if the phone is offline for weeks). Scan the QR code again.

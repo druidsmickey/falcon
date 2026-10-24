@@ -13,9 +13,10 @@ How the apps are laid out on the server, how to restart and check them, and how 
 | Web address | `/Phantom/2027/` | `/Detori/2027/` |
 | API address | `/api-phantom-2027/` | `/api-detori-2027/` |
 
-- **nginx** is configured in `/etc/nginx/sites-enabled/apps`. It serves `<folder>/dist/itb/browser/` for each web address and forwards each API address to the backend port. The older apps (Gambit, Cumbre) use the same file, with their own paths and ports 3000 and 3001. **Do not change or reuse those.**
+- **nginx** is configured in `/etc/nginx/sites-enabled/apps`. For each 2027 app it (a) redirects the address without the closing slash to the one with it, (b) sends `Cache-Control: no-cache` for `index.html`, `ngsw.json` and the service-worker files, so a new version is picked up at once, and (c) passes the visitor's real address on to the backend (`X-Forwarded-For`), which the login rate limit depends on. It serves `<folder>/dist/itb/browser/` for each web address and forwards each API address to the backend port. The older apps (Gambit, Cumbre) use the same file, with their own paths and ports 3000 and 3001. **Do not change or reuse those.**
 - A deploy (push to `main`) copies the project into the folders above, runs `npm install` in `backend/` and restarts the PM2 process. It does **not** write `.env` and does not delete `backend/.wwebjs_auth/`.
 - Node.js and PM2 are on the server's path through the normal login shell.
+- Before building, the workflow runs the frontend and backend tests; a failing test stops the deploy.
 
 ### Everyday commands
 
@@ -41,7 +42,7 @@ If the test fails, copy the backup back over the file. A mistake in this file af
 
 ### Checks after a deploy
 
-- `http://<server>/Phantom/2027/` and `/Detori/2027/` load. Use the address **with a trailing slash**; without it nginx answers 404.
+- `http://<server>/Phantom/2027/` and `/Detori/2027/` load (the address without the closing slash redirects to it).
 - Both health addresses answer `"database":"Connected"`.
 - `pm2 list` shows all backends `online`, including the older ones.
 
@@ -108,7 +109,8 @@ In `pm2 logs <process>`:
 | Nothing after 3 minutes | The server is too slow or short of memory: `free -m`, `top` |
 | 502 from `/api-...-2027/` | The backend is not running: `pm2 list`, `pm2 logs`, then `pm2 restart` |
 | 500 from `/Phantom/2027/` | The `dist` folder is missing, the deploy did not finish; check the GitHub Actions run |
-| 404 from `/Phantom/2027` | Missing trailing slash; use `/Phantom/2027/` |
+| `/Phantom/2027` without the slash | Redirects to `/Phantom/2027/` |
+| 429 on login | Too many wrong passwords; wait 15 minutes. If it happens for everyone at once, check that nginx passes `X-Forwarded-For` (see above) |
 | Page looks old after a deploy | The browser or the service worker has the old version: reload twice or clear the site data |
 
 ## Memory
@@ -132,6 +134,8 @@ PORT=3010
 MONGODB_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/phantom2027?retryWrites=true&w=majority
 JWT_SECRET=a-long-random-string
 ```
+
+`JWT_SECRET` is required: the backend refuses to start without it (check `pm2 logs`). `CORS_ORIGINS` is optional and only needed if the app is opened from an address other than the API's own.
 
 Use a different port, database name and `JWT_SECRET` for each app. After editing: `pm2 restart <process>`. See [AUTHENTICATION.md](AUTHENTICATION.md) for creating the first user.
 
