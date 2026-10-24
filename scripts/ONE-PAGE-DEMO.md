@@ -1,58 +1,61 @@
-# ITB One-Page Production Demo (Offline + Sync Proof)
+# ITB one-page demo: offline entry and sync
 
-## Purpose
-Use this page to demonstrate and sign off that ITB is production-ready for offline operation and safe sync recovery.
+Use this page to show that ITB keeps taking bets when the internet drops and catches up safely afterwards. For how it works in detail, see [README-offline-pwa.md](README-offline-pwa.md).
 
-## Prerequisites (Before Demo)
-1. Frontend and backend are running.
-2. Browser has opened the app at least once while online (PWA cache installed).
-3. Test user can log in.
-4. Backend sync audit endpoint is reachable.
+## Before the demo
 
-## Start Commands
-1. Backend:
-  - `cd backend`
-  - `npm start`
-2. Frontend:
-  - `cd ..`
-  - `npm start`
+1. The backend and frontend are running (locally: see [../README.md](../README.md); or use a deployed app).
+2. A meeting is **selected** in the Init tab, with races and horse names in Params.
+3. For the offline part, use a **production build** (`npm run build` and serve it, or the deployed app). The development server (`npm start`) has no service worker.
+4. Open the app once **while online** in the browser you will use, so it is cached.
+5. Log in **just before** you start. The login lasts 1 hour and the app logs you out after **4 minutes without use**, which would interrupt a slow demo. Keep clicking, or log in again if it happens (queued bets are kept).
 
-## Client-Facing Success Criteria
-1. App remains usable when internet drops.
-2. New records are queued offline without data loss.
-3. Queued records sync after reconnect.
-4. UI clearly reports Online/Offline, Pending, Conflict, Failed, Last Sync, and Sync result message.
-5. Conflict cases are visible and do not silently overwrite server data.
+## Success criteria
 
-## 3-Minute Live Demo Script
-1. Keep internet ON and create one normal record.
-2. Turn Wi-Fi OFF.
-3. Confirm red badge: `Internet Offline`.
-4. Create 2-3 records while offline.
-5. Show `Pending` count increased.
-6. Turn Wi-Fi ON.
-7. Click `Sync Now`.
-8. Confirm proof on UI:
-  - `Pending` goes down to 0 (or lower than before)
-  - Sync message shows `Sync successful: X item(s) sent` (or partial/issue)
-  - `Last Sync` timestamp updates
+1. The app stays usable when the internet drops.
+2. New bets and saves are queued offline with no loss.
+3. Queued items are sent after reconnecting, with no double entries.
+4. The screen shows Online/Offline, Pending, Conflicts, Failed, the last sync time and a result message.
+5. A conflict is shown and never silently overwrites the server's data.
 
-## Server-Side Proof (Optional but Recommended)
-1. Run: `powershell -ExecutionPolicy Bypass -File "scripts/phase34-api-verify.ps1"`
-2. Show sync audit entries from backend endpoint (`/api/sync/audit`).
+## 3-minute script
 
-## Important Production Behavior
-1. Offline refresh works only after first successful online load on that browser/device.
-2. If browser storage is cleared, cache/outbox is cleared too.
-3. `localhost` is for local machine only; production must use real server URL/domain.
+1. With the internet **on**, enter one normal bet in the **Entry** tab.
+2. Turn Wi-Fi **off**. The tab-bar button turns red and says **Offline**.
+3. Enter 2 or 3 more bets. Each shows "Saved offline".
+4. Open the sync tab (the **Offline | Sync** button). **Pending** has gone up.
+5. Turn Wi-Fi **on** and press **Sync Now** (or wait up to 30 seconds).
+6. Show the proof on screen:
+   - **Pending** drops to 0
+   - the message reads `Sync successful: sent 3, fetched ...`
+   - **Last Sync** shows the new time
+7. Open the **List** tab: all bets are there, once each.
 
-## Production Checklist (Go-Live)
-1. Replace localhost API URL with production API URL.
-2. Enable HTTPS for frontend and backend.
-3. Protect secrets with environment variables (no secrets in repo).
-4. Confirm backup/restore policy for MongoDB.
-5. Confirm monitoring/logging for backend uptime and sync failures.
-6. Verify role/access rules and token policy in production environment.
+## Proof on the server (optional)
 
-## Acceptance Statement
-"ITB supports offline data capture and safe deferred synchronization. During outages, records are queued locally and synced when connectivity returns, with visible proof in UI and audit evidence on server."
+- Run `powershell -ExecutionPolicy Bypass -File scripts/phase34-api-verify.ps1`, or
+- open `/api/sync/audit` (needs a login token) to list what was synced, ignored as a duplicate, rejected as a conflict, or failed.
+
+## Limits to mention
+
+1. Offline pages only work after the app was opened once online on that device.
+2. Entering bets, saving Params and saving Init work offline. Ticking winners, cancelling bets and WhatsApp need the internet.
+3. Clearing the browser's site data removes the saved copy and any unsent items. Logging out clears the saved copy of the data but not the unsent items.
+4. The app decides it is online by contacting a Google address as well; on a network that blocks Google it can show Offline while the server is reachable.
+5. A conflict (the same Params or Init data was changed elsewhere) is not retried and has no resolve screen: check the data and enter it again.
+
+## Go-live checklist
+
+| Item | State |
+|---|---|
+| Production API address set | Done by the deploy workflow (`/api-phantom-2027`, `/api-detori-2027`) |
+| Secrets kept out of the repository | `backend/.env` lives on the server only; GitHub secrets hold the SSH key |
+| HTTPS for the web address and API | **Not done.** Passwords and tokens travel unencrypted until a domain and certificate are added |
+| Login attempts limited | **Not done** |
+| Database backups | Confirm the backup policy of the MongoDB cluster |
+| Monitoring | `pm2 list` and the `/health` addresses; consider an uptime monitor |
+| Automatic deletion | Meetings older than 6 days are deleted at login. Confirm this is wanted |
+
+## Acceptance statement
+
+"ITB supports offline bet entry and safe deferred synchronisation. During an outage, records are queued in the browser and sent when the connection returns, with the result visible on screen and an audit trail on the server."

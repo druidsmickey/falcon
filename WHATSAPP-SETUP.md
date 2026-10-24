@@ -1,156 +1,88 @@
-# WhatsApp Messaging Integration
+# WhatsApp tab
 
-This document explains how to use the WhatsApp messaging feature in the ITB application.
+Send messages, reports and photos to clients from the app, through your own WhatsApp account. It uses `whatsapp-web.js`, which drives a headless Chromium browser on the **server** and links to your phone as a "Linked device".
 
-## Overview
+The tab has four parts:
 
-The WhatsApp integration uses `whatsapp-web.js` to send messages to contacts directly from the application. This feature allows you to:
-- Connect your WhatsApp account via QR code
-- Manage contacts with phone numbers
-- Send individual or bulk messages
-- Use pre-formatted message templates
+| Part | What it does |
+|---|---|
+| **Connection** | Connect or disconnect WhatsApp, show the QR code, reset the session, test that the server can start Chrome |
+| **Contacts** | Add contacts by hand or import them from your WhatsApp, delete contacts |
+| **Groups** | Create, edit and delete groups of contacts (a group is only a sending list kept in the app) |
+| **Send Message** | Send text to one contact, several contacts or a whole group; send a photo to a group; see and delete what was sent |
 
-## Setup Instructions
+## Before you start
 
-### 1. Backend Setup
+- **Each app has its own WhatsApp session.** Phantom and Detori run as separate server processes, so each needs its own QR scan and counts as its own "linked device". One WhatsApp account can have several linked devices, so both apps may use the same number, but they will then send from the same account and each runs its own Chrome (memory). Never copy one app's `.wwebjs_auth` folder to the other.
+- The server needs **Chromium** and enough memory. See [DIGITAL_OCEAN_SETUP.md](DIGITAL_OCEAN_SETUP.md).
+- The session is saved on the server in `backend/.wwebjs_auth/` (next to `server.js`). **Never commit or share this folder: it is a logged-in copy of your WhatsApp.** It is in `.gitignore`. A deployment does not remove it.
 
-The backend dependencies have been installed:
-- `whatsapp-web.js` - WhatsApp Web API client
-- `qrcode-terminal` - QR code display in terminal
+## Connecting
 
-### 2. Start the Backend Server
+1. Open the **WhatsApp** tab, then **Connection**.
+2. Press **Initialize WhatsApp** and wait (about 10 to 20 seconds) for the QR code.
+3. On your phone: WhatsApp, Settings, **Linked devices**, **Link a device**, scan the QR code.
+4. The status changes to **Connected**. After that the server reconnects by itself; you only scan again if you disconnect, press **Reset & New QR**, or WhatsApp ends the session.
 
-```bash
-cd backend
-npm start
-```
+Buttons on Connection:
+- **Refresh Status:** check the state again.
+- **Disconnect:** close the connection (the saved session stays).
+- **Reset & New QR:** delete the saved session and show a new QR code. Use this if the connection is stuck or authentication fails.
+- **Test Server:** checks that Chrome can start on the server and shows the version or the problem.
 
-The WhatsApp routes are available at: `http://localhost:3000/api/whatsapp/*`
+The QR code image is drawn by an outside website (`api.qrserver.com`), which receives the QR text. The code is only valid for a short time, but this is something to be aware of; the server also prints the QR code in its own log.
 
-### 3. Start the Frontend
+## Contacts
 
-```bash
-npm start
-```
+- **Add by hand:** name and number with the country code and no `+`, spaces or dashes (for example `61412345678`). The app adds `@c.us` itself.
+- **Import from WhatsApp:** fetches the contacts of the linked phone, you tick the ones to import. Contacts already in the list are skipped.
+- Contacts are saved in the app's database. Deleting a contact also removes it from every group.
 
-## Using the WhatsApp Feature
+## Sending
 
-### Step 1: Connect WhatsApp
+- **To contacts:** tick one or more contacts, write the message, send. Several contacts are sent in batches of 7 with a 1 second pause, to stay within WhatsApp's limits.
+- **To a group:** choose the group (it is remembered for next time), write the message and send. Each send is saved in the history below.
+- **Photo to a group:** press the camera button, take or pick a photo. It is shrunk (longest side 1920 px, JPEG) before sending. The text box, if filled, becomes the caption.
+- **History:** messages sent to the selected group are listed. You can copy one back into the text box, or **delete** one: this removes it **for everyone** in each contact's chat (WhatsApp only allows this for a limited time after sending).
+- Formatting: `*bold*`, `_italic_`, `~strikethrough~`.
+- If a chat had unread messages, the app marks it unread again after sending, so you do not lose track of it.
 
-1. Navigate to the **WhatsApp** tab in the application
-2. Go to the **Connection** sub-tab
-3. Click **Initialize WhatsApp**
-4. Wait for the QR code to appear
-5. Open WhatsApp on your phone:
-   - Go to Settings > Linked Devices
-   - Tap "Link a Device"
-   - Scan the QR code displayed in the app
-6. Once connected, the status will change to "Connected"
+There are no message templates in the app.
 
-**Note**: The WhatsApp session is persisted locally, so you won't need to scan the QR code every time unless you disconnect or the session expires.
+## API (all need a login token)
 
-### Step 2: Add Contacts
+Connection: `GET /api/whatsapp/status`, `POST /initialize`, `POST /disconnect`, `POST /reset`, `GET /test-puppeteer`.
 
-1. Go to the **Contacts** tab
-2. Enter the contact name
-3. Enter the phone number:
-   - Include country code (e.g., `1234567890` for a US number)
-   - The system will automatically format it as `1234567890@c.us`
-   - Or you can enter the full WhatsApp ID: `1234567890@c.us`
-4. Click **Add Contact**
+Contacts: `GET /contacts`, `POST /contacts`, `DELETE /contacts/:id`, `GET /whatsapp-contacts`, `POST /import-contacts`.
 
-### Step 3: Send Messages
+Groups: `GET /groups`, `POST /groups`, `PUT /groups/:id`, `DELETE /groups/:id`.
 
-1. Go to the **Send Message** tab
-2. Select one or more contacts from your contact list
-3. Type your message or use a quick template:
-   - **Greeting**: Simple hello message
-   - **Race Results**: Template for race winners
-   - **Betting Summary**: Template for betting reports
-4. Click **Send Message**
+Sending: `POST /send-message`, `POST /send-bulk`, `POST /send-to-group`, `POST /send-image-to-group`, `POST /send-report`, `GET /messages/:groupId`, `POST /delete-messages`.
 
-**Formatting Tips**:
-- Use `*text*` for **bold**
-- Use `_text_` for _italic_
-- Use `~text~` for ~~strikethrough~~
+Chat "keep unread" tracking: `POST /mark-keep-unread`, `POST /unmark-keep-unread`.
 
-## API Endpoints
-
-The following endpoints are available (all require authentication):
-
-### Connection Management
-- `GET /api/whatsapp/status` - Get current WhatsApp connection status
-- `POST /api/whatsapp/initialize` - Initialize WhatsApp client
-- `POST /api/whatsapp/disconnect` - Disconnect WhatsApp client
-
-### Contact Management
-- `GET /api/whatsapp/contacts` - Get all contacts
-- `POST /api/whatsapp/contacts` - Add a new contact
-- `DELETE /api/whatsapp/contacts/:id` - Delete a contact
-
-### Messaging
-- `POST /api/whatsapp/send-message` - Send message to single contact
-- `POST /api/whatsapp/send-bulk` - Send message to multiple contacts
-- `POST /api/whatsapp/send-report` - Send formatted betting report
-
-## Example: Send Formatted Report
-
-To send a formatted betting report programmatically:
-
-```typescript
-const reportData = {
-  title: 'Race Day Results',
-  meeting: 'Churchill Downs',
-  date: '2026-05-19',
-  races: [
-    { winner: 'Thunder Strike', totalBets: '$5,000', totalPayout: '$15,000' },
-    { winner: 'Lightning Bolt', totalBets: '$3,500', totalPayout: '$8,500' }
-  ],
-  summary: 'Total Revenue: $8,500\nTotal Payout: $23,500',
-  footer: 'Thank you for your business!'
-};
-
-this.http.post(`${this.apiUrl}/api/whatsapp/send-report`, {
-  contactId: 'contact-id-here',
-  reportData
-}).subscribe(...);
-```
+All paths start with `/api/whatsapp`.
 
 ## Troubleshooting
 
-### QR Code Not Appearing
-- Check that the backend is running
-- Check the browser console for errors
-- Try clicking "Refresh Status"
+**The QR code does not appear**
+- Press **Test Server**. If it fails, Chromium is missing or cannot start; see [DIGITAL_OCEAN_SETUP.md](DIGITAL_OCEAN_SETUP.md).
+- Wait up to 3 minutes; after that the server gives up and you can press **Initialize** again.
 
-### Authentication Failed
-- The QR code may have expired
-- Click "Initialize WhatsApp" again to generate a new QR code
-- Make sure you scan within the time limit
+**Authentication failed or the connection is stuck**
+- Press **Reset & New QR** and scan again.
 
-### Message Not Sending
-- Verify WhatsApp status is "Connected"
-- Check that the phone number format is correct
-- Ensure the number is registered on WhatsApp
-- Check backend logs for error messages
+**A message does not send**
+- The status must be **Connected**.
+- Check the number: country code, digits only, and it must be registered on WhatsApp.
+- Look at the server log (`pm2 logs <process>`).
 
-### Session Expired
-- You may need to scan the QR code again
-- Sessions typically last for several weeks but can expire
+**The session ended**
+- WhatsApp can unlink a device (for example if the phone is offline for weeks). Scan the QR code again.
 
-## Security Notes
+## Security notes
 
-- WhatsApp sessions are stored locally on the server in `.wwebjs_auth` directory
-- Only authenticated users can access WhatsApp endpoints
-- Contacts are stored in memory (consider moving to MongoDB for persistence)
-- Messages are sent through your WhatsApp account, so they appear as coming from you
-
-## Future Enhancements
-
-Possible improvements:
-- Store contacts in MongoDB for persistence
-- Add message scheduling
-- Add support for sending images/documents
-- Integrate with reports to auto-send race results
-- Add message templates management
-- Add message history/logs
+- Only logged-in users can reach the WhatsApp routes, and they can send as you to anyone in the contact list. Keep the login safe.
+- Messages appear to come from your own WhatsApp account.
+- Using an unofficial library such as `whatsapp-web.js` is against WhatsApp's terms and the account can be restricted. Send to people who expect your messages and avoid large unsolicited bulk sends.
+- `.wwebjs_auth/` holds the live session: keep it out of git, backups you share, and screenshots.

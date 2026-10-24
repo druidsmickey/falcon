@@ -1,78 +1,65 @@
-# ITB Offline/PWA & Sync Guide
+# Offline mode and sync
 
-This document explains how the offline (PWA) features work, how the client interacts with them, and how the system is set up for offline/online operation.
+How the app keeps working when the internet drops, what it can and cannot do offline, and how it catches up afterwards.
 
----
+## What works offline
 
-## 1. How does the offline feature work?
+| Action | Offline? |
+|---|---|
+| Enter bets (Entry, Single, Chart) | **Yes**: saved in the browser and sent later |
+| Save Params (horse names, Special, Rule 4) | **Yes**: queued |
+| Save a meeting's races in Init | **Yes**: queued |
+| Look at charts, lists and reports | Yes, from the data last loaded (see below) |
+| Tick winners | **No**: needs the server |
+| Cancel or uncancel a bet | **No** |
+| Reports add-ons, deleting a meeting, change password, WhatsApp | **No** |
 
-- **PWA (Progressive Web App):**
-  - The app is installable on desktop and mobile browsers (look for the install prompt or use browser menu > "Install App").
-  - A service worker caches static assets and API data for offline use.
-- **Offline Data Entry:**
-  - When the internet is lost, you can still enter bets, params, and init data.
-  - All offline actions are queued in the browser (IndexedDB outbox).
-  - A yellow banner shows when you are offline.
-- **Syncing:**
-  - When you reconnect, the app auto-syncs all queued actions to the server.
-  - You can also press the "Sync Now" button (top bar) to force a sync when online.
-  - If a conflict is detected (e.g., someone else changed the same data), you’ll see a conflict status in the sync queue.
-- **Idempotency:**
-  - Each offline action has a unique request ID, so duplicate syncs are ignored by the backend (no double entries).
+If a "No" action is tried offline it fails with an error message.
 
----
+## How it works
 
-## 2. Where does the project run?
+- **Installable app (PWA).** In a production build a service worker keeps the app itself available offline. The app can be installed from the browser menu ("Install app"). It must have been opened **once while online** on that device first.
+- **Outbox.** Offline saves are put in a queue in the browser (IndexedDB, `itb-offline`). Each item has a unique request id.
+- **Data cache.** Races, params, bets and the last bet are also kept in the browser (localStorage) so the pages can still show data offline. Offline bets are added to this copy straight away, so the charts include them.
+- **Sync.** When the connection returns, and every 30 seconds while online, the app sends the queued items in order, then downloads the latest data from the server. If anything was sent, the page reloads once to show the server's version.
+- **No double entries.** The server remembers request ids, so an item sent twice is ignored the second time.
+- **Conflicts.** For Params and Init the server compares the time the edit started from with the time the data last changed. If someone else changed it meanwhile, the server answers 409 and the item is marked **conflict**.
 
-- **Local System:**
-  - You can run the backend (Node.js/Express) and frontend (Angular) on your own computer for development or demo.
-  - Use the provided batch script: `scripts/run-itb-local.bat` to start both servers.
-- **Website/Production:**
-  - The app is designed to be deployed to a web server (frontend build + backend API).
-  - Users access it via browser (Chrome, Edge, etc.), and can install it as a PWA for offline use.
+## The Online / Sync button
 
----
+The button in the tab bar shows **Online** or **Offline** (green or red) and **Sync**. Press it, or open its tab, to see:
 
-## 3. How was the PWA/offline system implemented?
+- **Network:** online or offline
+- **Pending / Conflicts / Failed:** how many queued items are waiting, in conflict, or failed
+- **A message:** for example `Sync successful: sent 3, fetched 120`, `Sync partial...` or `Sync issue...`
+- **Last Sync:** time of the last attempt
+- **Sync Now:** send everything now (only works when the app thinks you are online)
 
-- **Frontend:**
-  - Angular 21 with service worker enabled (`ngsw-config.json`).
-  - IndexedDB outbox (Dexie) for queuing offline actions.
-  - Sync service that auto-syncs on reconnect or on "Sync Now".
-  - Manual sync button and status display in the app shell.
-  - UI banners for offline/online state.
-- **Backend:**
-  - Express.js API with idempotency checks (clientRequestId) for all write endpoints.
-  - Conflict detection for params/init using last-updated timestamps.
-  - Sync audit log for all sync attempts and conflicts.
+## Things to know
 
----
+- **A conflict is not retried and there is no screen to fix it.** The item stays counted under Conflicts. Look at what happened with the sync audit (`GET /api/sync/audit`, or `scripts/phase34-api-verify.ps1`), check the data on the server, and enter the change again by hand. Avoid editing the same meeting from two devices at once.
+- **A failed item is retried** at the next sync.
+- **How "Offline" is decided.** The app asks `https://www.gstatic.com/generate_204` (a Google address) every 10 seconds, besides the browser's own online flag. On a network that blocks Google it will show **Offline**, and **Sync Now** will refuse to run, even though your own server is reachable. This is a known weakness; the fix is to check the app's own `/health` address instead.
+- **Login and offline.** A login lasts 1 hour and the app logs out after 4 minutes without use. Logging out **clears the cached data** (not the outbox), so offline use after a logout or after the hour has passed is not possible until you log in again online. Queued bets stay in the outbox and are sent after the next login. See [../AUTHENTICATION.md](../AUTHENTICATION.md).
+- **Clearing browser data** (site data, private windows) removes the cache and the outbox with anything not yet sent.
+- **Fonts and icons** are loaded from Google, so the first load offline on a new device needs one online visit, and icons may show as text if they were never cached.
+- **Development builds** (`npm start`) do not use the service worker. Test offline behaviour with a production build.
+- **Meetings older than 6 days are deleted** at login, together with their bets (see [../AUTHENTICATION.md](../AUTHENTICATION.md)).
 
-## 4. How to use offline features as a client
+## Running it on your computer
 
-1. **Go offline (disconnect WiFi or unplug cable).**
-2. Enter bets, params, or meeting data as usual.
-3. See the yellow "Offline mode" banner.
-4. Reconnect to the internet.
-5. Wait for auto-sync, or press "Sync Now".
-6. Check sync status (pending/conflict/failed) in the top bar.
-7. If a conflict occurs, resolve it manually (see audit log for details).
+- Follow [../README.md](../README.md) to start the backend and the frontend.
+- `scripts/run-itb-local.bat` starts both for you, but its `ROOT` line has a folder on another computer. Change it to the project folder first.
 
----
+## Testing offline
 
-## 5. Troubleshooting
+1. Log in and open the app while online.
+2. In the browser's developer tools (Network tab) choose **Offline**, or turn Wi-Fi off. The button turns red.
+3. Enter a few bets and save Params. The Pending count goes up.
+4. Go online again. The app syncs by itself, or press **Sync Now**. Pending goes down and the message says `Sync successful`.
+5. Optional: `powershell -ExecutionPolicy Bypass -File scripts/phase34-api-verify.ps1` checks the sync API, and `/api/sync/audit` lists what was synced, duplicated, rejected or failed.
 
-- If sync does not work, check your internet connection and backend server status.
-- If you see repeated conflicts, ensure you are not editing the same data from multiple devices at the same time.
-- For advanced troubleshooting, use the API verification script: `scripts/phase34-api-verify.ps1`.
+## Further reading
 
----
-
-## 6. Further Reading
-
-- See main [README.md](../README.md) for full setup and deployment instructions.
-- See [AUTHENTICATION.md](../AUTHENTICATION.md) for login and security details.
-
----
-
-*This file summarizes all offline/PWA changes and usage for client handover.*
+- [../README.md](../README.md): setup, rules and deployment
+- [../AUTHENTICATION.md](../AUTHENTICATION.md): login and session rules
