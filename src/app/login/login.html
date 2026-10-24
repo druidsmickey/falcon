@@ -12,34 +12,40 @@
           required
           class="form-control"
           [disabled]="isLoading"
-        />
-      </div>
+          />
+        </div>
 
-      <div class="form-group">
-        <label for="password">Password:</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          [(ngModel)]="password"
-          required
-          class="form-control"
-          [disabled]="isLoading"
-        />
-      </div>
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            [(ngModel)]="password"
+            required
+            class="form-control"
+            [disabled]="isLoading"
+            />
+          </div>
 
-      <div class="error-message" *ngIf="errorMessage">
-        {{ errorMessage }}
-      </div>
+          @if (errorMessage) {
+            <div class="error-message">
+              {{ errorMessage }}
+            </div>
+          }
 
-      <button
-        type="submit"
-        class="btn btn-primary"
-        [disabled]="!loginForm.form.valid || isLoading"
-      >
-        <span *ngIf="isLoading">Logging in...</span>
-        <span *ngIf="!isLoading">Login</span>
-      </button>
-    </form>
-  </div>
-</div>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="!loginForm.form.valid || isLoading"
+            >
+            @if (isLoading) {
+              <span>Logging in...</span>
+            }
+            @if (!isLoading) {
+              <span>Login</span>
+            }
+          </button>
+        </form>
+      </div>
+    </div>

@@ -8,294 +8,317 @@
       type="text"
       placeholder="Filter by client name"
       [(ngModel)]="filterClientName"
-    />
-  </div>
-  <!-- Add Add-On for clients not in the list -->
-  <div class="addon-print-hidden" *ngIf="showSummaryOnly" style="margin-top: 1rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.5rem;">
-    <span style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">Add-On:</span>
-    <input
-      type="text"
-      [(ngModel)]="newAddonClientName"
-      placeholder="Client"
-      style="width: 65px; min-width: 0; padding: 0.5rem 0.5rem;"
-      (input)="newAddonClientName = newAddonClientName.toUpperCase()"
-      (keydown.enter)="addManualAddonClient()"
-    />
-    <input
-      type="text" inputmode="numeric" pattern="-?[0-9]*"
-      [(ngModel)]="newAddonValue"
-      placeholder="0"
-      style="width: 65px; min-width: 0; padding: 0.5rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem;"
-      (keydown.enter)="addManualAddonClient()"
-    />
-    <button class="addon-save-btn" (click)="addManualAddonClient()">Add</button>
-  </div>
+      />
+    </div>
+    <!-- Add Add-On for clients not in the list -->
+    @if (showSummaryOnly) {
+      <div class="addon-print-hidden" style="margin-top: 1rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.5rem;">
+        <span style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">Add-On:</span>
+        <input
+          type="text"
+          [(ngModel)]="newAddonClientName"
+          placeholder="Client"
+          style="width: 65px; min-width: 0; padding: 0.5rem 0.5rem;"
+          (input)="newAddonClientName = newAddonClientName.toUpperCase()"
+          (keydown.enter)="addManualAddonClient()"
+          />
+          <input
+            type="text" inputmode="numeric" pattern="-?[0-9]*"
+            [(ngModel)]="newAddonValue"
+            placeholder="0"
+            style="width: 65px; min-width: 0; padding: 0.5rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem;"
+            (keydown.enter)="addManualAddonClient()"
+            />
+            <button class="addon-save-btn" (click)="addManualAddonClient()">Add</button>
+          </div>
+        }
 
-  <table class="reports-table" *ngIf="!showSummaryOnly">
-    <thead>
-      <tr>
-        <th>Client</th>
-        <th>Date</th>
-        <th>R</th>
-        <th>H</th>
-        <th>Horse Name</th>
-        <th>Type</th>
-        <th>Books</th>
-        <th>F500</th>
-        <th>Odds</th>
-        <th>Stake</th>
-        <th>Status</th>
-        <th>Payout</th>
-      </tr>
-    </thead>
-    <tbody>
-      <ng-container *ngFor="let clientName of filteredGroupedItems | keyvalue:compareKeysAsc; trackBy: trackClientKey; let isFirst = first">
-        <ng-container *ngFor="let item of clientName.value; trackBy: trackItemId">
-          <tr *ngIf="!item.cancelled" class="client-bet-row" [class.client-first-row]="!isFirst && isFirstVisibleBet(clientName.value, item)">
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }">{{ clientName.key }}</td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }">
-              {{ item.date | date:'dd/MM' }}<br>
-              <small>{{ item.date | date:'HH:mm' }}</small>
-            </td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }" style="text-align: center;">{{ item.raceNum }}</td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }" style="text-align: center;">{{ item.horseNum }}</td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }">
-              {{ horseNamesByRace[item.raceNum - 1]?.[item.horseNum - 1] || '-' }}
-              <small *ngIf="hasRule4Deduction(item) && !isRule4(item)" style="color: #dc2626; font-weight: 600;">
-                {{ getRule4Deductions(item) }}
-              </small>
-            </td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }" style="text-align: center;">
-              {{ (item.stake || 0) >= 0 ? 'S' : 'P' }} ({{ item.tax || 0 }}%)
-            </td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }" style="text-align: right;">
-              {{ item.f500 && item.f500 !== 0 ? (item.books | number:'1.0-0') : '-' }}
-            </td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }" style="text-align: right;">
-              {{ item.f500 && item.f500 !== 0 ? item.f500 : '-' }}
-            </td>
-            <td [ngClass]="{ 'pur-bet-type': (item.stake || 0) < 0 }" style="text-align: right;">
-              {{ item.odds100 && item.odds100 !== 0 ? item.odds100 : '-' }}
-            </td>
-            <td [ngClass]="{
-                'strike-stake': isSpecial(item) || isRule4(item),
-                'pur-bet-type': (item.stake || 0) < 0
-              }" style="text-align: right;">
-              {{ item.stake | number:'1.0-0' }}
-            </td>
-            <td>
-              <ng-container *ngIf="isSpecial(item)">
-                <span class="withdrawn-label">With-Sp</span>
-              </ng-container>
-              <ng-container *ngIf="!isSpecial(item) && isRule4(item)">
-                <span class="rule4-label">With-R4</span>
-              </ng-container>
-              <ng-container *ngIf="!isSpecial(item) && !isRule4(item) && hasRule4Deduction(item)">
-                <span class="rule4-deduction-label">R4</span>
-              </ng-container>
-              <ng-container *ngIf="!isSpecial(item) && !isRule4(item) && !hasRule4Deduction(item) && isWinner(item)">
-                <span class="winner-label">{{ isDeadHeat(item) ? 'Win-DH' : 'Win' }}</span>
-              </ng-container>
-            </td>
-            <td style="text-align: right;">
-              <ng-container *ngIf="!isSpecial(item) && !isRule4(item) && isWinner(item)">
-                <span class="payout-value-red">{{ getAdjustedPayout(item) | number:'1.0-0' }}</span>
-              </ng-container>
-            </td>
-          </tr>
-        </ng-container>
-        <tr class="client-summary-row" *ngIf="hasActiveBets(clientName.value)">
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-          <td colspan="8" class="client-summary" style="text-align: left;">
-            Stake: <span class="summary-value">{{ getStakeAmountForGroup(clientName.value) | number:'2.0-0' }}</span>
-            &nbsp;|&nbsp;
-            Tax: <span class="summary-value" [class.negative-value]="getTaxAmountForGroup(clientName.value) < 0">{{ getTaxAmountForGroup(clientName.value) | number:'2.0-0' }}</span>
-            &nbsp;|&nbsp;
-            P/L: 
-            <span 
-              class="summary-value" 
-              [ngClass]="{'negative-value': getProfitLossForGroup(clientName.value) < 0}">
-              {{ getProfitLossForGroup(clientName.value) | number:'2.0-0' }}
-            </span>
-          </td>
-        </tr>
-      </ng-container>
-    </tbody>
-  </table>
+        @if (!showSummaryOnly) {
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Date</th>
+                <th>R</th>
+                <th>H</th>
+                <th>Horse Name</th>
+                <th>Type</th>
+                <th>Books</th>
+                <th>F500</th>
+                <th>Odds</th>
+                <th>Stake</th>
+                <th>Status</th>
+                <th>Payout</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (clientName of filteredGroupedItems | keyvalue:compareKeysAsc; track trackClientKey($index, clientName); let isFirst = $first) {
+                @for (item of clientName.value; track trackItemId($index, item)) {
+                  @if (!item.cancelled) {
+                    <tr class="client-bet-row" [class.client-first-row]="!isFirst && isFirstVisibleBet(clientName.value, item)">
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0">{{ clientName.key }}</td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0">
+                        {{ item.date | date:'dd/MM' }}<br>
+                        <small>{{ item.date | date:'HH:mm' }}</small>
+                      </td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: center;">{{ item.raceNum }}</td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: center;">{{ item.horseNum }}</td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0">
+                        {{ horseNamesByRace[item.raceNum - 1]?.[item.horseNum - 1] || '-' }}
+                        @if (hasRule4Deduction(item) && !isRule4(item)) {
+                          <small style="color: #dc2626; font-weight: 600;">
+                            {{ getRule4Deductions(item) }}
+                          </small>
+                        }
+                      </td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: center;">
+                        {{ (item.stake || 0) >= 0 ? 'S' : 'P' }} ({{ item.tax || 0 }}%)
+                      </td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: right;">
+                        {{ item.f500 && item.f500 !== 0 ? (item.books | number:'1.0-0') : '-' }}
+                      </td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: right;">
+                        {{ item.f500 && item.f500 !== 0 ? item.f500 : '-' }}
+                      </td>
+                      <td [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: right;">
+                        {{ item.odds100 && item.odds100 !== 0 ? item.odds100 : '-' }}
+                      </td>
+            <td [class.strike-stake]="isSpecial(item) || isRule4(item)" [class.pur-bet-type]="(item.stake || 0) < 0" style="text-align: right;">
+                        {{ item.stake | number:'1.0-0' }}
+                      </td>
+                      <td>
+                        @if (isSpecial(item)) {
+                          <span class="withdrawn-label">With-Sp</span>
+                        }
+                        @if (!isSpecial(item) && isRule4(item)) {
+                          <span class="rule4-label">With-R4</span>
+                        }
+                        @if (!isSpecial(item) && !isRule4(item) && hasRule4Deduction(item)) {
+                          <span class="rule4-deduction-label">R4</span>
+                        }
+                        @if (!isSpecial(item) && !isRule4(item) && !hasRule4Deduction(item) && isWinner(item)) {
+                          <span class="winner-label">{{ isDeadHeat(item) ? 'Win-DH' : 'Win' }}</span>
+                        }
+                      </td>
+                      <td style="text-align: right;">
+                        @if (!isSpecial(item) && !isRule4(item) && isWinner(item)) {
+                          <span class="payout-value-red">{{ getAdjustedPayout(item) | number:'1.0-0' }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                }
+                @if (hasActiveBets(clientName.value)) {
+                  <tr class="client-summary-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="8" class="client-summary" style="text-align: left;">
+                      Stake: <span class="summary-value">{{ getStakeAmountForGroup(clientName.value) | number:'2.0-0' }}</span>
+                      &nbsp;|&nbsp;
+                      Tax: <span class="summary-value" [class.negative-value]="getTaxAmountForGroup(clientName.value) < 0">{{ getTaxAmountForGroup(clientName.value) | number:'2.0-0' }}</span>
+                      &nbsp;|&nbsp;
+                      P/L:
+                      <span
+                        class="summary-value"
+                        [class.negative-value]="getProfitLossForGroup(clientName.value) < 0">
+                        {{ getProfitLossForGroup(clientName.value) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        }
 
-  <table class="reports-table profit-table" *ngIf="showSummaryOnly">
-    <thead>
-      <tr>
-        <th style="text-align: left;">Client</th>
-        <th style="text-align: left;">Add-On</th>
-        <th style="text-align: left;">Tax</th>
-        <th style="text-align: left;">Collect</th>
-        <th style="text-align: left;">Total</th>
-        <th class="print-fill-column" aria-hidden="true"></th>
-      </tr>
-    </thead>
-    <tbody>
-      <ng-container *ngFor="let clientName of filteredGroupedItems | keyvalue:compareKeysAsc; trackBy: trackClientKey">
-        <tr *ngIf="getAdjustedPLForGroup(clientName.value, clientName.key) >= 0">
-          <td style="text-align: left;">{{ clientName.key }}</td>
-          <td style="text-align: left;">
-            <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName.key] || 0) < 0">{{ (savedAddonValues[clientName.key] || 0) | number:'1.0-0' }}</span>
-            <button mat-icon-button (click)="deleteAddon(clientName.key)" style="vertical-align: middle;" title="Delete Add-On" *ngIf="savedAddonValues[clientName.key] != null">
-              <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
-            </button>
-          </td>
-          <td style="text-align: left;">
-            <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getTaxAmountForGroup(clientName.value) < 0">
-              {{ getTaxAmountForGroup(clientName.value) | number:'2.0-0' }}
-            </span>
-          </td>
-          <td style="text-align: left;">
-            <span class="summary-value" style="font-weight: 400;" [class.negative-value]="(getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) < 0">
-              {{ (getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) | number:'2.0-0' }}
-            </span>
-          </td>
-          <td style="text-align: left;">
-            <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getAdjustedPLForGroup(clientName.value, clientName.key) < 0">
-              {{ getAdjustedPLForGroup(clientName.value, clientName.key) | number:'2.0-0' }}
-            </span>
-          </td>
-          <td class="print-fill-column" aria-hidden="true"></td>
-        </tr>
-      </ng-container>
-      <!-- Manual addon clients (no bets) in profit table -->
-      <ng-container *ngFor="let clientName of manualAddonClients">
-        <tr *ngIf="(savedAddonValues[clientName] || 0) >= 0">
-          <td style="text-align: left;">{{ clientName }}</td>
-          <td style="text-align: left;">
-            <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName] || 0) < 0">{{ (savedAddonValues[clientName] || 0) | number:'1.0-0' }}</span>
-            <button mat-icon-button (click)="deleteManualAddonClient(clientName)" style="vertical-align: middle;" title="Delete Add-On">
-              <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
-            </button>
-          </td>
-          <td style="text-align: left;">-</td>
-          <td style="text-align: left;">-</td>
-          <td style="text-align: left;">
-            <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName] || 0) < 0">{{ (savedAddonValues[clientName] || 0) | number:'2.0-0' }}</span>
-          </td>
-          <td class="print-fill-column" aria-hidden="true"></td>
-        </tr>
-      </ng-container>
-      <tr>
-        <td style="text-align: left; font-weight: 400;">Net Total:</td>
-        <td></td>
-        <td style="text-align: left;">
-          <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalTaxAmount() < 0">
-            {{ getNetTotalTaxAmount() | number:'2.0-0' }}
+        @if (showSummaryOnly) {
+          <table class="reports-table profit-table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Client</th>
+                <th style="text-align: left;">Add-On</th>
+                <th style="text-align: left;">Tax</th>
+                <th style="text-align: left;">Collect</th>
+                <th style="text-align: left;">Total</th>
+                <th class="print-fill-column" aria-hidden="true"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (clientName of filteredGroupedItems | keyvalue:compareKeysAsc; track trackClientKey($index, clientName)) {
+                @if (getAdjustedPLForGroup(clientName.value, clientName.key) >= 0) {
+                  <tr>
+                    <td style="text-align: left;">{{ clientName.key }}</td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName.key] || 0) < 0">{{ (savedAddonValues[clientName.key] || 0) | number:'1.0-0' }}</span>
+                      @if (savedAddonValues[clientName.key] != null) {
+                        <button mat-icon-button (click)="deleteAddon(clientName.key)" style="vertical-align: middle;" title="Delete Add-On">
+                          <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
+                        </button>
+                      }
+                    </td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getTaxAmountForGroup(clientName.value) < 0">
+                        {{ getTaxAmountForGroup(clientName.value) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" style="font-weight: 400;" [class.negative-value]="(getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) < 0">
+                        {{ (getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getAdjustedPLForGroup(clientName.value, clientName.key) < 0">
+                        {{ getAdjustedPLForGroup(clientName.value, clientName.key) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                    <td class="print-fill-column" aria-hidden="true"></td>
+                  </tr>
+                }
+              }
+              <!-- Manual addon clients (no bets) in profit table -->
+              @for (clientName of manualAddonClients; track clientName) {
+                @if ((savedAddonValues[clientName] || 0) >= 0) {
+                  <tr>
+                    <td style="text-align: left;">{{ clientName }}</td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName] || 0) < 0">{{ (savedAddonValues[clientName] || 0) | number:'1.0-0' }}</span>
+                      <button mat-icon-button (click)="deleteManualAddonClient(clientName)" style="vertical-align: middle;" title="Delete Add-On">
+                        <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
+                      </button>
+                    </td>
+                    <td style="text-align: left;">-</td>
+                    <td style="text-align: left;">-</td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName] || 0) < 0">{{ (savedAddonValues[clientName] || 0) | number:'2.0-0' }}</span>
+                    </td>
+                    <td class="print-fill-column" aria-hidden="true"></td>
+                  </tr>
+                }
+              }
+              <tr>
+                <td style="text-align: left; font-weight: 400;">Net Total:</td>
+                <td></td>
+                <td style="text-align: left;">
+                  <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalTaxAmount() < 0">
+                    {{ getNetTotalTaxAmount() | number:'2.0-0' }}
+                  </span>
+                </td>
+                <td style="text-align: left;">
+                  <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalProfitLossUnadjusted() < 0">
+                    {{ getNetTotalProfitLossUnadjusted() | number:'2.0-0' }}
+                  </span>
+                </td>
+                <td style="text-align: left; font-weight: 700;">
+                  <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getNetTotalProfitLoss() < 0">
+                    {{ getNetTotalProfitLoss() | number:'2.0-0' }}
+                  </span>
+                </td>
+                <td class="print-fill-column" aria-hidden="true"></td>
+              </tr>
+            </tbody>
+          </table>
+        }
+
+        @if (showSummaryOnly) {
+          <table class="reports-table loss-table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Client</th>
+                <th style="text-align: left;">Add-On</th>
+                <th style="text-align: left;">Tax</th>
+                <th style="text-align: left;">Pay</th>
+                <th style="text-align: left;">Total</th>
+                <th class="print-fill-column" aria-hidden="true"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (clientName of filteredGroupedItems | keyvalue:compareKeysAsc; track trackClientKey($index, clientName)) {
+                @if (getAdjustedPLForGroup(clientName.value, clientName.key) < 0) {
+                  <tr>
+                    <td style="text-align: left;">{{ clientName.key }}</td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName.key] || 0) < 0">{{ (savedAddonValues[clientName.key] || 0) | number:'1.0-0' }}</span>
+                      @if (savedAddonValues[clientName.key] != null) {
+                        <button mat-icon-button (click)="deleteAddon(clientName.key)" style="vertical-align: middle;" title="Delete Add-On">
+                          <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
+                        </button>
+                      }
+                    </td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getTaxAmountForGroup(clientName.value) < 0">
+                        {{ getTaxAmountForGroup(clientName.value) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" style="font-weight: 400;" [class.negative-value]="(getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) < 0">
+                        {{ (getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getAdjustedPLForGroup(clientName.value, clientName.key) < 0">
+                        {{ getAdjustedPLForGroup(clientName.value, clientName.key) | number:'2.0-0' }}
+                      </span>
+                    </td>
+                    <td class="print-fill-column" aria-hidden="true"></td>
+                  </tr>
+                }
+              }
+              <!-- Manual addon clients (no bets) in loss table -->
+              @for (clientName of manualAddonClients; track clientName) {
+                @if ((savedAddonValues[clientName] || 0) < 0) {
+                  <tr>
+                    <td style="text-align: left;">{{ clientName }}</td>
+                    <td style="text-align: left;">
+                      <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName] || 0) < 0">{{ (savedAddonValues[clientName] || 0) | number:'1.0-0' }}</span>
+                      <button mat-icon-button (click)="deleteManualAddonClient(clientName)" style="vertical-align: middle;" title="Delete Add-On">
+                        <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
+                      </button>
+                    </td>
+                    <td style="text-align: left;">-</td>
+                    <td style="text-align: left;">-</td>
+                    <td style="text-align: left;">
+                      <span class="summary-value negative-value">{{ (savedAddonValues[clientName] || 0) | number:'2.0-0' }}</span>
+                    </td>
+                    <td class="print-fill-column" aria-hidden="true"></td>
+                  </tr>
+                }
+              }
+              <tr>
+                <td style="text-align: left; font-weight: 400;">Net Total:</td>
+                <td></td>
+                <td style="text-align: left;">
+                  <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalTaxAmountLoss() < 0">
+                    {{ getNetTotalTaxAmountLoss() | number:'2.0-0' }}
+                  </span>
+                </td>
+                <td style="text-align: left;">
+                  <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalLossUnadjusted() < 0">
+                    {{ getNetTotalLossUnadjusted() | number:'2.0-0' }}
+                  </span>
+                </td>
+                <td style="text-align: left; font-weight: 700;">
+                  <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getNetTotalLoss() < 0">
+                    {{ getNetTotalLoss() | number:'2.0-0' }}
+                  </span>
+                </td>
+                <td class="print-fill-column" aria-hidden="true"></td>
+              </tr>
+            </tbody>
+          </table>
+        }
+
+        <p>
+          <strong>Net Profit:</strong>
+          <span [class.negative-value]="(getNetTotalProfitLoss() + getNetTotalLoss()) < 0">
+            {{ (getNetTotalProfitLoss() + getNetTotalLoss()) | number:'2.0-0' }}
           </span>
-        </td>
-        <td style="text-align: left;">
-          <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalProfitLossUnadjusted() < 0">
-            {{ getNetTotalProfitLossUnadjusted() | number:'2.0-0' }}
-          </span>
-        </td>
-        <td style="text-align: left; font-weight: 700;">
-          <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getNetTotalProfitLoss() < 0">
-            {{ getNetTotalProfitLoss() | number:'2.0-0' }}
-          </span>
-        </td>
-        <td class="print-fill-column" aria-hidden="true"></td>
-      </tr>
-    </tbody>
-  </table>
-
-  <table class="reports-table loss-table" *ngIf="showSummaryOnly">
-    <thead>
-      <tr>
-        <th style="text-align: left;">Client</th>
-        <th style="text-align: left;">Add-On</th>
-        <th style="text-align: left;">Tax</th>
-        <th style="text-align: left;">Pay</th>
-        <th style="text-align: left;">Total</th>
-        <th class="print-fill-column" aria-hidden="true"></th>
-      </tr>
-    </thead>
-    <tbody>
-      <ng-container *ngFor="let clientName of filteredGroupedItems | keyvalue:compareKeysAsc; trackBy: trackClientKey">
-        <tr *ngIf="getAdjustedPLForGroup(clientName.value, clientName.key) < 0">
-          <td style="text-align: left;">{{ clientName.key }}</td>
-          <td style="text-align: left;">
-            <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName.key] || 0) < 0">{{ (savedAddonValues[clientName.key] || 0) | number:'1.0-0' }}</span>
-            <button mat-icon-button (click)="deleteAddon(clientName.key)" style="vertical-align: middle;" title="Delete Add-On" *ngIf="savedAddonValues[clientName.key] != null">
-              <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
-            </button>
-          </td>
-          <td style="text-align: left;">
-            <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getTaxAmountForGroup(clientName.value) < 0">
-              {{ getTaxAmountForGroup(clientName.value) | number:'2.0-0' }}
-            </span>
-          </td>
-          <td style="text-align: left;">
-            <span class="summary-value" style="font-weight: 400;" [class.negative-value]="(getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) < 0">
-              {{ (getProfitLossForGroup(clientName.value) - getTaxAmountForGroup(clientName.value)) | number:'2.0-0' }}
-            </span>
-          </td>
-          <td style="text-align: left;">
-            <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getAdjustedPLForGroup(clientName.value, clientName.key) < 0">
-              {{ getAdjustedPLForGroup(clientName.value, clientName.key) | number:'2.0-0' }}
-            </span>
-          </td>
-          <td class="print-fill-column" aria-hidden="true"></td>
-        </tr>
-      </ng-container>
-      <!-- Manual addon clients (no bets) in loss table -->
-      <ng-container *ngFor="let clientName of manualAddonClients">
-        <tr *ngIf="(savedAddonValues[clientName] || 0) < 0">
-          <td style="text-align: left;">{{ clientName }}</td>
-          <td style="text-align: left;">
-            <span class="summary-value" [class.negative-value]="(savedAddonValues[clientName] || 0) < 0">{{ (savedAddonValues[clientName] || 0) | number:'1.0-0' }}</span>
-            <button mat-icon-button (click)="deleteManualAddonClient(clientName)" style="vertical-align: middle;" title="Delete Add-On">
-              <mat-icon style="font-size: 16px; color: #dc2626;">delete</mat-icon>
-            </button>
-          </td>
-          <td style="text-align: left;">-</td>
-          <td style="text-align: left;">-</td>
-          <td style="text-align: left;">
-            <span class="summary-value negative-value">{{ (savedAddonValues[clientName] || 0) | number:'2.0-0' }}</span>
-          </td>
-          <td class="print-fill-column" aria-hidden="true"></td>
-        </tr>
-      </ng-container>
-      <tr>
-        <td style="text-align: left; font-weight: 400;">Net Total:</td>
-        <td></td>
-        <td style="text-align: left;">
-          <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalTaxAmountLoss() < 0">
-            {{ getNetTotalTaxAmountLoss() | number:'2.0-0' }}
-          </span>
-        </td>
-        <td style="text-align: left;">
-          <span class="summary-value" style="font-weight: 400;" [class.negative-value]="getNetTotalLossUnadjusted() < 0">
-            {{ getNetTotalLossUnadjusted() | number:'2.0-0' }}
-          </span>
-        </td>
-        <td style="text-align: left; font-weight: 700;">
-          <span class="summary-value" style="font-weight: 700;" [class.negative-value]="getNetTotalLoss() < 0">
-            {{ getNetTotalLoss() | number:'2.0-0' }}
-          </span>
-        </td>
-        <td class="print-fill-column" aria-hidden="true"></td>
-      </tr>
-    </tbody>
-  </table>
-
-  <p>
-    <strong>Net Profit:</strong>
-    <span [ngClass]="{'negative-value': (getNetTotalProfitLoss() + getNetTotalLoss()) < 0}">
-      {{ (getNetTotalProfitLoss() + getNetTotalLoss()) | number:'2.0-0' }}
-    </span>
-  </p>
+        </p>
 
 
-  <button (click)="printProfit()">Print Report</button>
+        <button (click)="printProfit()">Print Report</button>
 
-</div>
+      </div>
 
 

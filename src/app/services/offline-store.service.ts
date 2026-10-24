@@ -7,7 +7,7 @@ export type OutboxStatus = 'pending' | 'conflict' | 'failed';
 export interface OutboxItem {
   id?: number;
   type: OutboxType;
-  payload: any;
+  payload: unknown;
   createdAt: string;
   attempts: number;
   status: OutboxStatus;
@@ -40,7 +40,7 @@ export class OfflineStoreService {
     return `req_${Date.now()}_${rand}`;
   }
 
-  async queueBet(payload: any): Promise<void> {
+  async queueBet(payload: unknown): Promise<void> {
     const item: OutboxItem = {
       type: 'create-bet',
       payload,
@@ -51,7 +51,7 @@ export class OfflineStoreService {
     await this.db.outbox.add(item);
   }
 
-  async queueParams(payload: any): Promise<void> {
+  async queueParams(payload: unknown): Promise<void> {
     const item: OutboxItem = {
       type: 'save-params',
       payload,
@@ -62,7 +62,7 @@ export class OfflineStoreService {
     await this.db.outbox.add(item);
   }
 
-  async queueMeetingRaces(payload: any): Promise<void> {
+  async queueMeetingRaces(payload: unknown): Promise<void> {
     const item: OutboxItem = {
       type: 'save-meeting-races',
       payload,

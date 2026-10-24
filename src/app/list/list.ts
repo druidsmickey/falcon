@@ -1,13 +1,13 @@
 import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../environments/environment';
 import { MeetingDataService } from '../services/meeting-data.service';
+import { Bet, HorseParam, betTimeOf } from '../models';
 
 @Component({
   selector: 'app-listdata',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './list.html',
   styleUrl: './list.css',
@@ -15,16 +15,19 @@ import { MeetingDataService } from '../services/meeting-data.service';
 })
 
 export class ListdataComponent implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
-  items: any[] = [];
+  items: Bet[] = [];
   searchRaceNum: number | null = null;
   searchHorseNum: number | null = null;
   searchClientName: string = '';
   meetingName: string = '';
   
   // Cache all params data for horse names
-  private allParams: any[] = [];
+  private allParams: HorseParam[] = [];
 
   get filteredItems() {
     // If no filters, return all
@@ -50,8 +53,6 @@ export class ListdataComponent implements OnInit {
 
   private meetingData = inject(MeetingDataService);
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
-
   ngOnInit() {
     this.loadData();
   }
@@ -74,9 +75,9 @@ export class ListdataComponent implements OnInit {
       ]);
       
       this.allParams = params;
-      this.items = bets.sort((a: any, b: any) => {
-        const dateA = new Date(a.betTime || a.createdAt).getTime();
-        const dateB = new Date(b.betTime || b.createdAt).getTime();
+      this.items = bets.sort((a, b) => {
+        const dateA = betTimeOf(a).getTime();
+        const dateB = betTimeOf(b).getTime();
         return dateB - dateA;
       });
       
@@ -86,7 +87,7 @@ export class ListdataComponent implements OnInit {
     }
   }
 
-  cancelBet(item: any) {
+  cancelBet(item: Bet) {
     const newCancelledValue = !item.cancelled;
     const action = newCancelledValue ? 'cancel' : 'reactivate';
     
@@ -100,7 +101,7 @@ export class ListdataComponent implements OnInit {
         item.cancelled = newCancelledValue; // Update local state
         this.cdr.detectChanges();
       },
-      error: (error: any) => {
+      error: (error: HttpErrorResponse) => {
         console.error(`Failed to ${action} bet:`, error);
         alert(`Error ${action}ing bet`);
       }
@@ -121,14 +122,14 @@ export class ListdataComponent implements OnInit {
     return param?.special != null;
   }
 
-  isBetBeforeSpecial(item: any): boolean {
+  isBetBeforeSpecial(item: Bet): boolean {
     // Find any horse in the race that has a special date
     const raceParams = this.allParams.filter(p => p.raceNum === item.raceNum);
     
     for (const param of raceParams) {
       if (param.special) {
         const specialDate = new Date(param.special);
-        const betTime = new Date(item.betTime || item.createdAt);
+        const betTime = betTimeOf(item);
         if (betTime < specialDate) {
           return true;
         }
@@ -144,10 +145,10 @@ export class ListdataComponent implements OnInit {
     return param?.rule4 != null;
   }
 
-  hasRule4Applies(item: any): boolean {
+  hasRule4Applies(item: Bet): boolean {
     // Check if any horse in the race has a rule4 date after this bet was placed
     const raceParams = this.allParams.filter(p => p.raceNum === item.raceNum);
-    const betTime = new Date(item.betTime || item.createdAt);
+    const betTime = betTimeOf(item);
     
     for (const param of raceParams) {
       if (param.rule4) {

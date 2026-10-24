@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatTabsModule } from '@angular/material/tabs';
 import { Dataentry } from './dataentry/dataentry';
 import { Single } from './single/single';
@@ -18,7 +18,7 @@ import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword],
+  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

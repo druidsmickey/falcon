@@ -25,13 +25,15 @@ interface RaceGroup {
 
 @Component({
   selector: 'app-winners',
-  standalone: true,
   imports: [CommonModule, MatTableModule, MatCheckboxModule, MatButtonModule],
   templateUrl: './winners.html',
   styleUrl: './winners.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Winners implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
   raceGroups: RaceGroup[] = [];
@@ -40,8 +42,6 @@ export class Winners implements OnInit {
   displayedColumns: string[] = ['horseNum', 'horseName', 'winner'];
   
   private meetingData = inject(MeetingDataService);
-
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
   
   ngOnInit() {
     this.loadWinners();
@@ -76,7 +76,7 @@ export class Winners implements OnInit {
         }
         
         raceMap.get(param.raceNum)!.push({
-          _id: param._id,
+          _id: param._id as string, // saved horses always have an id
           meetingName: param.meetingName,
           raceNum: param.raceNum,
           horseNum: param.horseNum,

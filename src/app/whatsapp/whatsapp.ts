@@ -46,6 +46,20 @@ interface WhatsAppStatus {
   qrCode: string | null;
 }
 
+// What the WhatsApp routes answer (not every route sends every field)
+interface WhatsAppResponse {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  sentTo?: string;
+  results: { success: boolean }[];
+  group: { contactCount: number };
+  notFoundCount?: number;
+  browserVersion?: string;
+  chromePath?: string;
+  suggestion?: string;
+}
+
 interface SentMessage {
   id: string;
   message: string;
@@ -111,7 +125,7 @@ export class Whatsapp implements OnInit, OnDestroy {
   
   protected cameraInput = viewChild<ElementRef<HTMLInputElement>>('cameraInput');
   
-  private statusCheckInterval: any = null;
+  private statusCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit() {
     this.loadContacts();
@@ -151,10 +165,10 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.loading.set(true);
     this.statusMessage.set('Initializing WhatsApp client...');
     
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/initialize`, {}).subscribe({
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/initialize`, {}).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.checkStatus();
       },
       error: (error) => {
@@ -168,10 +182,10 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.loading.set(true);
     this.statusMessage.set('Disconnecting...');
     
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/disconnect`, {}).subscribe({
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/disconnect`, {}).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.checkStatus();
       },
       error: (error) => {
@@ -189,10 +203,10 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.loading.set(true);
     this.statusMessage.set('Resetting WhatsApp session...');
     
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/reset`, {}).subscribe({
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/reset`, {}).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         // Start checking for QR code
         setTimeout(() => this.checkStatus(), 2000);
       },
@@ -207,7 +221,7 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.loading.set(true);
     this.statusMessage.set('Testing if Chrome can launch on server...');
     
-    this.http.get<any>(`${this.apiUrl}/api/whatsapp/test-puppeteer`).subscribe({
+    this.http.get<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/test-puppeteer`).subscribe({
       next: (response) => {
         this.loading.set(false);
         if (response.success) {
@@ -278,7 +292,7 @@ export class Whatsapp implements OnInit, OnDestroy {
       return;
     }
     
-    this.http.delete<any>(`${this.apiUrl}/api/whatsapp/contacts/${contactId}`).subscribe({
+    this.http.delete<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/contacts/${contactId}`).subscribe({
       next: (response) => {
         this.statusMessage.set('Contact deleted successfully');
         this.loadContacts();
@@ -325,7 +339,7 @@ export class Whatsapp implements OnInit, OnDestroy {
 
     if (selected.length === 1) {
       // Send single message
-      this.http.post<any>(`${this.apiUrl}/api/whatsapp/send-message`, {
+      this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/send-message`, {
         contactId: selected[0],
         message: this.message()
       }).subscribe({
@@ -341,13 +355,13 @@ export class Whatsapp implements OnInit, OnDestroy {
       });
     } else {
       // Send bulk messages
-      this.http.post<any>(`${this.apiUrl}/api/whatsapp/send-bulk`, {
+      this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/send-bulk`, {
         contactIds: selected,
         message: this.message()
       }).subscribe({
         next: (response) => {
           this.loading.set(false);
-          const successCount = response.results.filter((r: any) => r.success).length;
+          const successCount = response.results.filter(r => r.success).length;
           this.statusMessage.set(`Messages sent: ${successCount}/${response.results.length}`);
           this.message.set('');
         },
@@ -457,15 +471,15 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.importLoading.set(true);
     this.statusMessage.set('Importing contacts...');
 
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/import-contacts`, {
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/import-contacts`, {
       selectedNumbers: selected
     }).subscribe({
       next: (response) => {
         console.log('Import response:', response);
         this.importLoading.set(false);
         
-        let message = response.message;
-        if (response.notFoundCount > 0) {
+        let message = response.message ?? '';
+        if ((response.notFoundCount ?? 0) > 0) {
           message += ` (${response.notFoundCount} not found)`;
         }
         
@@ -583,13 +597,13 @@ export class Whatsapp implements OnInit, OnDestroy {
 
     this.loading.set(true);
 
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/groups`, {
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/groups`, {
       name,
       contactIds: selectedContacts
     }).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.newGroupName.set('');
         this.selectedContactsForGroup.set(new Set());
         this.loadGroups();
@@ -624,7 +638,7 @@ export class Whatsapp implements OnInit, OnDestroy {
 
     this.loading.set(true);
 
-    this.http.put<any>(`${this.apiUrl}/api/whatsapp/groups/${group.id}`, {
+    this.http.put<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/groups/${group.id}`, {
       name,
       contactIds: selectedContacts
     }).subscribe({
@@ -654,7 +668,7 @@ export class Whatsapp implements OnInit, OnDestroy {
       return;
     }
 
-    this.http.delete<any>(`${this.apiUrl}/api/whatsapp/groups/${groupId}`).subscribe({
+    this.http.delete<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/groups/${groupId}`).subscribe({
       next: (response) => {
         this.statusMessage.set('Group deleted successfully');
         this.loadGroups();
@@ -700,13 +714,13 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.loading.set(true);
     this.statusMessage.set('Sending message to group...');
 
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/send-to-group`, {
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/send-to-group`, {
       groupId,
       message: this.message()
     }).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.message.set('');
         this.loadMessageHistory(); // Reload message history
       },
@@ -731,12 +745,12 @@ export class Whatsapp implements OnInit, OnDestroy {
     this.loading.set(true);
     this.statusMessage.set('Deleting message...');
 
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/delete-messages`, {
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/delete-messages`, {
       messageIds: [messageId]
     }).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.loadMessageHistory(); // Reload message history
       },
       error: (error) => {
@@ -761,12 +775,12 @@ export class Whatsapp implements OnInit, OnDestroy {
 
     const messageIds = messages.map(m => m.id);
 
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/delete-messages`, {
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/delete-messages`, {
       messageIds
     }).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.loadMessageHistory(); // Reload message history
       },
       error: (error) => {
@@ -906,10 +920,10 @@ export class Whatsapp implements OnInit, OnDestroy {
       formData.append('caption', messageText);
     }
 
-    this.http.post<any>(`${this.apiUrl}/api/whatsapp/send-image-to-group`, formData).subscribe({
+    this.http.post<WhatsAppResponse>(`${this.apiUrl}/api/whatsapp/send-image-to-group`, formData).subscribe({
       next: (response) => {
         this.loading.set(false);
-        this.statusMessage.set(response.message);
+        this.statusMessage.set(response.message ?? '');
         this.message.set('');
         
         // Clear the file input

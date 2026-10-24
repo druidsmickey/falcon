@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { environment } from '../../environments/environment';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { applyRule4, rule4Applies, rule4Percentages } from '../services/settlement';
+import { Addon, Bet, BetRow, HorseParam, betTimeOf } from '../models';
 
 interface ClientReport {
   clientName: string;
@@ -18,19 +19,21 @@ interface ClientReport {
 
 @Component({
   selector: 'app-reports',
-  standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './reports.html',
   styleUrl: './reports.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Reports implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
-  allBets: any[] = [];
-  allParams: any[] = [];
+  allBets: Bet[] = [];
+  allParams: HorseParam[] = [];
   clientReports: Map<string, ClientReport> = new Map();
-  groupedItems: Map<string, any[]> = new Map();
+  groupedItems: Map<string, BetRow[]> = new Map();
   horseNamesByRace: string[][] = [];
   
   showSummaryOnly: boolean = false;
@@ -52,8 +55,6 @@ export class Reports implements OnInit {
   private specialHorseSet = new Set<string>(); // keys of horses with special dates
 
   private meetingData = inject(MeetingDataService);
-
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.loadData();
@@ -97,7 +98,7 @@ export class Reports implements OnInit {
     if (!this.meetingName) return;
     try {
       const addons = await this.http
-        .get<any[]>(`${this.apiUrl}/reports/addon/${encodeURIComponent(this.meetingName)}`)
+        .get<Addon[]>(`${this.apiUrl}/reports/addon/${encodeURIComponent(this.meetingName)}`)
         .toPromise();
       this.addonValues = {};
       this.savedAddonValues = {};
@@ -161,7 +162,7 @@ export class Reports implements OnInit {
     this.cdr.detectChanges();
   }
 
-  getAdjustedPLForGroup(bets: any[], clientName: string): number {
+  getAdjustedPLForGroup(bets: Bet[], clientName: string): number {
     return this.getProfitLossForGroup(bets) + Number(this.savedAddonValues[clientName] || 0);
   }
 
@@ -202,13 +203,13 @@ export class Reports implements OnInit {
       
       if (param.rule4) {
         this.rule4HorseSet.add(key);
-        if (param.rule4deduct > 0) {
+        if ((param.rule4deduct ?? 0) > 0) {
           if (!this.rule4Info.has(param.raceNum)) {
             this.rule4Info.set(param.raceNum, []);
           }
           this.rule4Info.get(param.raceNum)!.push({
             date: new Date(param.rule4),
-            deduct: param.rule4deduct
+            deduct: param.rule4deduct ?? 0
           });
         }
       }
@@ -222,7 +223,7 @@ export class Reports implements OnInit {
     this.allBets.forEach(bet => {
       if (bet.cancelled) return;
       
-      const betTime = new Date(bet.betTime || bet.createdAt);
+      const betTime = betTimeOf(bet);
       
       // Check if ANY horse in this race was withdrawn special before this bet
       // This matches the isSpecial() logic - all bets in race before withdrawal are ignored
@@ -300,18 +301,18 @@ export class Reports implements OnInit {
       
       this.groupedItems.get(clientName)!.push({
         ...bet,
-        date: new Date(bet.betTime || bet.createdAt)
+        date: betTimeOf(bet)
       });
     });
   }
 
-  getStakeAmountForGroup(bets: any[]): number {
+  getStakeAmountForGroup(bets: Bet[]): number {
     return bets
       .filter(bet => !bet.cancelled && !this.shouldIgnoreBet(bet))
       .reduce((sum, bet) => sum + (bet.stake || 0), 0);
   }
 
-  getTaxAmountForGroup(bets: any[]): number {
+  getTaxAmountForGroup(bets: Bet[]): number {
     return bets
       .filter(bet => !bet.cancelled && !this.shouldIgnoreBet(bet))
       .reduce((sum, bet) => {
@@ -321,7 +322,7 @@ export class Reports implements OnInit {
       }, 0);
   }
 
-  getProfitLossForGroup(bets: any[]): number {
+  getProfitLossForGroup(bets: Bet[]): number {
     let totalStake = 0;
     let totalPayout = 0;
     let totalTax = 0;
@@ -338,7 +339,7 @@ export class Reports implements OnInit {
       // Calculate payout with rule4 deductions (only for winners)
       if (this.isWinner(bet)) {
         let payout = bet.payout || 0;
-        const betTime = new Date(bet.betTime || bet.createdAt);
+        const betTime = betTimeOf(bet);
         const rule4s = this.rule4Info.get(bet.raceNum) || [];
         
         // Adjust for dead heat
@@ -356,7 +357,7 @@ export class Reports implements OnInit {
     return (totalStake + totalTax) - totalPayout;
   }
 
-  shouldIgnoreBet(bet: any): boolean {
+  shouldIgnoreBet(bet: Bet): boolean {
     // Ignore bets that are marked as With-Sp or With-R4
     if (this.isSpecial(bet) || this.isRule4(bet)) {
       return true;
@@ -427,22 +428,22 @@ export class Reports implements OnInit {
     return total;
   }
 
-  compareKeysAsc(a: any, b: any): number {
+  compareKeysAsc(a: { key: string }, b: { key: string }): number {
     return a.key.localeCompare(b.key);
   }
 
-  trackClientKey(index: number, item: any): string {
+  trackClientKey(index: number, item: { key: string }): string {
     return item.key;
   }
 
-  trackItemId(index: number, item: any): string {
+  trackItemId(index: number, item: { _id?: string }): string {
     return item._id || index.toString();
   }
 
-  isSpecial(bet: any): boolean {
+  isSpecial(bet: Bet): boolean {
     // Check if ANY horse in the race was withdrawn special
     // and if this bet was placed before that withdrawal
-    const betTime = new Date(bet.betTime || bet.createdAt);
+    const betTime = betTimeOf(bet);
     
     // Check all horses in this race for special withdrawals
     const raceParams = this.allParams.filter(p => p.raceNum === bet.raceNum);
@@ -454,22 +455,22 @@ export class Reports implements OnInit {
     });
   }
 
-  isRule4(bet: any): boolean {
+  isRule4(bet: Bet): boolean {
     // Check if the specific horse has rule4 flag set
     return this.rule4HorseSet.has(`${bet.raceNum}-${bet.horseNum}`);
   }
 
-  isWinner(bet: any): boolean {
+  isWinner(bet: Bet): boolean {
     return this.winnerSet.has(`${bet.raceNum}-${bet.horseNum}`);
   }
 
-  getWinnerStatus(bet: any): string {
+  getWinnerStatus(bet: Bet): string {
     return 'Winner';
   }
 
-  getDividedPayout(bet: any): number {
+  getDividedPayout(bet: Bet): number {
     let payout = bet.payout || 0;
-    const betTime = new Date(bet.betTime || bet.createdAt);
+    const betTime = betTimeOf(bet);
     const rule4s = this.rule4Info.get(bet.raceNum) || [];
     
     payout = applyRule4(payout, betTime, rule4s);
@@ -477,16 +478,16 @@ export class Reports implements OnInit {
     return payout;
   }
 
-  hasRule4Deduction(bet: any): boolean {
-    const betTime = new Date(bet.betTime || bet.createdAt);
+  hasRule4Deduction(bet: Bet): boolean {
+    const betTime = betTimeOf(bet);
     const rule4s = this.rule4Info.get(bet.raceNum) || [];
     
     // Check if any rule4 deduction applies (bet was before rule4 date)
     return rule4Applies(betTime, rule4s);
   }
 
-  getRule4Deductions(bet: any): string {
-    const betTime = new Date(bet.betTime || bet.createdAt);
+  getRule4Deductions(bet: Bet): string {
+    const betTime = betTimeOf(bet);
     const rule4s = this.rule4Info.get(bet.raceNum) || [];
     
     // Get all applicable deductions
@@ -505,7 +506,7 @@ export class Reports implements OnInit {
     }
 
     const filter = this.filterClientName.toLowerCase().trim();
-    const filtered = new Map<string, any[]>();
+    const filtered = new Map<string, BetRow[]>();
 
     this.groupedItems.forEach((value, key) => {
       if (key.toLowerCase().includes(filter)) {
@@ -516,11 +517,11 @@ export class Reports implements OnInit {
     return filtered;
   }
 
-  hasActiveBets(bets: any[]): boolean {
+  hasActiveBets(bets: Bet[]): boolean {
     return bets.some(bet => !bet.cancelled && !this.shouldIgnoreBet(bet));
   }
 
-  isFirstVisibleBet(bets: any[], currentBet: any): boolean {
+  isFirstVisibleBet(bets: Bet[], currentBet: Bet): boolean {
     const firstNonCancelled = bets.find(bet => !bet.cancelled);
     return firstNonCancelled === currentBet;
   }
@@ -539,11 +540,11 @@ export class Reports implements OnInit {
     }).length;
   }
 
-  isDeadHeat(bet: any): boolean {
+  isDeadHeat(bet: Bet): boolean {
     return this.getWinnerCountForRace(bet.raceNum) > 1;
   }
 
-  getAdjustedPayout(bet: any): number {
+  getAdjustedPayout(bet: Bet): number {
     let payout = this.getDividedPayout(bet);
     const winnerCount = this.getWinnerCountForRace(bet.raceNum);
     

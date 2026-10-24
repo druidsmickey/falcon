@@ -13,6 +13,7 @@ import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
 import { environment } from '../../environments/environment';
 import { applyRule4 } from '../services/settlement';
+import { Bet, BetRequest, BetslipHorse, HorseParam, betTimeOf } from '../models';
 
 interface Horse {
   horseNum: number;
@@ -34,7 +35,6 @@ interface Race {
 
 @Component({
   selector: 'app-chart',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -49,6 +49,10 @@ interface Race {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Chart implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+  private recentClientsService = inject(RecentClientsService);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
   @ViewChild('sidenav') sidenav!: MatSidenav;
@@ -62,11 +66,11 @@ export class Chart implements OnInit {
   recentClients: string[] = [];
   
   // Last saved bet
-  lastBet: any = null;
+  lastBet: Bet | null = null;
   
   // Betslip form fields
   selectedRaceNum: number | null = null;
-  betslipHorses: any[] = [];
+  betslipHorses: BetslipHorse[] = [];
   betslipSelectedHorseNum: number | null = null;
   betslipSelectedHorseName: string = '';
   clientName: string = '';
@@ -80,17 +84,11 @@ export class Chart implements OnInit {
   oddsError: string = '';
   
   // Cache data
-  private allParams: any[] = [];
-  private allBets: any[] = [];
+  private allParams: HorseParam[] = [];
+  private allBets: Bet[] = [];
   
   private meetingData = inject(MeetingDataService);
   private offlineStore = inject(OfflineStoreService);
-
-  constructor(
-    private http: HttpClient, 
-    private cdr: ChangeDetectorRef,
-    private recentClientsService: RecentClientsService
-  ) {}
   
   ngOnInit() {
     this.loadData();
@@ -189,13 +187,13 @@ export class Chart implements OnInit {
       });
       
       // Pre-filter and group valid bets by race
-      const betsByRace = new Map<number, any[]>();
+      const betsByRace = new Map<number, Bet[]>();
       
       bets?.forEach(bet => {
         if (bet.cancelled || !raceMap.has(bet.raceNum)) return;
         
         const horses = raceMap.get(bet.raceNum)!;
-        const betTime = new Date(bet.betTime || bet.createdAt);
+        const betTime = betTimeOf(bet);
         
         // Check if bet should be ignored due to special dates
         let shouldIgnore = false;
@@ -230,7 +228,7 @@ export class Chart implements OnInit {
         const rule4Deductions = rule4ByRace.get(raceNum) || [];
         
         // Group bets by horse for efficient lookup
-        const betsByHorse = new Map<number, any[]>();
+        const betsByHorse = new Map<number, Bet[]>();
         const stakesByHorse = new Map<number, number>();
         
         raceBets.forEach(bet => {
@@ -250,7 +248,7 @@ export class Chart implements OnInit {
           // Add to books with Rule 4 adjustments
           if (betHorse && bet.books) {
             let adjustedBooks = bet.books;
-            const betTime = new Date(bet.betTime || bet.createdAt);
+            const betTime = betTimeOf(bet);
             
             // Apply rule4 deductions that occurred AFTER this bet was placed
             adjustedBooks = applyRule4(adjustedBooks, betTime, rule4Deductions);
@@ -273,7 +271,7 @@ export class Chart implements OnInit {
           
           horseBets.forEach(bet => {
             let payout = bet.payout || 0;
-            const betTime = new Date(bet.betTime || bet.createdAt);
+            const betTime = betTimeOf(bet);
             
             // Apply only rule4 deductions that occurred AFTER this bet was placed
             payout = applyRule4(payout, betTime, allRule4s);
@@ -380,7 +378,7 @@ export class Chart implements OnInit {
       return;
     }
     
-    const betData: any = {
+    const betData: BetRequest = {
       meetingName: this.meetingName,
       raceNum: this.selectedRaceNum,
       horseNum: this.betslipSelectedHorseNum,

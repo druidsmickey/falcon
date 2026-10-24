@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
 const MINUTE = 60 * 1000;
@@ -48,11 +51,24 @@ describe('AuthService session rules', () => {
     localStorage.clear();
   });
 
+  // A fresh AuthService, as when the page is opened. The router only records where it is sent.
+  function createService(): AuthService {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        AuthService,
+        { provide: HttpClient, useValue: {} },
+        { provide: Router, useValue: { navigate: (...args: unknown[]) => navigated.push(args) } },
+      ],
+    });
+    return TestBed.inject(AuthService);
+  }
+
   // Logs in the way AuthService.login does, then creates the service for the page
   function login(tokenMinutes: number) {
     localStorage.setItem('token', tokenExpiringIn(tokenMinutes));
     localStorage.setItem('lastActivity', Date.now().toString());
-    service = new AuthService({} as never, { navigate: (...args: unknown[]) => navigated.push(args) } as never);
+    service = createService();
   }
 
   it('stays logged in while the app is being used', () => {
@@ -122,7 +138,7 @@ describe('AuthService session rules', () => {
 
   it('opening the app again after more than 4 minutes needs a new login', () => {
     vi.setSystemTime(Date.now() + 5 * MINUTE);
-    const reopened = new AuthService({} as never, { navigate: () => undefined } as never);
+    const reopened = createService();
     expect(reopened.isLoggedIn()).toBe(false);
   });
 

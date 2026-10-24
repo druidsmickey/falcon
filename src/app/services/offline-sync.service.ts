@@ -104,7 +104,8 @@ export class OfflineSyncService {
             await this.store.markSynced(item.id);
             sentCount += 1;
           }
-        } catch (error: any) {
+        } catch (caught: unknown) {
+          const error = caught as { status?: number; error?: { error?: string }; message?: string } | null;
           const status = error?.status;
           const message = error?.error?.error || error?.message || 'Sync failed';
           if (item.id != null) {

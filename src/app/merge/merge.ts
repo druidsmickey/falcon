@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { environment } from '../../environments/environment';
 import { applyRule4, rule4Applies, rule4Percentages } from '../services/settlement';
+import { Addon, Bet, BetRow, HorseParam, betTimeOf } from '../models';
 
 interface ClientReport {
   clientName: string;
@@ -17,22 +18,24 @@ interface ClientReport {
 
 @Component({
   selector: 'app-merge',
-  standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './merge.html',
   styleUrl: './merge.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Merge implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
   allMeetings: string[] = [];
   selectedMeetings: string[] = [];
   
-  allBets: any[] = [];
-  allParams: any[] = [];
+  allBets: Bet[] = [];
+  allParams: HorseParam[] = [];
   clientReports: Map<string, ClientReport> = new Map();
-  groupedItems: Map<string, any[]> = new Map();
+  groupedItems: Map<string, BetRow[]> = new Map();
   horseNamesByRace: Map<string, string[][]> = new Map(); // keyed by meetingName
   
   showSummaryOnly: boolean = false;
@@ -46,9 +49,7 @@ export class Merge implements OnInit {
   
   // Cache for special and rule4 dates per meeting
   private specialDates = new Map<string, Date>(); // key: meetingName-raceNum-horseNum
-  private rule4Info = new Map<string, Array<{ date: Date; deduct: number }>>(); // key: meetingName-raceNum
-
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  private rule4Info = new Map<string, Array<{ date: Date; deduct: number }>>();
 
   ngOnInit() {
     this.loadMeetings();
@@ -96,8 +97,8 @@ export class Merge implements OnInit {
       // Load data for each selected meeting
       for (const meetingName of this.selectedMeetings) {
         const [params, bets] = await Promise.all([
-          this.http.get<any[]>(`${this.apiUrl}/params?meetingName=${encodeURIComponent(meetingName)}`).toPromise(),
-          this.http.get<any[]>(`${this.apiUrl}/bets?meetingName=${encodeURIComponent(meetingName)}`).toPromise()
+          this.http.get<HorseParam[]>(`${this.apiUrl}/params?meetingName=${encodeURIComponent(meetingName)}`).toPromise(),
+          this.http.get<Bet[]>(`${this.apiUrl}/bets?meetingName=${encodeURIComponent(meetingName)}`).toPromise()
         ]);
         
         this.allParams.push(...(params || []));
@@ -128,7 +129,7 @@ export class Merge implements OnInit {
     this.rule4Info.clear();
     
     // Group params by meeting
-    const paramsByMeeting = new Map<string, any[]>();
+    const paramsByMeeting = new Map<string, HorseParam[]>();
     this.allParams.forEach(param => {
       if (!paramsByMeeting.has(param.meetingName)) {
         paramsByMeeting.set(param.meetingName, []);
@@ -158,14 +159,14 @@ export class Merge implements OnInit {
           this.specialDates.set(key, new Date(param.special));
         }
         
-        if (param.rule4 && param.rule4deduct > 0) {
+        if (param.rule4 && (param.rule4deduct ?? 0) > 0) {
           const raceKey = `${meetingName}-${param.raceNum}`;
           if (!this.rule4Info.has(raceKey)) {
             this.rule4Info.set(raceKey, []);
           }
           this.rule4Info.get(raceKey)!.push({
             date: new Date(param.rule4),
-            deduct: param.rule4deduct
+            deduct: param.rule4deduct ?? 0
           });
         }
       });
@@ -181,7 +182,7 @@ export class Merge implements OnInit {
     this.allBets.forEach(bet => {
       if (bet.cancelled) return;
       
-      const betTime = new Date(bet.betTime || bet.createdAt);
+      const betTime = betTimeOf(bet);
       const clientName = bet.clientName || 'Unknown';
       
       // Check if bet should be ignored
@@ -253,7 +254,7 @@ export class Merge implements OnInit {
     for (const meetingName of this.selectedMeetings) {
       try {
         const addons = await this.http
-          .get<any[]>(`${this.apiUrl}/reports/addon/${encodeURIComponent(meetingName)}`)
+          .get<Addon[]>(`${this.apiUrl}/reports/addon/${encodeURIComponent(meetingName)}`)
           .toPromise();
         (addons || []).forEach(a => {
           if (a.clientName && a.stake != null) {
@@ -334,19 +335,19 @@ export class Merge implements OnInit {
     this.cdr.detectChanges();
   }
 
-  getAdjustedPLForGroup(bets: any[], clientName: string): number {
+  getAdjustedPLForGroup(bets: Bet[], clientName: string): number {
     const addonTotal = this.selectedMeetings.reduce(
       (sum, m) => sum + Number(this.savedAddonValues[clientName]?.[m] || 0), 0
     );
     return this.getProfitLossForGroup(bets) + addonTotal;
   }
 
-  getAdjustedPLForGroupByMeeting(bets: any[], clientName: string, meetingName: string): number {
+  getAdjustedPLForGroupByMeeting(bets: Bet[], clientName: string, meetingName: string): number {
     return this.getProfitLossForGroupByMeeting(bets, meetingName)
       + Number(this.savedAddonValues[clientName]?.[meetingName] || 0);
   }
 
-  isHorseSpecial(param: any): boolean {
+  isHorseSpecial(param: HorseParam): boolean {
     const specialDate = this.specialDates.get(`${param.meetingName}-${param.raceNum}-${param.horseNum}`);
     return specialDate != null;
   }
@@ -361,7 +362,7 @@ export class Merge implements OnInit {
       }
       this.groupedItems.get(clientName)!.push({
         ...bet,
-        date: new Date(bet.betTime || bet.createdAt)
+        date: betTimeOf(bet)
       });
     });
     
@@ -376,7 +377,7 @@ export class Merge implements OnInit {
       return this.groupedItems;
     }
     
-    const filtered = new Map<string, any[]>();
+    const filtered = new Map<string, BetRow[]>();
     const searchTerm = this.filterClientName.trim().toLowerCase();
     
     this.groupedItems.forEach((bets, clientName) => {
@@ -394,13 +395,13 @@ export class Merge implements OnInit {
     return array.sort((a, b) => a.key.localeCompare(b.key));
   }
 
-  getStakeAmountForGroup(bets: any[]): number {
+  getStakeAmountForGroup(bets: Bet[]): number {
     return bets
       .filter(bet => !bet.cancelled && !this.shouldIgnoreBet(bet))
       .reduce((sum, bet) => sum + (bet.stake || 0), 0);
   }
 
-  getTaxAmountForGroup(bets: any[]): number {
+  getTaxAmountForGroup(bets: Bet[]): number {
     return bets
       .filter(bet => !bet.cancelled && !this.shouldIgnoreBet(bet))
       .reduce((sum, bet) => {
@@ -410,7 +411,7 @@ export class Merge implements OnInit {
       }, 0);
   }
 
-  getProfitLossForGroupByMeeting(bets: any[], meetingName: string): number {
+  getProfitLossForGroupByMeeting(bets: Bet[], meetingName: string): number {
     let totalStake = 0;
     let totalPayout = 0;
     let totalTax = 0;
@@ -427,7 +428,7 @@ export class Merge implements OnInit {
       // Calculate payout with rule4 deductions (only for winners)
       if (this.isWinner(bet)) {
         let payout = bet.payout || 0;
-        const betTime = new Date(bet.betTime || bet.createdAt);
+        const betTime = betTimeOf(bet);
         const raceKey = `${bet.meetingName}-${bet.raceNum}`;
         const rule4s = this.rule4Info.get(raceKey) || [];
         
@@ -451,7 +452,7 @@ export class Merge implements OnInit {
     return (totalStake + totalTax) - totalPayout;
   }
 
-  getProfitLossForGroup(bets: any[]): number {
+  getProfitLossForGroup(bets: Bet[]): number {
     let totalStake = 0;
     let totalPayout = 0;
     let totalTax = 0;
@@ -468,7 +469,7 @@ export class Merge implements OnInit {
       // Calculate payout with rule4 deductions (only for winners)
       if (this.isWinner(bet)) {
         let payout = bet.payout || 0;
-        const betTime = new Date(bet.betTime || bet.createdAt);
+        const betTime = betTimeOf(bet);
         const raceKey = `${bet.meetingName}-${bet.raceNum}`;
         const rule4s = this.rule4Info.get(raceKey) || [];
         
@@ -492,7 +493,7 @@ export class Merge implements OnInit {
     return (totalStake + totalTax) - totalPayout;
   }
 
-  shouldIgnoreBet(bet: any): boolean {
+  shouldIgnoreBet(bet: Bet): boolean {
     // Ignore bets that are marked as With-Sp or With-R4
     if (this.isSpecial(bet) || this.isRule4(bet)) {
       return true;
@@ -599,22 +600,22 @@ export class Merge implements OnInit {
 
   Math = Math;
 
-  compareKeysAsc = (a: any, b: any) => {
+  compareKeysAsc = (a: { key: string }, b: { key: string }) => {
     return a.key.localeCompare(b.key);
   };
 
-  trackClientKey(index: number, item: any): string {
+  trackClientKey(index: number, item: { key: string }): string {
     return item.key;
   }
 
-  trackItemId(index: number, item: any): string {
+  trackItemId(index: number, item: { _id?: string }): string {
     return item._id || index.toString();
   }
 
-  isSpecial(bet: any): boolean {
+  isSpecial(bet: Bet): boolean {
     // Check if ANY horse in the race was withdrawn special
     // and if this bet was placed before that withdrawal
-    const betTime = new Date(bet.betTime || bet.createdAt);
+    const betTime = betTimeOf(bet);
     
     // Check all horses in this race for special withdrawals
     return this.allParams.some(p => {
@@ -626,7 +627,7 @@ export class Merge implements OnInit {
     });
   }
 
-  isRule4(bet: any): boolean {
+  isRule4(bet: Bet): boolean {
     // Check if the specific horse has rule4 flag set
     return this.allParams.some(p => 
       p.meetingName === bet.meetingName &&
@@ -636,7 +637,7 @@ export class Merge implements OnInit {
     );
   }
 
-  isWinner(bet: any): boolean {
+  isWinner(bet: Bet): boolean {
     return this.allParams.some(p => 
       p.meetingName === bet.meetingName &&
       p.raceNum === bet.raceNum && 
@@ -645,9 +646,9 @@ export class Merge implements OnInit {
     );
   }
 
-  getDividedPayout(bet: any): number {
+  getDividedPayout(bet: Bet): number {
     let payout = bet.payout || 0;
-    const betTime = new Date(bet.betTime || bet.createdAt);
+    const betTime = betTimeOf(bet);
     const raceKey = `${bet.meetingName}-${bet.raceNum}`;
     const rule4s = this.rule4Info.get(raceKey) || [];
     
@@ -656,16 +657,16 @@ export class Merge implements OnInit {
     return payout;
   }
 
-  hasRule4Deduction(bet: any): boolean {
-    const betTime = new Date(bet.betTime || bet.createdAt);
+  hasRule4Deduction(bet: Bet): boolean {
+    const betTime = betTimeOf(bet);
     const raceKey = `${bet.meetingName}-${bet.raceNum}`;
     const rule4s = this.rule4Info.get(raceKey) || [];
     
     return rule4Applies(betTime, rule4s);
   }
 
-  getRule4Deductions(bet: any): string {
-    const betTime = new Date(bet.betTime || bet.createdAt);
+  getRule4Deductions(bet: Bet): string {
+    const betTime = betTimeOf(bet);
     const raceKey = `${bet.meetingName}-${bet.raceNum}`;
     const rule4s = this.rule4Info.get(raceKey) || [];
     
@@ -674,16 +675,16 @@ export class Merge implements OnInit {
     return deductions.length > 0 ? `(${deductions.join(' ')})` : '';
   }
 
-  hasActiveBets(bets: any[]): boolean {
+  hasActiveBets(bets: Bet[]): boolean {
     return bets.some(bet => !bet.cancelled && !this.shouldIgnoreBet(bet));
   }
 
-  isFirstVisibleBet(bets: any[], currentBet: any): boolean {
+  isFirstVisibleBet(bets: Bet[], currentBet: Bet): boolean {
     const firstNonCancelled = bets.find(bet => !bet.cancelled);
     return firstNonCancelled === currentBet;
   }
 
-  getWinnerCountForRace(bet: any): number {
+  getWinnerCountForRace(bet: Bet): number {
     // Only count winners that are not special (withdrawn)
     return this.allParams.filter(p => {
       if (p.meetingName !== bet.meetingName || p.raceNum !== bet.raceNum || !p.winner) return false;
@@ -692,11 +693,11 @@ export class Merge implements OnInit {
     }).length;
   }
 
-  isDeadHeat(bet: any): boolean {
+  isDeadHeat(bet: Bet): boolean {
     return this.getWinnerCountForRace(bet) > 1;
   }
 
-  getAdjustedPayout(bet: any): number {
+  getAdjustedPayout(bet: Bet): number {
     let payout = this.getDividedPayout(bet);
     const winnerCount = this.getWinnerCountForRace(bet);
     
@@ -707,7 +708,7 @@ export class Merge implements OnInit {
     return payout;
   }
 
-  getHorseName(bet: any): string {
+  getHorseName(bet: Bet): string {
     const horseNames = this.horseNamesByRace.get(bet.meetingName);
     if (!horseNames) return '-';
     const raceIndex = bet.raceNum - 1;

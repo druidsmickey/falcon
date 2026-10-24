@@ -5,7 +5,6 @@ import { appConfig } from './app/app.config';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [RouterOutlet],
   template: '<router-outlet></router-outlet>'
 })

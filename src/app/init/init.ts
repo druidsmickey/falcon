@@ -11,6 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { environment } from '../../environments/environment';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
+import { SelectedRace } from '../models';
 
 interface Race {
   raceNum: number;
@@ -20,7 +21,6 @@ interface Race {
 
 @Component({
   selector: 'app-init',
-  standalone: true,
   imports: [
     CommonModule,
     DatePipe,
@@ -37,6 +37,9 @@ interface Race {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Init implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
   meetingNames: string[] = [];
@@ -50,8 +53,6 @@ export class Init implements OnInit {
 
   private meetingData = inject(MeetingDataService);
   private offlineStore = inject(OfflineStoreService);
-
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.loadMeetingNames();
@@ -84,7 +85,7 @@ export class Init implements OnInit {
   }
 
   loadRaces(meetingName: string) {
-    this.http.get<any[]>(`${this.apiUrl}/meetings/${meetingName}/races`).subscribe({
+    this.http.get<SelectedRace[]>(`${this.apiUrl}/meetings/${meetingName}/races`).subscribe({
       next: (races) => {
         this.races = races.map(r => ({
           raceNum: r.raceNum,
@@ -97,7 +98,7 @@ export class Init implements OnInit {
         this.isSelected = races.length > 0 && races[0].selected === true;
         // Use the max updatedAt across all races — this matches what the backend
         // conflict check compares against (Init.findOne().sort({ updatedAt: -1 }))
-        const maxUpdatedAt = races.reduce((max: number, r: any) => {
+        const maxUpdatedAt = races.reduce((max: number, r: SelectedRace) => {
           const t = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
           return t > max ? t : max;
         }, 0);
@@ -238,8 +239,8 @@ export class Init implements OnInit {
       return;
     }
 
-    this.http.delete(`${this.apiUrl}/meetings/${encodeURIComponent(meetingToDelete)}`).subscribe({
-      next: (response: any) => {
+    this.http.delete<{ deleted: { init: number; params: number; bets: number } }>(`${this.apiUrl}/meetings/${encodeURIComponent(meetingToDelete)}`).subscribe({
+      next: (response: { deleted: { init: number; params: number; bets: number } }) => {
         this.meetingData.invalidateAll();
         alert(
           `Meeting "${meetingToDelete}" has been deleted successfully!\n\n` +

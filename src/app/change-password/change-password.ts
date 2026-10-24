@@ -1,30 +1,28 @@
-import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-change-password',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './change-password.html',
   styleUrl: './change-password.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangePassword {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
   errorMessage = '';
   successMessage = '';
   isLoading = false;
-
-  constructor(
-    private authService: AuthService, 
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   onSubmit() {
     this.errorMessage = '';
@@ -50,7 +48,7 @@ export class ChangePassword {
     this.authService
       .changePassword(this.currentPassword, this.newPassword)
       .subscribe({
-        next: (response: any) => {
+        next: (response: { message?: string }) => {
           this.isLoading = false;
           this.successMessage =
             response.message || 'Password changed successfully!';
@@ -66,7 +64,7 @@ export class ChangePassword {
             this.router.navigate(['/home']);
           }, 2000);
         },
-        error: (error: any) => {
+        error: (error: HttpErrorResponse) => {
           this.isLoading = false;
           this.successMessage = '';
           this.errorMessage =

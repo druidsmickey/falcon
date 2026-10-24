@@ -26,8 +26,8 @@ function readCache(req: HttpRequest<unknown>): unknown | null {
   }
 }
 
-function shouldTryOfflineFallback(error: any): boolean {
-  const status = error?.status;
+function shouldTryOfflineFallback(error: unknown): boolean {
+  const status = (error as { status?: number } | null)?.status;
   if (status === 0) return true;
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   return false;

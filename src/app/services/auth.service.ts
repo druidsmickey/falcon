@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -29,11 +29,14 @@ const ACTIVITY_THROTTLE = 5 * 1000;
   providedIn: 'root',
 })
 export class AuthService {
+  private http = inject(HttpClient);
+  private router = inject(Router);
+
   private apiUrl = `${environment.apiUrl}/auth`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor() {
     this.initializeAuth();
     this.setupSessionTracking();
   }
@@ -158,8 +161,8 @@ export class AuthService {
   changePassword(
     currentPassword: string,
     newPassword: string
-  ): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/change-password`, {
+  ): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/change-password`, {
       currentPassword,
       newPassword,
     });

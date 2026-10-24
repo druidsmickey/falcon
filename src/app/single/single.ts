@@ -13,6 +13,7 @@ import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
 import { environment } from '../../environments/environment';
 import { applyRule4 } from '../services/settlement';
+import { Bet, BetRequest, BetslipHorse, HorseParam, betTimeOf } from '../models';
 
 interface Horse {
   horseNum: number;
@@ -33,7 +34,6 @@ interface Race {
 
 @Component({
   selector: 'app-single',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -48,6 +48,10 @@ interface Race {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Single implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+  private recentClientsService = inject(RecentClientsService);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
   @ViewChild('sidenav') sidenav!: MatSidenav;
@@ -64,17 +68,17 @@ export class Single implements OnInit {
   oddsError: string = '';
   
   // Cache data to avoid reloading
-  private cachedParams: any[] | null = null;
-  private cachedBets: any[] | null = null;
+  private cachedParams: HorseParam[] | null = null;
+  private cachedBets: Bet[] | null = null;
   
   // Recent clients
   recentClients: string[] = [];
   
   // Last saved bet
-  lastBet: any = null;
+  lastBet: Bet | null = null;
   
   // Betslip form fields
-  betslipHorses: any[] = [];
+  betslipHorses: BetslipHorse[] = [];
   betslipSelectedHorseNum: number | null = null;
   betslipSelectedHorseName: string = '';
   clientName: string = '';
@@ -86,12 +90,6 @@ export class Single implements OnInit {
   
   private meetingData = inject(MeetingDataService);
   private offlineStore = inject(OfflineStoreService);
-
-  constructor(
-    private http: HttpClient, 
-    private cdr: ChangeDetectorRef,
-    private recentClientsService: RecentClientsService
-  ) {}
   
   ngOnInit() {
     this.loadSelectedRaces();
@@ -191,10 +189,10 @@ export class Single implements OnInit {
         specialDates.set(param.horseNum, new Date(param.special));
       }
       
-      if (param.rule4 && param.rule4deduct > 0) {
+      if (param.rule4 && (param.rule4deduct ?? 0) > 0) {
         rule4Info.push({
           date: new Date(param.rule4),
-          deduct: param.rule4deduct
+          deduct: param.rule4deduct ?? 0
         });
       }
       
@@ -212,14 +210,14 @@ export class Single implements OnInit {
     });
       
       // Pre-filter bets and group by horse for efficient processing
-      const betsByHorse = new Map<number, any[]>();
+      const betsByHorse = new Map<number, Bet[]>();
       const stakesByHorse = new Map<number, number>();
       let totalStakes = 0;
       
       this.cachedBets.forEach(b => {
         if (b.raceNum !== this.selectedRaceNum || b.cancelled) return;
         
-        const betTime = new Date(b.betTime || b.createdAt);
+        const betTime = betTimeOf(b);
         
         // Check special dates
         for (const [horseNum, specialDate] of specialDates.entries()) {
@@ -247,7 +245,7 @@ export class Single implements OnInit {
         const horse = horsesMap.get(b.horseNum);
         if (horse && b.books) {
           let adjustedBooks = b.books;
-          const betTime = new Date(b.betTime || b.createdAt);
+          const betTime = betTimeOf(b);
           
           // Apply rule4 deductions that occurred AFTER this bet was placed
           adjustedBooks = applyRule4(adjustedBooks, betTime, rule4Info);
@@ -267,7 +265,7 @@ export class Single implements OnInit {
         let totalPayout = 0;
         horseBets.forEach(bet => {
           let payout = bet.payout || 0;
-          const betTime = new Date(bet.betTime || bet.createdAt);
+          const betTime = betTimeOf(bet);
           
           // Apply only rule4 deductions that occurred AFTER this bet was placed
           payout = applyRule4(payout, betTime, rule4Info);
@@ -357,7 +355,7 @@ export class Single implements OnInit {
       return;
     }
     
-    const betData: any = {
+    const betData: BetRequest = {
       meetingName: this.meetingName,
       raceNum: this.selectedRaceNum,
       horseNum: this.betslipSelectedHorseNum,

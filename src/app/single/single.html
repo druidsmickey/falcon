@@ -1,5 +1,5 @@
 <mat-sidenav-container class="sidenav-container">
-  <mat-sidenav #sidenav mode="over" position="end" class="betslip-sidenav" [ngClass]="{'purchase-bg': betType === 'purchase'}" (closed)="resetBetslipForm()">
+  <mat-sidenav #sidenav mode="over" position="end" class="betslip-sidenav" [class.purchase-bg]="betType === 'purchase'" (closed)="resetBetslipForm()">
     <div class="betslip-content">
       <div style="display: flex; align-items: center; margin-bottom: 10px;">
         <h3 style="flex: 0 0 auto; margin: 0;">R {{ selectedRaceNum }}</h3>
@@ -7,21 +7,22 @@
           <span class="horse-name-display" style="color: red; font-size: 1.35rem; font-weight: bold; background-color: #d0f5d7; padding: 3px; border-radius: 4px;">#&nbsp;&nbsp;{{ betslipSelectedHorseName }}</span>
         </div>
       </div>
-      
+
       <div class="form-grid">
         <!-- Horse Selection -->
         <div class="full-width radio-group">
           <div class="horse-buttons">
-            <button 
-              *ngFor="let horse of betslipHorses" 
-              mat-mini-fab
-              [disabled]="horse.hasSpecial || horse.hasRule4"
-              (click)="selectBetslipHorse(horse.horseNum)"
-              class="horse-btn"
-              [class.selected]="betslipSelectedHorseNum === horse.horseNum"
-              [class.winner-horse]="horse.isWinner">
-              {{ horse.horseNum }}
-            </button>
+            @for (horse of betslipHorses; track horse) {
+              <button
+                mat-mini-fab
+                [disabled]="horse.hasSpecial || horse.hasRule4"
+                (click)="selectBetslipHorse(horse.horseNum)"
+                class="horse-btn"
+                [class.selected]="betslipSelectedHorseNum === horse.horseNum"
+                [class.winner-horse]="horse.isWinner">
+                {{ horse.horseNum }}
+              </button>
+            }
           </div>
         </div>
 
@@ -36,147 +37,169 @@
             <mat-radio-button value="odds">Odds</mat-radio-button>
           </mat-radio-group>
         </div>
-        
-        <!-- Recent Clients -->
-        <div class="full-width" *ngIf="recentClients.length > 0" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;">
-          <button 
-            *ngFor="let client of recentClients" 
-            mat-mini-fab
-            (click)="selectClient(client)"
-            class="client-btn"
-            style="font-size: 17px; padding: 0px 23px; min-width: 0; height: 38px;">
-            {{ client }}
-          </button>
-        </div>
 
-                <!-- All Inputs in One Row -->
+        <!-- Recent Clients -->
+        @if (recentClients.length > 0) {
+          <div class="full-width" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;">
+            @for (client of recentClients; track client) {
+              <button
+                mat-mini-fab
+                (click)="selectClient(client)"
+                class="client-btn"
+                style="font-size: 17px; padding: 0px 23px; min-width: 0; height: 38px;">
+                {{ client }}
+              </button>
+            }
+          </div>
+        }
+
+        <!-- All Inputs in One Row -->
         <div class="full-width" style="display: flex; gap: 4px; flex-wrap: nowrap; padding: 3px 0;">
           <mat-form-field appearance="outline" style="flex: 1; min-width: 100px;">
             <mat-label>{{ oddsType === 'odds' ? 'Stakes' : 'Books' }}</mat-label>
-            <input matInput type="number" [(ngModel)]="stakeBooks" 
-                   (input)="validateStakeBooks()" 
-                   (blur)="validateStakeBooks()">
-            <mat-error *ngIf="stakeBooksError">{{ stakeBooksError }}</mat-error>
-          </mat-form-field>
+            <input matInput type="number" [(ngModel)]="stakeBooks"
+              (input)="validateStakeBooks()"
+              (blur)="validateStakeBooks()">
+              @if (stakeBooksError) {
+                <mat-error>{{ stakeBooksError }}</mat-error>
+              }
+            </mat-form-field>
 
-          <mat-form-field appearance="outline" style="flex: 1.2; min-width: 50px;" [style.background-color]="oddsType === 'odds' ? '#40E0D0' : 'transparent'">
-            <mat-label>{{ oddsType === 'odds' ? 'Odds' : 'F500' }}</mat-label>
-            <input matInput type="number" [(ngModel)]="odds" 
-                   (input)="validateOdds()" 
-                   (blur)="validateOdds()">
-            <mat-error *ngIf="oddsError">{{ oddsError }}</mat-error>
-          </mat-form-field>
+            <mat-form-field appearance="outline" style="flex: 1.2; min-width: 50px;" [style.background-color]="oddsType === 'odds' ? '#40E0D0' : 'transparent'">
+              <mat-label>{{ oddsType === 'odds' ? 'Odds' : 'F500' }}</mat-label>
+              <input matInput type="number" [(ngModel)]="odds"
+                (input)="validateOdds()"
+                (blur)="validateOdds()">
+                @if (oddsError) {
+                  <mat-error>{{ oddsError }}</mat-error>
+                }
+              </mat-form-field>
 
-          <mat-form-field appearance="outline" style="flex: 1.2; min-width: 50px;">
-            <mat-label>Name</mat-label>
-            <input matInput [(ngModel)]="clientName" (input)="onClientNameInput()">
-          </mat-form-field>
+              <mat-form-field appearance="outline" style="flex: 1.2; min-width: 50px;">
+                <mat-label>Name</mat-label>
+                <input matInput [(ngModel)]="clientName" (input)="onClientNameInput()">
+              </mat-form-field>
 
-          <mat-form-field appearance="outline" style="flex: 0.8; min-width: 40px;">
-            <mat-label>Tax</mat-label>
-            <input matInput type="number" [(ngModel)]="tax">
-          </mat-form-field>
+              <mat-form-field appearance="outline" style="flex: 0.8; min-width: 40px;">
+                <mat-label>Tax</mat-label>
+                <input matInput type="number" [(ngModel)]="tax">
+              </mat-form-field>
+            </div>
+
+            <!-- Action Buttons and Last Bet -->
+            <div class="full-width" style="display: flex; gap: 19px; align-items: stretch; flex-direction: column; padding: 19px 0;">
+              <div style="display: flex; gap: 19px;">
+                <button mat-raised-button color="primary" (click)="saveBet()" style="flex: 1; height: 80px; font-size: 1.5rem; background-color: #1976d2; color: white;">
+                  Save Bet
+                </button>
+                @if (lastBet) {
+                  <div [style.background-color]="lastBet.stake < 0 || lastBet.books < 0 ? '#fee2e2' : '#f0f9ff'" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-size: 0.975rem; line-height: 1.4;" [style.text-decoration]="lastBet.cancelled ? 'line-through' : 'none'">
+                      <div><strong style="color: black;">{{ lastBet.clientName }}</strong></div>
+                      <div><strong style="color: rgb(34, 110, 35)">R{{ lastBet.raceNum }} H{{ lastBet.horseNum }} {{ lastBet.horseName }}</strong></div>
+                      <div>
+                        @if (lastBet.f500) {
+                          <strong>{{ lastBet.books < 0 ? -lastBet.books : lastBet.books }} x {{ lastBet.f500 }}</strong>
+                        }
+                        @if (!lastBet.f500) {
+                          <strong>{{ lastBet.stake < 0 ? -lastBet.stake : lastBet.stake }} @ <span style="color: #1976d2;">{{ lastBet.odds100 }}</span></strong>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+              <button mat-raised-button (click)="closeSidenav()" style="margin-top: 100px; background-color: #dc2626; color: #fff;">
+                Close
+              </button>
+            </div>
+          </div>
         </div>
+      </mat-sidenav>
 
-        <!-- Action Buttons and Last Bet -->
-        <div class="full-width" style="display: flex; gap: 19px; align-items: stretch; flex-direction: column; padding: 19px 0;">
-          <div style="display: flex; gap: 19px;">
-            <button mat-raised-button color="primary" (click)="saveBet()" style="flex: 1; height: 80px; font-size: 1.5rem; background-color: #1976d2; color: white;">
-              Save Bet
-            </button>
-            <div *ngIf="lastBet" [style.background-color]="lastBet.stake < 0 || lastBet.books < 0 ? '#fee2e2' : '#f0f9ff'" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; display: flex; flex-direction: column; justify-content: center;">
-              <div style="font-size: 0.975rem; line-height: 1.4;" [style.text-decoration]="lastBet.cancelled ? 'line-through' : 'none'">
-                <div><strong style="color: black;">{{ lastBet.clientName }}</strong></div>
-                <div><strong style="color: rgb(34, 110, 35)">R{{ lastBet.raceNum }} H{{ lastBet.horseNum }} {{ lastBet.horseName }}</strong></div>
-                <div>
-                  <strong *ngIf="lastBet.f500">{{ lastBet.books < 0 ? -lastBet.books : lastBet.books }} x {{ lastBet.f500 }}</strong>
-                  <strong *ngIf="!lastBet.f500">{{ lastBet.stake < 0 ? -lastBet.stake : lastBet.stake }} @ <span style="color: #1976d2;">{{ lastBet.odds100 }}</span></strong>
+      <mat-sidenav-content>
+        <div class="single-container">
+          <!-- <h3 class="single-title">Race Chart</h3> -->
+
+          @if (loading && races.length === 0) {
+            <div class="loading">Loading data...</div>
+          }
+
+          @if (!loading && races.length === 0) {
+            <div class="no-data">
+              No selected races found. Please select a meeting in the Init page first.
+            </div>
+          }
+
+          @if (races.length > 0) {
+            <div>
+              <!-- Race Selection -->
+              <div class="race-selection">
+                <div class="race-buttons">
+                  @for (race of races; track race) {
+                    <button
+                      mat-button
+                      (click)="selectRace(race.raceNum)"
+                      class="race-btn"
+                      [class.selected]="selectedRaceNum === race.raceNum">
+                      {{ race.raceNum }}
+                    </button>
+                  }
                 </div>
               </div>
-            </div>
-          </div>
-          <button mat-raised-button (click)="closeSidenav()" style="margin-top: 100px; background-color: #dc2626; color: #fff;">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </mat-sidenav>
-
-  <mat-sidenav-content>
-    <div class="single-container">
-      <!-- <h3 class="single-title">Race Chart</h3> -->
-      
-      <div *ngIf="loading && races.length === 0" class="loading">Loading data...</div>
-      
-      <div *ngIf="!loading && races.length === 0" class="no-data">
-        No selected races found. Please select a meeting in the Init page first.
-      </div>
-      
-      <div *ngIf="races.length > 0">
-        <!-- Race Selection -->
-        <div class="race-selection">
-          <div class="race-buttons">
-            <button 
-              *ngFor="let race of races" 
-              mat-button
-              (click)="selectRace(race.raceNum)"
-              class="race-btn"
-              [class.selected]="selectedRaceNum === race.raceNum">
-              {{ race.raceNum }}
-            </button>
-          </div>
-        </div>
-        
-        <!-- Chart Display -->
-        <div *ngIf="selectedRaceNum" class="chart-display">
-          <div *ngIf="loading" class="loading">Loading race data...</div>
-          
-          <div *ngIf="!loading">
-            <!-- <h4 class="race-title">Race {{ selectedRaceNum }}</h4> -->
-            <div>
-              <table class="race-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Horse</th>
-                    <th>Books</th>
-                    <th>P&L</th>
-                    <th>Avg</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (horse of horses; track horse.horseNum) {
-                    <tr [ngClass]="{'winner-row': horse.isWinner, 'negative-profit': horse.profitLoss < 0 && !horse.isWinner}" 
-                        (click)="openBetslip(horse)"
-                        [style.cursor]="hasWinner ? 'not-allowed' : 'pointer'"
-                        [style.opacity]="hasWinner && !horse.isWinner ? '0.6' : '1'">
-                      <td>{{ horse.horseNum }}</td>
-                      <td class="horse-name" [ngClass]="{'strikethrough': horse.hasSpecial || horse.hasRule4}">{{ horse.horseName }}</td>
-                      <td class="books">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.books | number:'1.0-0') }}</td>
-                      <td class="profit-loss" [ngClass]="{
-                        'positive': horse.profitLoss > 0,
-                        'negative': horse.profitLoss < 0
-                      }">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.profitLoss | number:'1.0-0') }}</td>
-                      <td class="avg">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.avg | number:'1.0-0') }}</td>
-                    </tr>
+              <!-- Chart Display -->
+              @if (selectedRaceNum) {
+                <div class="chart-display">
+                  @if (loading) {
+                    <div class="loading">Loading race data...</div>
                   }
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="4" style="text-align: right; font-weight: bold;">Total:</td>
-                    <td style="font-weight: bold; color: rgb(0, 149, 255);">{{ totalAvg | number:'1.0-0' }}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                  @if (!loading) {
+                    <div>
+                      <!-- <h4 class="race-title">Race {{ selectedRaceNum }}</h4> -->
+                      <div>
+                        <table class="race-table">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Horse</th>
+                              <th>Books</th>
+                              <th>P&L</th>
+                              <th>Avg</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (horse of horses; track horse.horseNum) {
+                              <tr [class.winner-row]="horse.isWinner" [class.negative-profit]="horse.profitLoss < 0 && !horse.isWinner"
+                                (click)="openBetslip(horse)"
+                                [style.cursor]="hasWinner ? 'not-allowed' : 'pointer'"
+                                [style.opacity]="hasWinner && !horse.isWinner ? '0.6' : '1'">
+                                <td>{{ horse.horseNum }}</td>
+                                <td class="horse-name" [class.strikethrough]="horse.hasSpecial || horse.hasRule4">{{ horse.horseName }}</td>
+                                <td class="books">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.books | number:'1.0-0') }}</td>
+                      <td class="profit-loss" [class.positive]="horse.profitLoss > 0" [class.negative]="horse.profitLoss < 0">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.profitLoss | number:'1.0-0') }}</td>
+                                <td class="avg">{{ (horse.hasSpecial || horse.hasRule4) ? '-' : (horse.avg | number:'1.0-0') }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colspan="4" style="text-align: right; font-weight: bold;">Total:</td>
+                              <td style="font-weight: bold; color: rgb(0, 149, 255);">{{ totalAvg | number:'1.0-0' }}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+              @if (!selectedRaceNum && !loading) {
+                <div class="select-prompt">
+                  Please select a race to view the chart.
+                </div>
+              }
             </div>
-          </div>
+          }
         </div>
-        
-        <div *ngIf="!selectedRaceNum && !loading" class="select-prompt">
-          Please select a race to view the chart.
-        </div>
-      </div>
-    </div>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+      </mat-sidenav-content>
+    </mat-sidenav-container>

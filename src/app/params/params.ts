@@ -8,6 +8,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { environment } from '../../environments/environment';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
+import { HorseParam, SelectedRace } from '../models';
 
 interface ParamRow {
   meetingName: string;
@@ -43,7 +44,7 @@ export class Params implements OnInit {
   raceNumbers: number[] = [];
   meetingName: string = '';
   loading: boolean = true;
-  private existingParams: any[] = [];
+  private existingParams: HorseParam[] = [];
 
   protected readonly saving = signal(false);
   protected readonly dirty = signal(false);
@@ -100,7 +101,7 @@ export class Params implements OnInit {
     }
   }
 
-  buildDataSource(races: any[], existingParams: any[]) {
+  buildDataSource(races: SelectedRace[], existingParams: HorseParam[]) {
     this.dataSource = [];
     this.raceGroups = {};
     this.raceNumbers = [];
@@ -220,7 +221,7 @@ export class Params implements OnInit {
 
     this.saving.set(true);
     this.http.post(`${this.apiUrl}/params`, data).subscribe({
-      next: (response: any) => {
+      next: (response: { params?: HorseParam[] }) => {
         this.meetingData.invalidateParams();
         this.saving.set(false);
         this.dirty.set(false);
@@ -272,7 +273,7 @@ export class Params implements OnInit {
     const data = { params: this.buildRows() };
 
     this.http.post(`${this.apiUrl}/params`, data).subscribe({
-      next: (response: any) => {
+      next: (response: { params?: HorseParam[] }) => {
         this.meetingData.invalidateParams();
         this.dirty.set(false);
         this.lastSavedAt.set(new Date());

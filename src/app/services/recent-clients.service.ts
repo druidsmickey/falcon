@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -7,11 +7,11 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class RecentClientsService {
+  private http = inject(HttpClient);
+
   private apiUrl = `${environment.apiUrl}/api`;
   private recentClientsSubject = new BehaviorSubject<string[]>([]);
   public recentClients$ = this.recentClientsSubject.asObservable();
-
-  constructor(private http: HttpClient) {}
 
   loadRecentClients(): Promise<string[]> {
     return new Promise((resolve) => {

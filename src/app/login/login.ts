@@ -1,27 +1,25 @@
-import { Component, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './login.html',
   styleUrl: './login.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+
   username = '';
   password = '';
   errorMessage = '';
   isLoading = false;
-
-  constructor(
-    private authService: AuthService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   onLogin(): void {
     if (!this.username || !this.password) {

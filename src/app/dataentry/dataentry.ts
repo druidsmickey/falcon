@@ -13,6 +13,7 @@ import { RecentClientsService } from '../services/recent-clients.service';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { OfflineStoreService } from '../services/offline-store.service';
 import { environment } from '../../environments/environment';
+import { Bet, BetRequest, BetslipHorse, HorseParam } from '../models';
 
 interface Race {
   raceNum: number;
@@ -30,7 +31,6 @@ interface Horse {
 
 @Component({
   selector: 'app-dataentry',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -47,6 +47,10 @@ interface Horse {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dataentry implements OnInit {
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+  private recentClientsService = inject(RecentClientsService);
+
   private apiUrl = `${environment.apiUrl}/api`;
   
   races: Race[] = [];
@@ -54,7 +58,7 @@ export class Dataentry implements OnInit {
   meetingName: string = '';
   
   // Cache all params data
-  private allParams: any[] = [];
+  private allParams: HorseParam[] = [];
   
   // Track if selected race has a winner
   selectedRaceHasWinner: boolean = false;
@@ -65,7 +69,7 @@ export class Dataentry implements OnInit {
   recentClients: string[] = [];
   
   // Last saved bet
-  lastBet: any = null;
+  lastBet: Bet | null = null;
   
   // Betslip form
   selectedRaceNum: number | null = null;
@@ -88,12 +92,6 @@ export class Dataentry implements OnInit {
 
   private meetingData = inject(MeetingDataService);
   private offlineStore = inject(OfflineStoreService);
-
-  constructor(
-    private http: HttpClient, 
-    private cdr: ChangeDetectorRef,
-    private recentClientsService: RecentClientsService
-  ) {}
 
   ngOnInit() {
     this.loadSelectedRaces();
@@ -217,7 +215,7 @@ export class Dataentry implements OnInit {
         return;
     }
     
-    const betData: any = {
+    const betData: BetRequest = {
       meetingName: this.meetingName,
       raceNum: this.selectedRaceNum,
       horseNum: this.selectedHorseNum,

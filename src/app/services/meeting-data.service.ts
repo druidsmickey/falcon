@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { Bet, BetRequest, HorseParam, SelectedRace } from '../models';
 
 /**
  * Shared data service that caches selectedRaces, params, and bets
@@ -18,10 +19,10 @@ export class MeetingDataService {
   private cachePrefix = 'itb-cache-v1';
 
   // Cached promises – multiple callers share the same in-flight request
-  private _selectedRaces: Promise<any[]> | null = null;
-  private _params: Promise<any[]> | null = null;
-  private _bets: Promise<any[]> | null = null;
-  private _lastBet: Promise<any> | null = null;
+  private _selectedRaces: Promise<SelectedRace[]> | null = null;
+  private _params: Promise<HorseParam[]> | null = null;
+  private _bets: Promise<Bet[]> | null = null;
+  private _lastBet: Promise<Bet | null> | null = null;
   private _meetingName = this.readCache<string>('meetingName') || '';
 
   private cacheKey(name: string): string {
@@ -52,17 +53,17 @@ export class MeetingDataService {
   }
 
   /** Selected races (cached). */
-  getSelectedRaces(): Promise<any[]> {
+  getSelectedRaces(): Promise<SelectedRace[]> {
     if (!this._selectedRaces) {
       if (!this.isAuthenticated()) {
-        const cached = this.readCache<any[]>('selectedRaces') || [];
+        const cached = this.readCache<SelectedRace[]>('selectedRaces') || [];
         if (cached.length > 0 && cached[0]?.meetingName) {
           this._meetingName = cached[0].meetingName;
         }
         return Promise.resolve(cached);
       }
       this._selectedRaces = firstValueFrom(
-        this.http.get<any[]>(`${this.apiUrl}/params/selected-races`)
+        this.http.get<SelectedRace[]>(`${this.apiUrl}/params/selected-races`)
       ).then(races => {
         if (races && races.length > 0) {
           this._meetingName = races[0].meetingName;
@@ -72,7 +73,7 @@ export class MeetingDataService {
         this.writeCache('selectedRaces', result);
         return result;
       }).catch(() => {
-        const cached = this.readCache<any[]>('selectedRaces') || [];
+        const cached = this.readCache<SelectedRace[]>('selectedRaces') || [];
         if (cached.length > 0 && cached[0]?.meetingName) {
           this._meetingName = cached[0].meetingName;
           this.writeCache('meetingName', this._meetingName);
@@ -84,15 +85,15 @@ export class MeetingDataService {
   }
 
   /** Params for the current meeting (cached). */
-  async getParams(): Promise<any[]> {
+  async getParams(): Promise<HorseParam[]> {
     if (!this._meetingName) await this.getSelectedRaces();
     if (!this._params) {
       const key = `params:${this._meetingName || 'default'}`;
       if (!this.isAuthenticated()) {
-        return this.readCache<any[]>(key) || [];
+        return this.readCache<HorseParam[]>(key) || [];
       }
       this._params = firstValueFrom(
-        this.http.get<any[]>(
+        this.http.get<HorseParam[]>(
           `${this.apiUrl}/params?meetingName=${encodeURIComponent(this._meetingName)}`
         )
       ).then(p => {
@@ -100,22 +101,22 @@ export class MeetingDataService {
         this.writeCache(key, result);
         return result;
       }).catch(() => {
-        return this.readCache<any[]>(key) || [];
+        return this.readCache<HorseParam[]>(key) || [];
       });
     }
     return this._params;
   }
 
   /** Bets for the current meeting (cached). */
-  async getBets(): Promise<any[]> {
+  async getBets(): Promise<Bet[]> {
     if (!this._meetingName) await this.getSelectedRaces();
     if (!this._bets) {
       const key = `bets:${this._meetingName || 'default'}`;
       if (!this.isAuthenticated()) {
-        return this.readCache<any[]>(key) || [];
+        return this.readCache<Bet[]>(key) || [];
       }
       this._bets = firstValueFrom(
-        this.http.get<any[]>(
+        this.http.get<Bet[]>(
           `${this.apiUrl}/bets?meetingName=${encodeURIComponent(this._meetingName)}`
         )
       ).then(b => {
@@ -123,25 +124,25 @@ export class MeetingDataService {
         this.writeCache(key, result);
         return result;
       }).catch(() => {
-        return this.readCache<any[]>(key) || [];
+        return this.readCache<Bet[]>(key) || [];
       });
     }
     return this._bets;
   }
 
   /** Last placed bet (cached). */
-  getLastBet(): Promise<any> {
+  getLastBet(): Promise<Bet | null> {
     if (!this._lastBet) {
       if (!this.isAuthenticated()) {
-        return Promise.resolve(this.readCache<any>('lastBet'));
+        return Promise.resolve(this.readCache<Bet | null>('lastBet'));
       }
       this._lastBet = firstValueFrom(
-        this.http.get<any>(`${this.apiUrl}/bets/last`)
+        this.http.get<Bet | null>(`${this.apiUrl}/bets/last`)
       ).then((value) => {
         this.writeCache('lastBet', value);
         return value;
       }).catch(() => {
-        return this.readCache<any>('lastBet');
+        return this.readCache<Bet | null>('lastBet');
       });
     }
     return this._lastBet;
@@ -159,7 +160,9 @@ export class MeetingDataService {
   }
 
   /** Add a local bet to cache for offline mode. */
-  addLocalBet(bet: any): void {
+  addLocalBet(newBet: BetRequest): void {
+    // the entry screens have filled in books, stake and payout before the bet is saved
+    const bet = newBet as Bet;
     if (this._bets) {
       this._bets = this._bets.then(list => {
         const next = [bet, ...(list || [])];

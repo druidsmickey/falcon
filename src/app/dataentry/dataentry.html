@@ -1,135 +1,144 @@
 <div class="dataentry-container">
   <!--  <h2>{{ meetingName || 'Bet Entry' }}</h2> -->
 
-  <mat-card *ngIf="races.length === 0" class="empty-state">
-    <p>No selected races found. Please select a meeting in the Init page first.</p>
-  </mat-card>
+  @if (races.length === 0) {
+    <mat-card class="empty-state">
+      <p>No selected races found. Please select a meeting in the Init page first.</p>
+    </mat-card>
+  }
 
-  <mat-card *ngIf="races.length > 0" class="betslip-card" [ngClass]="{'purchase-bg': betType === 'purchase'}">
-    <!-- <h3>Betslip</h3> -->
-    
-    <div class="form-grid">
-      <!-- Race Selection -->
-      <div class="full-width chip-section">
-        <!-- <label class="chip-label">Race Number:</label> -->
-        <div class="race-buttons">
-          <button 
-            *ngFor="let race of races" 
-            mat-mini-fab
-            (click)="selectRace(race.raceNum)"
-            class="race-btn"
-            [class.selected]="selectedRaceNum === race.raceNum">
-            {{ race.raceNum }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Horse Selection -->
-      <div class="full-width radio-group">
-        <!-- <label>Horse:</label> -->
-        <div class="horse-buttons">
-          <button 
-            *ngFor="let horse of horses" 
-            mat-mini-fab
-            [disabled]="!selectedRaceNum || horse.hasSpecial || horse.hasRule4 || selectedRaceHasWinner"
-            (click)="selectHorse(horse.horseNum)"
-            class="horse-btn"
-            [class.selected]="selectedHorseNum === horse.horseNum"
-            [class.winner-horse]="horse.isWinner">
-            {{ horse.horseNum }}
-          </button>
-        </div>
-
-      </div>
-      <div class="horse-name-display" style="background-color: #d0f5d7; padding: 8px; border-radius: 4px;">#&nbsp;&nbsp;{{ selectedHorseName }}</div>
-      <!-- Bet Option Selection -->
-      <div class="full-width" style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; margin-bottom: 5px; flex-direction: row !important;">
-        <!-- <label>Bet Type:</label> -->
-        <mat-radio-group [(ngModel)]="betType" class="radio-buttons" style="flex-shrink: 0;">
-          <mat-radio-button value="sales">Sales</mat-radio-button>
-          <mat-radio-button value="purchase">Pur</mat-radio-button>
-        </mat-radio-group>
-        <mat-radio-group [(ngModel)]="oddsType" class="radio-buttons" style="flex-shrink: 0;">
-          <mat-radio-button value="f500">F500</mat-radio-button>
-          <mat-radio-button value="odds">Odds</mat-radio-button>
-        </mat-radio-group>
-      </div>
-      
-      <!-- Recent Clients -->
-      <div class="full-width" *ngIf="recentClients.length > 0" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;">
-        <button 
-          *ngFor="let client of recentClients" 
-          mat-mini-fab
-          (click)="selectClient(client)"
-          class="client-btn"
-          style="font-size: 17px; padding: 0px 23px; min-width: 0; height: 38px;">
-          {{ client }}
-        </button>
-      </div>
-
-            <!-- All Inputs in One Row -->
-      <div class="full-width" style="display: flex; gap: 4px; flex-wrap: wrap;; margin-bottom: 5px">
-        <mat-form-field appearance="outline" style="flex: 1; min-width: 100px;">
-          <mat-label>{{ oddsType === 'odds' ? 'Stakes' : 'Books' }}</mat-label>
-          <input matInput type="number" [(ngModel)]="stakeBooks" 
-                 (input)="validateStakeBooks()" 
-                 (blur)="validateStakeBooks()">
-          <mat-error *ngIf="stakeBooksError">{{ stakeBooksError }}</mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" style="flex: 1; min-width: 80px;" [style.background-color]="oddsType === 'odds' ? '#40E0D0' : 'transparent'">
-          <mat-label>{{ oddsType === 'odds' ? 'Odds' : 'F500' }}</mat-label>
-          <input matInput type="number" [(ngModel)]="odds" 
-                 (input)="validateOdds()" 
-                 (blur)="validateOdds()">
-          <mat-error *ngIf="oddsError">{{ oddsError }}</mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" style="flex: 1.5; min-width: 80px;">
-          <mat-label>Name</mat-label>
-          <input matInput [(ngModel)]="clientName" (input)="onClientNameInput()">
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" style="flex: 0.8; min-width: 60px;">
-          <mat-label>Tax</mat-label>
-          <input matInput type="number" [(ngModel)]="tax">
-        </mat-form-field>
-      </div>
-
-      <!-- Action Buttons and Last Bet -->
-      <div class="full-width" style="display: flex; gap: 19px; align-items: stretch; padding: 19px 0;">
-        <button mat-raised-button color="primary" (click)="saveBet()" style="flex: 1; height: 80px; font-size: 1.5rem; background-color: #1976d2; color: white;">
-          Save Bet
-        </button>
-        <div *ngIf="lastBet" [style.background-color]="lastBet.stake < 0 || lastBet.books < 0 ? '#fee2e2' : '#f0f9ff'" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; display: flex; flex-direction: column; justify-content: center;">
-          <div style="font-size: 0.975rem; line-height: 1.4;" [style.text-decoration]="lastBet.cancelled ? 'line-through' : 'none'">
-            <div><strong style="color: black;">{{ lastBet.clientName }}</strong></div>
-            <div><strong style="color: rgb(34, 110, 35)">R{{ lastBet.raceNum }} H{{ lastBet.horseNum }} {{ lastBet.horseName }}</strong></div>
-            <div>
-              <strong *ngIf="lastBet.f500">{{ lastBet.books < 0 ? -lastBet.books : lastBet.books }} x {{ lastBet.f500 }}</strong>
-              <strong *ngIf="!lastBet.f500">{{ lastBet.stake < 0 ? -lastBet.stake : lastBet.stake }} @ <span style="color: #1976d2;">{{ lastBet.odds100 }}</span></strong>
-            </div>
+  @if (races.length > 0) {
+    <mat-card class="betslip-card" [class.purchase-bg]="betType === 'purchase'">
+      <!-- <h3>Betslip</h3> -->
+      <div class="form-grid">
+        <!-- Race Selection -->
+        <div class="full-width chip-section">
+          <!-- <label class="chip-label">Race Number:</label> -->
+          <div class="race-buttons">
+            @for (race of races; track race) {
+              <button
+                mat-mini-fab
+                (click)="selectRace(race.raceNum)"
+                class="race-btn"
+                [class.selected]="selectedRaceNum === race.raceNum">
+                {{ race.raceNum }}
+              </button>
+            }
           </div>
         </div>
-      </div>
-      <!-- Dynamic Input Fields 
-      <div class="option-group full-width">
-        <div class="option-fields">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ betOption === 'odds' ? 'Odds (x100)' : 'Books' }}</mat-label>
-            <input matInput type="number" 
-                   [(ngModel)]="betOption === 'odds' ? odds100 : books" 
-                   [placeholder]="betOption === 'odds' ? 'e.g., 550' : 'e.g., 50'">
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ betOption === 'odds' ? 'Stake' : 'F500' }}</mat-label>
-            <input matInput type="number" 
-                   [(ngModel)]="betOption === 'odds' ? stake : f500" 
-                   [placeholder]="betOption === 'odds' ? 'e.g., 100' : 'e.g., 25'">
-          </mat-form-field>
+        <!-- Horse Selection -->
+        <div class="full-width radio-group">
+          <!-- <label>Horse:</label> -->
+          <div class="horse-buttons">
+            @for (horse of horses; track horse) {
+              <button
+                mat-mini-fab
+                [disabled]="!selectedRaceNum || horse.hasSpecial || horse.hasRule4 || selectedRaceHasWinner"
+                (click)="selectHorse(horse.horseNum)"
+                class="horse-btn"
+                [class.selected]="selectedHorseNum === horse.horseNum"
+                [class.winner-horse]="horse.isWinner">
+                {{ horse.horseNum }}
+              </button>
+            }
+          </div>
         </div>
-      </div>-->
-    </div>
-  </mat-card>
-</div>
+        <div class="horse-name-display" style="background-color: #d0f5d7; padding: 8px; border-radius: 4px;">#&nbsp;&nbsp;{{ selectedHorseName }}</div>
+        <!-- Bet Option Selection -->
+        <div class="full-width" style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; margin-bottom: 5px; flex-direction: row !important;">
+          <!-- <label>Bet Type:</label> -->
+          <mat-radio-group [(ngModel)]="betType" class="radio-buttons" style="flex-shrink: 0;">
+            <mat-radio-button value="sales">Sales</mat-radio-button>
+            <mat-radio-button value="purchase">Pur</mat-radio-button>
+          </mat-radio-group>
+          <mat-radio-group [(ngModel)]="oddsType" class="radio-buttons" style="flex-shrink: 0;">
+            <mat-radio-button value="f500">F500</mat-radio-button>
+            <mat-radio-button value="odds">Odds</mat-radio-button>
+          </mat-radio-group>
+        </div>
+        <!-- Recent Clients -->
+        @if (recentClients.length > 0) {
+          <div class="full-width" style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;">
+            @for (client of recentClients; track client) {
+              <button
+                mat-mini-fab
+                (click)="selectClient(client)"
+                class="client-btn"
+                style="font-size: 17px; padding: 0px 23px; min-width: 0; height: 38px;">
+                {{ client }}
+              </button>
+            }
+          </div>
+        }
+        <!-- All Inputs in One Row -->
+        <div class="full-width" style="display: flex; gap: 4px; flex-wrap: wrap;; margin-bottom: 5px">
+          <mat-form-field appearance="outline" style="flex: 1; min-width: 100px;">
+            <mat-label>{{ oddsType === 'odds' ? 'Stakes' : 'Books' }}</mat-label>
+            <input matInput type="number" [(ngModel)]="stakeBooks"
+              (input)="validateStakeBooks()"
+              (blur)="validateStakeBooks()">
+              @if (stakeBooksError) {
+                <mat-error>{{ stakeBooksError }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="flex: 1; min-width: 80px;" [style.background-color]="oddsType === 'odds' ? '#40E0D0' : 'transparent'">
+              <mat-label>{{ oddsType === 'odds' ? 'Odds' : 'F500' }}</mat-label>
+              <input matInput type="number" [(ngModel)]="odds"
+                (input)="validateOdds()"
+                (blur)="validateOdds()">
+                @if (oddsError) {
+                  <mat-error>{{ oddsError }}</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="flex: 1.5; min-width: 80px;">
+                <mat-label>Name</mat-label>
+                <input matInput [(ngModel)]="clientName" (input)="onClientNameInput()">
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="flex: 0.8; min-width: 60px;">
+                <mat-label>Tax</mat-label>
+                <input matInput type="number" [(ngModel)]="tax">
+              </mat-form-field>
+            </div>
+            <!-- Action Buttons and Last Bet -->
+            <div class="full-width" style="display: flex; gap: 19px; align-items: stretch; padding: 19px 0;">
+              <button mat-raised-button color="primary" (click)="saveBet()" style="flex: 1; height: 80px; font-size: 1.5rem; background-color: #1976d2; color: white;">
+                Save Bet
+              </button>
+              @if (lastBet) {
+                <div [style.background-color]="lastBet.stake < 0 || lastBet.books < 0 ? '#fee2e2' : '#f0f9ff'" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; display: flex; flex-direction: column; justify-content: center;">
+                  <div style="font-size: 0.975rem; line-height: 1.4;" [style.text-decoration]="lastBet.cancelled ? 'line-through' : 'none'">
+                    <div><strong style="color: black;">{{ lastBet.clientName }}</strong></div>
+                    <div><strong style="color: rgb(34, 110, 35)">R{{ lastBet.raceNum }} H{{ lastBet.horseNum }} {{ lastBet.horseName }}</strong></div>
+                    <div>
+                      @if (lastBet.f500) {
+                        <strong>{{ lastBet.books < 0 ? -lastBet.books : lastBet.books }} x {{ lastBet.f500 }}</strong>
+                      }
+                      @if (!lastBet.f500) {
+                        <strong>{{ lastBet.stake < 0 ? -lastBet.stake : lastBet.stake }} @ <span style="color: #1976d2;">{{ lastBet.odds100 }}</span></strong>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+            <!-- Dynamic Input Fields
+            <div class="option-group full-width">
+              <div class="option-fields">
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ betOption === 'odds' ? 'Odds (x100)' : 'Books' }}</mat-label>
+                  <input matInput type="number"
+                    [(ngModel)]="betOption === 'odds' ? odds100 : books"
+                    [placeholder]="betOption === 'odds' ? 'e.g., 550' : 'e.g., 50'">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ betOption === 'odds' ? 'Stake' : 'F500' }}</mat-label>
+                    <input matInput type="number"
+                      [(ngModel)]="betOption === 'odds' ? stake : f500"
+                      [placeholder]="betOption === 'odds' ? 'e.g., 100' : 'e.g., 25'">
+                    </mat-form-field>
+                  </div>
+                </div>-->
+              </div>
+            </mat-card>
+          }
+        </div>
