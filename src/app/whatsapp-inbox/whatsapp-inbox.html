@@ -1,4 +1,4 @@
-<div class="inbox">
+<div class="inbox-container">
   <header class="top">
     <h2>WhatsApp inbox</h2>
     <span class="tools">
@@ -37,23 +37,40 @@
     }
   </details>
 
+  <!-- The bets that were saved from here, shown the way the Entry page shows its last bet -->
+  @if (saved().length > 0) {
+    <section class="saved" aria-label="Saved bets">
+      @for (bet of saved(); track bet.id) {
+        <div class="saved-bet" [class.purchase]="bet.stake < 0 || bet.books < 0">
+          <div><strong class="client">{{ bet.clientName }}</strong>
+            @if (bet.queued) { <span class="tag">queued, will be sent</span> }
+            @if (bet.demo) { <span class="tag demo-tag">demo, nothing saved</span> }
+          </div>
+          <div><strong class="horse-line">R{{ bet.raceNum }} H{{ bet.horseNum }} {{ bet.horseName }}</strong></div>
+          <div>
+            @if (bet.f500) {
+              <strong>{{ bet.books < 0 ? -bet.books : bet.books }} x {{ bet.f500 }}</strong>
+            } @else {
+              <strong>{{ bet.stake < 0 ? -bet.stake : bet.stake }} @ <span class="odds">{{ bet.odds100 }}</span></strong>
+            }
+          </div>
+        </div>
+      }
+    </section>
+  }
+
   @if (loaded() && drafts().length === 0 && !error()) {
     <p class="empty">Nothing waiting. Bets sent by the contacts you listen to will appear here.</p>
   }
 
   @for (draft of drafts(); track draft.id) {
-    <article class="card" [class.unsure]="draft.unsure">
+    <!-- the message as it was written, and what was read from it -->
+    <div class="read" [class.unsure]="draft.unsure">
       @if (draft.demo) {
-        <p class="demo">DEMO: confirming this saves nothing</p>
+        <span class="demo">DEMO: saving this saves nothing</span>
       }
-      <div class="head">
-        <input class="client" type="text" [value]="draft.clientName" (input)="setClient(draft, $event)"
-               [class.missing]="has(draft, 'client name')" aria-label="Client name">
-        <span class="time">{{ draft.sentAt | date: 'HH:mm' }}</span>
-      </div>
-
+      <div class="from">{{ draft.contactName }} <span class="time">{{ draft.sentAt | date: 'HH:mm' }}</span></div>
       <blockquote class="said">{{ draft.text }}</blockquote>
-
       @if (draft.issues.length > 0) {
         <ul class="issues">
           @for (issue of draft.issues; track issue) {
@@ -61,72 +78,83 @@
           }
         </ul>
       }
+    </div>
 
-      <div class="row">
-        <label>Race
-          <input type="text" inputmode="numeric" [value]="shown(draft.raceNum)" (input)="setNumber(draft, 'raceNum', $event)"
-                 [class.missing]="has(draft, 'race')">
-        </label>
-        <label>Horse
-          <input type="text" inputmode="numeric" [value]="shown(draft.horseNum)" (input)="setNumber(draft, 'horseNum', $event)"
-                 [class.missing]="has(draft, 'horse') || has(draft, 'horse is not in this race')">
-        </label>
-        <span class="horse" [class.bad]="has(draft, 'horse is not in this race')">
-          @if (has(draft, 'horse is not in this race')) { not in this race } @else { {{ horseName(draft) }} }
-        </span>
-      </div>
+    <!-- the same betslip as the Entry page, filled in from the message -->
+    <mat-card class="betslip-card" [class.purchase-bg]="draft.purchase">
+      <div class="form-grid">
+        <div class="full-width chip-section">
+          <div class="race-buttons" [class.missing]="has(draft, 'race')">
+            @for (race of races(); track race.raceNum) {
+              <button mat-mini-fab type="button" class="race-btn" [class.selected]="draft.raceNum === race.raceNum"
+                      (click)="selectRace(draft, race.raceNum)">{{ race.raceNum }}</button>
+            }
+          </div>
+        </div>
 
-      <div class="kind" role="group" aria-label="Books or stake">
-        <button type="button" [class.on]="draft.kind === 'books'" [class.missing]="has(draft, 'books or stake')" (click)="setKind(draft, 'books')">Books</button>
-        <button type="button" [class.on]="draft.kind === 'stake'" [class.missing]="has(draft, 'books or stake')" (click)="setKind(draft, 'stake')">Stake</button>
-        @if (draft.kind === null && draft.amount !== null) {
-          <span class="amount">{{ draft.amount }} is books or a stake?</span>
+        <div class="full-width radio-group">
+          <div class="horse-buttons" [class.missing]="has(draft, 'horse')">
+            @for (horse of horsesOf(draft); track horse.horseNum) {
+              <button mat-mini-fab type="button" class="horse-btn" [disabled]="horse.disabled"
+                      [class.selected]="draft.horseNum === horse.horseNum" [class.winner-horse]="horse.winner"
+                      (click)="selectHorse(draft, horse.horseNum)">{{ horse.horseNum }}</button>
+            }
+          </div>
+        </div>
+
+        <div class="horse-name-display" [class.bad]="has(draft, 'horse')">#&nbsp;&nbsp;{{ horseName(draft) }}</div>
+
+        <div class="full-width choices">
+          <mat-radio-group class="radio-buttons" [value]="draft.purchase ? 'purchase' : 'sales'"
+                           (change)="setPurchase(draft, $event.value === 'purchase')">
+            <mat-radio-button value="sales">Sales</mat-radio-button>
+            <mat-radio-button value="purchase">Pur</mat-radio-button>
+          </mat-radio-group>
+          <mat-radio-group class="radio-buttons" [class.missing]="has(draft, 'F500 or odds')" [value]="kindOf(draft)"
+                           (change)="setKind(draft, $event.value === 'odds' ? 'stake' : 'books')">
+            <mat-radio-button value="f500">F500</mat-radio-button>
+            <mat-radio-button value="odds">Odds</mat-radio-button>
+          </mat-radio-group>
+        </div>
+
+        <div class="full-width fields">
+          <mat-form-field appearance="outline" class="f-amount">
+            <mat-label>{{ draft.kind === 'stake' ? 'Stakes' : 'Books' }}</mat-label>
+            <input matInput type="number" [value]="shown(amountOf(draft))" (input)="setAmount(draft, $event)"
+                   [class.missing]="has(draft, 'books') || has(draft, 'stake')">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="f-rate" [class.odds]="draft.kind === 'stake'">
+            <mat-label>{{ draft.kind === 'stake' ? 'Odds' : 'F500' }}</mat-label>
+            <input matInput type="number" [value]="shown(rateOf(draft))" (input)="setRate(draft, $event)"
+                   [disabled]="draft.kind === null" [class.missing]="has(draft, 'F500') || has(draft, 'odds')">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="f-name">
+            <mat-label>Name</mat-label>
+            <input matInput [value]="draft.clientName" (input)="setClient(draft, $event)" [class.missing]="has(draft, 'client name')">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="f-tax">
+            <mat-label>Tax</mat-label>
+            <input matInput type="number" [value]="shown(draft.tax)" (input)="setNumber(draft, 'tax', $event)" [class.missing]="has(draft, 'tax')">
+          </mat-form-field>
+        </div>
+
+        @if (draft.kind === 'stake' && listOdds(draft) !== null && draft.odds100 !== listOdds(draft)) {
+          <button type="button" class="ghost list-odds" (click)="useListOdds(draft)">Odds list: {{ listOdds(draft) }}</button>
+        }
+
+        @if (itemErrors()[draft.id]) {
+          <p class="banner" role="alert">{{ itemErrors()[draft.id] }}</p>
+        }
+
+        <div class="full-width actions">
+          <button mat-raised-button color="primary" type="button" class="save" [disabled]="missing(draft).length > 0 || isBusy(draft)"
+                  (click)="save(draft)">{{ isBusy(draft) ? 'Saving...' : 'Save Bet' }}</button>
+          <button type="button" class="ghost dismiss" [disabled]="isBusy(draft)" (click)="dismiss(draft)">Dismiss</button>
+        </div>
+        @if (missing(draft).length > 0) {
+          <p class="needs">Needs: {{ missing(draft).join(', ') }}</p>
         }
       </div>
-
-      @if (draft.kind === 'books') {
-        <div class="row">
-          <label>Books
-            <input type="text" inputmode="decimal" [value]="shown(draft.books)" (input)="setNumber(draft, 'books', $event)" [class.missing]="has(draft, 'books')">
-          </label>
-          <label>F500
-            <input type="text" inputmode="decimal" [value]="shown(draft.f500)" (input)="setNumber(draft, 'f500', $event)" [class.missing]="has(draft, 'F500')">
-          </label>
-        </div>
-      }
-      @if (draft.kind === 'stake') {
-        <div class="row">
-          <label>Stake
-            <input type="text" inputmode="decimal" [value]="shown(draft.stake)" (input)="setNumber(draft, 'stake', $event)" [class.missing]="has(draft, 'stake')">
-          </label>
-          <label>Odds
-            <input type="text" inputmode="decimal" [value]="shown(draft.odds100)" (input)="setNumber(draft, 'odds100', $event)" [class.missing]="has(draft, 'odds')">
-          </label>
-          @if (listOdds(draft) !== null && draft.odds100 !== listOdds(draft)) {
-            <button type="button" class="ghost small" (click)="useListOdds(draft)">List: {{ listOdds(draft) }}</button>
-          }
-        </div>
-      }
-
-      <div class="row">
-        <label>Tax
-          <input type="text" inputmode="decimal" [value]="shown(draft.tax)" (input)="setNumber(draft, 'tax', $event)" [class.missing]="has(draft, 'tax')">
-        </label>
-      </div>
-
-      @if (itemErrors()[draft.id]) {
-        <p class="banner" role="alert">{{ itemErrors()[draft.id] }}</p>
-      }
-
-      <div class="actions">
-        <button type="button" class="confirm" [disabled]="missing(draft).length > 0 || isBusy(draft)" (click)="confirm(draft)">
-          {{ isBusy(draft) ? 'Saving...' : 'Confirm' }}
-        </button>
-        <button type="button" class="ghost" [disabled]="isBusy(draft)" (click)="dismiss(draft)">Dismiss</button>
-      </div>
-      @if (missing(draft).length > 0) {
-        <p class="needs">Needs: {{ missing(draft).join(', ') }}</p>
-      }
-    </article>
+    </mat-card>
   }
 </div>

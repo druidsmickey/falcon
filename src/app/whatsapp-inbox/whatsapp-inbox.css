@@ -1,7 +1,7 @@
-.inbox {
-  max-width: 640px;
+.inbox-container {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 8px 12px 80px;
+  padding: 8px 8px 80px;
 }
 
 .top {
@@ -19,16 +19,6 @@ h2 {
 .tools {
   display: flex;
   gap: 8px;
-}
-
-.demo {
-  margin: 0 0 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: #e0e7ff;
-  color: #3730a3;
-  font-size: 0.8rem;
-  font-weight: 700;
 }
 
 .context {
@@ -72,52 +62,23 @@ h2 {
   font-size: 0.85rem;
 }
 
-button {
+button.ghost {
   min-height: 44px;
   padding: 0 16px;
   border: none;
   border-radius: 10px;
+  background: #e5e7eb;
+  color: #111827;
   font: 600 0.95rem sans-serif;
   cursor: pointer;
 }
 
-button:disabled {
+button.ghost:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.ghost {
-  background: #e5e7eb;
-  color: #111827;
-}
-
-.ghost.small {
-  min-height: 40px;
-  padding: 0 10px;
-  font-size: 0.85rem;
-}
-
-.confirm {
-  flex: 1;
-  background: #16a34a;
-  color: #fff;
-}
-
-input[type='text'] {
-  min-height: 44px;
-  padding: 0 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 1rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-input.missing,
-.kind button.missing {
-  border-color: #dc2626;
-  background: #fef2f2;
-}
+/* ---------------------------------------------------------------- who is listened to */
 
 .listen {
   margin: 8px 0 14px;
@@ -158,108 +119,344 @@ input.missing,
 
 .nick {
   flex: 1 1 200px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
-.card {
-  margin: 12px 0;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
+/* ---------------------------------------------------------------- saved bets (as the last bet of the Entry page) */
+
+.saved {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.saved-bet {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f0f9ff;
+  font-size: 0.975rem;
+  line-height: 1.4;
+}
+
+.saved-bet.purchase {
+  background: #fee2e2;
+}
+
+.saved-bet .client {
+  color: black;
+}
+
+.saved-bet .horse-line {
+  color: rgb(34, 110, 35);
+}
+
+.saved-bet .odds {
+  color: #1976d2;
+}
+
+.tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.tag.demo-tag {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* ---------------------------------------------------------------- the message that was read */
+
+.read {
+  margin: 14px 0 4px;
+  padding: 8px 10px;
   border-left: 5px solid #16a34a;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
-.card.unsure {
+.read.unsure {
   border-left-color: #f59e0b;
 }
 
-.head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.client {
+.demo {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
+.from {
+  font-weight: 600;
+  color: #334155;
+}
+
 .said {
-  margin: 8px 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #f1f5f9;
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #e2e8f0;
   font-family: ui-monospace, monospace;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .issues {
-  margin: 0 0 8px;
+  margin: 4px 0 0;
   padding-left: 18px;
   color: #b45309;
   font-size: 0.85rem;
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px;
-  margin: 8px 0;
+/* ---------------------------------------------------------------- the betslip (the same as the Entry page) */
+
+.betslip-card {
+  padding: 12px;
+  transition: background-color 0.3s ease;
 }
 
-.row label {
+.betslip-card.purchase-bg {
+  background-color: #fee2e2;
+}
+
+.form-grid {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.chip-section {
+  padding: 4px 0;
+}
+
+.radio-group {
+  padding: 4px 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.race-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 2px;
+  justify-content: flex-start;
+  min-height: 28px;
+}
+
+.horse-buttons {
+  display: flex;
+  flex-wrap: nowrap;
   gap: 2px;
-  flex: 1 1 90px;
-  font-size: 0.8rem;
-  color: #475569;
+  margin-bottom: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 28px;
 }
 
-.horse {
-  flex: 2 1 120px;
-  align-self: center;
-  font-weight: 600;
-  color: #334155;
+.race-buttons.missing,
+.horse-buttons.missing {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
-.horse.bad {
+.race-btn,
+.horse-btn {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  font-size: 0.75rem !important;
+  line-height: 28px !important;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  min-width: 28px !important;
+  min-height: 28px !important;
+}
+
+.horse-btn {
+  color: rgb(34, 110, 35);
+}
+
+::ng-deep .race-btn .mat-mdc-button-touch-target,
+::ng-deep .horse-btn .mat-mdc-button-touch-target {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+::ng-deep .race-btn .mdc-fab__ripple,
+::ng-deep .race-btn .mat-mdc-fab-base,
+::ng-deep .horse-btn .mdc-fab__ripple,
+::ng-deep .horse-btn .mat-mdc-fab-base {
+  padding: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.race-btn.selected {
+  background: #1976d2 !important;
+  color: white !important;
+  border-color: #1976d2;
+}
+
+.horse-btn.selected {
+  background: rgb(34, 110, 35) !important;
+  color: white !important;
+  border-color: rgb(34, 110, 35);
+}
+
+.horse-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.horse-btn.winner-horse {
+  background: #1e3a8a !important;
+  color: white !important;
+  border-color: #1e3a8a;
+}
+
+.horse-name-display {
+  min-height: 20px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #d0f5d7;
+  font-size: 2rem;
+  font-weight: 500;
+  color: red;
+  text-align: center;
+}
+
+.horse-name-display.bad {
+  background-color: #fee2e2;
+}
+
+.choices {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.radio-buttons {
+  flex-shrink: 0;
+}
+
+.radio-buttons.missing {
+  outline: 2px solid #dc2626;
+  border-radius: 6px;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+.f-amount {
+  flex: 1;
+  min-width: 100px;
+}
+
+.f-rate {
+  flex: 1;
+  min-width: 80px;
+}
+
+.f-rate.odds {
+  background-color: #40e0d0;
+}
+
+.f-name {
+  flex: 1.5;
+  min-width: 80px;
+}
+
+.f-tax {
+  flex: 0.8;
+  min-width: 60px;
+}
+
+input.missing {
   color: #dc2626;
 }
 
-.kind {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0;
-}
-
-.kind button {
-  flex: 0 0 auto;
-  min-width: 90px;
-  background: #e5e7eb;
-  border: 1px solid transparent;
-}
-
-.kind button.on {
-  background: #1d4ed8;
-  color: #fff;
-}
-
-.amount {
-  color: #b45309;
-  font-size: 0.85rem;
+.list-odds {
+  align-self: flex-start;
 }
 
 .actions {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 19px;
+  align-items: stretch;
+  padding: 10px 0 0;
+}
+
+.save {
+  flex: 1;
+  height: 80px;
+  font-size: 1.5rem;
+  background-color: #1976d2;
+  color: white;
+}
+
+.dismiss {
+  flex: 0 0 auto;
 }
 
 .needs {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   color: #b45309;
   font-size: 0.85rem;
+}
+
+@media (max-width: 450px) {
+  .inbox-container {
+    padding: 4px 4px 80px;
+  }
+
+  .betslip-card {
+    padding: 8px;
+  }
+
+  .horse-buttons {
+    gap: 2px;
+  }
+
+  .horse-btn {
+    min-width: 30px !important;
+    max-width: 34px !important;
+    height: 30px !important;
+    padding: 0 3px !important;
+    font-size: 0.8rem !important;
+    line-height: 30px !important;
+  }
 }

@@ -107,7 +107,9 @@ The server can read the bets your contacts send and list them in the **Inbox** t
 
 Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a race number followed by one line of odds per horse (horse 1, 2, 3...). When the number sent is more than the horses in the list, the first digit is the race: with 5 horses `11` is race 1 horse 1, with 12 horses it is horse 11 and the line is marked unsure. For a stake, the **List** button next to the odds box offers the price from the latest odds list.
 
-**In the inbox** each bet shows the message as it was written, what was understood, and what is missing (red boxes, and a Needs line). Confirm sends it through the normal bet entry, using the time the message was sent, so it is checked and saved like any other bet (and queued if the server cannot be reached). It can never be entered twice. Dismiss throws it away. Lines that could not be read are kept so nothing is lost; fill them in or dismiss them.
+**In the inbox** each message is shown as it was written, and under it the **same betslip as the Entry page**, filled in from what was read: race and horse buttons, the horse name, Sales/Pur, F500/Odds, books or stakes, the F500 or odds, name and tax. Change anything the same way as on the Entry page. What is missing is outlined in red and listed under the Save button; a bare number (`1 500`) leaves F500/Odds unchosen until you choose. The same limits as the Entry page apply, and horses that are withdrawn (or in a race that has a winner) cannot be chosen.
+
+**Save Bet** sends it through the normal bet entry, with the time the message was sent, so it is checked and saved like any other bet (and queued if the server cannot be reached). As soon as it is saved the card disappears and the saved bet is shown at the top, like the last bet on the Entry page (marked "queued" if it is waiting to be sent). It can never be entered twice. **Dismiss** throws a bet away. Lines that could not be read are kept so nothing is lost; fill them in or dismiss them.
 
 **Limits**
 - Messages are stored on the server for 7 days, then deleted. Only the lines with numbers in them are kept.
