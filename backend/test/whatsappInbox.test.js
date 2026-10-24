@@ -109,6 +109,7 @@ test('confirming or dismissing takes a bet out of the inbox, once', async () => 
   assert.equal(await inbox.decide(items[0].id, 'dismissed'), false);
   assert.equal(await inbox.decide(items[1].id, 'dismissed'), true);
   assert.equal((await inbox.listPending()).items.length, 0);
+  assert.equal(await inbox.countPending(), 0);
   assert.equal(await WhatsappInbox.countDocuments({ status: 'confirmed' }), 1);
 });
 
@@ -175,4 +176,15 @@ test('the demo adds sample bets that the real parser read, and they can be remov
 test('the demo works before any meeting exists', async () => {
   assert.equal(await inbox.createDemo(), 5);
   assert.equal((await inbox.listPending()).items.length, 5);
+});
+
+test('the number of bets waiting for approval follows what arrives and what is decided', async () => {
+  assert.equal(await inbox.countPending(), 0);
+  await inbox.handleIncoming(message('1 500x90'));
+  await inbox.handleIncoming(message('2 5k\n3 500x80'));
+  assert.equal(await inbox.countPending(), 3);
+  const { items } = await inbox.listPending();
+  await inbox.decide(items[0].id, 'confirmed');
+  await inbox.decide(items[1].id, 'dismissed');
+  assert.equal(await inbox.countPending(), 1);
 });

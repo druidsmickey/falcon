@@ -14,6 +14,7 @@ import { ChangePassword } from './change-password/change-password';
 import { DeviceSecurity } from './device-security/device-security';
 import { Whatsapp } from './whatsapp/whatsapp';
 import { WhatsappInbox } from './whatsapp-inbox/whatsapp-inbox';
+import { InboxCountService } from './whatsapp-inbox/inbox-count.service';
 import { AuthService } from './services/auth.service';
 import { OfflineSyncService } from './services/offline-sync.service';
 import { environment } from '../environments/environment';
@@ -29,6 +30,7 @@ export class App {
   protected readonly isOnline = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
   protected readonly checkingConnection = signal(false);
   protected readonly auth = inject(AuthService);
+  protected readonly inboxCount = inject(InboxCountService).count;
   // Raising this number builds all the tabs again, so that they show the data that was just synced. A
   // page reload cannot be used for that: it would lock the app (the key lives in memory only).
   protected readonly refreshKey = signal(0);
@@ -58,6 +60,7 @@ export class App {
     }
 
     this.offlineSync.start();
+    inject(InboxCountService).start();
   }
 
   private async checkConnectivity(): Promise<void> {

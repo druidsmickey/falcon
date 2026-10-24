@@ -1,6 +1,10 @@
 <div class="inbox-container">
   <header class="top">
-    <h2>WhatsApp inbox</h2>
+    <h2>WhatsApp inbox
+      @if (drafts().length > 0) {
+        <span class="counter">{{ drafts().length }} to approve</span>
+      }
+    </h2>
     <span class="tools">
       <button type="button" class="ghost" (click)="loadDemo()">Load demo</button>
       <button type="button" class="ghost" (click)="refresh()">Refresh</button>
@@ -60,7 +64,15 @@
     <p class="empty">Nothing waiting. Bets sent by the contacts you listen to will appear here.</p>
   }
 
-  @for (draft of drafts(); track draft.id) {
+  @if (compact() && drafts().length > 1) {
+    <nav class="pager" aria-label="Bets to approve">
+      <button type="button" class="ghost" [disabled]="current() === 0" (click)="move(-1)">&lsaquo; Previous</button>
+      <span>{{ current() + 1 }} of {{ drafts().length }}</span>
+      <button type="button" class="ghost" [disabled]="current() >= drafts().length - 1" (click)="move(1)">Next &rsaquo;</button>
+    </nav>
+  }
+
+  @for (draft of shownDrafts(); track draft.id) {
     <!-- the same betslip as the Entry page, filled in from the message -->
     <mat-card class="betslip-card" [class.purchase-bg]="draft.purchase">
       <div class="form-grid">
@@ -100,7 +112,7 @@
 
         <div class="full-width fields">
           <mat-form-field appearance="outline" class="f-amount">
-            <mat-label>{{ draft.kind === 'stake' ? 'Stakes' : 'Books' }}</mat-label>
+            <mat-label>{{ draft.kind === 'stake' ? 'Stakes' : draft.kind === 'books' ? 'Books' : 'Books / Stakes' }}</mat-label>
             <input matInput type="number" [value]="shown(amountOf(draft))" (input)="setAmount(draft, $event)"
                    [class.missing]="has(draft, 'books') || has(draft, 'stake')">
           </mat-form-field>

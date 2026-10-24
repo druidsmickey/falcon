@@ -147,6 +147,11 @@ async function listPending() {
   };
 }
 
+/** How many bets wait for a person to approve them. */
+async function countPending() {
+  return WhatsappInbox.countDocuments({ status: 'pending' });
+}
+
 /** Marks a pending item confirmed or dismissed. Returns false if it was not pending (already decided). */
 async function decide(id, status) {
   if (!['confirmed', 'dismissed'].includes(status)) throw new Error('bad status');
@@ -232,4 +237,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };

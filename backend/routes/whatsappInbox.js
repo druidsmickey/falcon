@@ -39,6 +39,15 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET: how many bets wait for approval (shown on the tab)
+router.get('/count', async (req, res) => {
+  try {
+    res.json({ count: await inbox.countPending() });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST: sample bets so that the screen can be tried (they save nothing when confirmed)
 router.post('/demo', async (req, res) => {
   try {

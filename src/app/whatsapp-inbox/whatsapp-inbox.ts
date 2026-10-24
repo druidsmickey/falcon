@@ -10,6 +10,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { HorseParam, SelectedRace } from '../models';
 import { MeetingDataService } from '../services/meeting-data.service';
+import { InboxCountService } from './inbox-count.service';
 import { Draft, InboxItem, Surroundings, chooseKind, draftFrom, hasProblem, problems, toBetRequest } from './inbox-bet';
 
 interface OddsList {
@@ -71,6 +72,7 @@ const SAVED_SHOWN = 8;
 export class WhatsappInbox implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private meetingData = inject(MeetingDataService);
+  private counter = inject(InboxCountService);
   private api = `${environment.apiUrl}/api/whatsapp-inbox`;
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Bets already saved here whose confirmation the server has not heard yet; they are not shown again meanwhile. */
@@ -86,9 +88,19 @@ export class WhatsappInbox implements OnInit, OnDestroy {
   protected readonly busy = signal<ReadonlySet<string>>(new Set());
   protected readonly loaded = signal(false);
   protected readonly itemErrors = signal<Record<string, string>>({});
+  /** On a phone one bet is shown at a time, with buttons to move between them. */
+  protected readonly compact = signal(false);
+  private readonly position = signal(0);
+  protected readonly current = computed(() => Math.min(this.position(), Math.max(0, this.drafts().length - 1)));
+  protected readonly shownDrafts = computed(() => (this.compact() ? this.drafts().slice(this.current(), this.current() + 1) : this.drafts()));
   protected readonly listened = computed(() => this.contacts().filter(c => c.listen).length);
 
   async ngOnInit(): Promise<void> {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      const phone = window.matchMedia('(max-width: 600px)');
+      this.compact.set(phone.matches);
+      phone.addEventListener('change', event => this.compact.set(event.matches));
+    }
     await Promise.all([this.refresh(), this.loadContacts(), this.loadMeeting()]);
     this.timer = setInterval(() => void this.refresh(), 10000);
   }
@@ -107,6 +119,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
       // what was typed into the bets already on screen is kept; new ones are added, decided ones disappear
       const existing = new Map(this.drafts().map(d => [d.id, d]));
       this.drafts.set(result.items.filter(item => !this.unconfirmed.has(item.id)).map(item => existing.get(item.id) ?? draftFrom(item)));
+      this.counter.set(this.drafts().length);
       this.error.set('');
     } catch {
       this.error.set('The server cannot be reached. Messages are kept there and will show here again.');
@@ -324,6 +337,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
       }
 
       this.drafts.update(list => list.filter(d => d.id !== draft.id));
+      this.counter.set(this.drafts().length);
       this.saved.update(list => [
         {
           id: draft.id,
@@ -350,6 +364,10 @@ export class WhatsappInbox implements OnInit, OnDestroy {
     }
   }
 
+  protected move(step: number): void {
+    this.position.set(Math.max(0, Math.min(this.drafts().length - 1, this.current() + step)));
+  }
+
   protected async loadDemo(): Promise<void> {
     try {
       await firstValueFrom(this.http.post(`${this.api}/demo`, {}));
@@ -365,6 +383,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
     try {
       await firstValueFrom(this.http.post(`${this.api}/${draft.id}/dismiss`, {}));
       this.drafts.update(list => list.filter(d => d.id !== draft.id));
+      this.counter.set(this.drafts().length);
     } catch {
       this.setItemError(draft.id, 'Could not dismiss this. Check the connection.');
     } finally {

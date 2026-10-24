@@ -27,7 +27,13 @@
       <app-whatsapp></app-whatsapp>
     </ng-template>
   </mat-tab>
-  <mat-tab label="Inbox">
+  <mat-tab>
+    <ng-template mat-tab-label>
+      Inbox
+      @if (inboxCount() > 0) {
+        <span class="inbox-badge" [attr.aria-label]="inboxCount() + ' bets to approve'">{{ inboxCount() }}</span>
+      }
+    </ng-template>
     <ng-template matTabContent>
       <app-whatsapp-inbox></app-whatsapp-inbox>
     </ng-template>
