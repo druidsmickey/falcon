@@ -1,19 +1,53 @@
-<main class="arcade">
-  <h1>PINBALL</h1>
+<main class="arcade" [class.playing]="theme()">
+  @if (theme(); as current) {
+    <header class="bar">
+      <button type="button" class="small" (click)="menu()" aria-label="Back to the tables">&larr; Tables</button>
+      <span class="name">{{ current.icon }} {{ current.name }}</span>
+      <button type="button" class="small" (click)="toggleSound()" [attr.aria-label]="data().muted ? 'Sound off' : 'Sound on'">
+        {{ data().muted ? '🔇' : '🔊' }}
+      </button>
+    </header>
+  } @else {
+    <h1>PINBALL</h1>
+    <p class="intro">Pick a table. Chain hits for a bigger multiplier, light all four targets, and beat your best.</p>
 
-  <canvas #table class="table" aria-label="Pinball table"></canvas>
+    <div class="tables">
+      @for (item of themes; track item.id; let i = $index) {
+        <button type="button" class="card" [style.--accent]="item.accent" [style.--from]="item.sky[0]" [style.--to]="item.sky[1]"
+                (click)="play(item)">
+          <span class="icon">{{ item.icon }}</span>
+          <span class="title">{{ item.name }}</span>
+          <span class="tagline">{{ item.tagline }}</span>
+          <span class="score">
+            @if (data().best[item.id] > 0) {
+              Best {{ format(data().best[item.id]) }} &middot; {{ data().games[item.id] }} {{ data().games[item.id] === 1 ? 'game' : 'games' }}
+            } @else {
+              Not played yet
+            }
+          </span>
+          <span class="key">{{ i + 1 }}</span>
+        </button>
+      }
+    </div>
+  }
 
-  <div class="pads">
-    <button type="button" class="pad" aria-label="Left flipper"
-            (pointerdown)="press('left', true)" (pointerup)="press('left', false)"
-            (pointerleave)="press('left', false)" (pointercancel)="press('left', false)">&#9664;</button>
-    <button type="button" class="pad launch" aria-label="Launch"
-            (pointerdown)="press('launch', true)" (pointerup)="press('launch', false)"
-            (pointerleave)="press('launch', false)" (pointercancel)="press('launch', false)">LAUNCH</button>
-    <button type="button" class="pad" aria-label="Right flipper"
-            (pointerdown)="press('right', true)" (pointerup)="press('right', false)"
-            (pointerleave)="press('right', false)" (pointercancel)="press('right', false)">&#9654;</button>
-  </div>
+  <canvas #table class="table" [hidden]="!theme()" aria-label="Pinball table"></canvas>
 
-  <p class="hint">Keyboard: &larr; &rarr; flippers, space to launch</p>
+  @if (theme()) {
+    <div class="pads">
+      <button type="button" class="pad" aria-label="Left flipper"
+              (pointerdown)="press('left', true)" (pointerup)="press('left', false)"
+              (pointerleave)="press('left', false)" (pointercancel)="press('left', false)">&#9664;</button>
+      <button type="button" class="pad launch" aria-label="Launch"
+              (pointerdown)="press('launch', true)" (pointerup)="press('launch', false)"
+              (pointerleave)="press('launch', false)" (pointercancel)="press('launch', false)">LAUNCH</button>
+      <button type="button" class="pad" aria-label="Right flipper"
+              (pointerdown)="press('right', true)" (pointerup)="press('right', false)"
+              (pointerleave)="press('right', false)" (pointercancel)="press('right', false)">&#9654;</button>
+    </div>
+
+    <p class="hint">Keyboard: &larr; &rarr; flippers, space to launch, Esc for the tables</p>
+  } @else {
+    <p class="hint">Press 1 to 4 on a keyboard</p>
+  }
 </main>

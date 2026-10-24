@@ -28,6 +28,8 @@ Typing the duress code **in the password field of the login page** (with any use
 2. deletes everything stored by the app: browser storage, the offline queue, cached data, the service worker;
 3. opens a **pinball game** (`/arcade`) that looks like an ordinary game and says nothing about the app.
 
+ The game has four tables (dinosaurs, cars and motorbikes, plants and trees, fish, sharks and whales), a multiplier for hits in quick succession, four targets to light, a meter that grows, a short ball save and an extra ball every 10,000 points. The best score and number of games for each table are saved in the browser under the neutral name `arcade-v1` (plain, nothing secret). A wipe or "Erase this device" removes them too, so after a wipe the game starts with empty scores.
+
 Only a one-way check of the code is kept (under the neutral name `itb-ui`); it survives the wipe so the code keeps working. The code itself is never stored. Typing it makes no request to the server.
 
 What this does **not** do:

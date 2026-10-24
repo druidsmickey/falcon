@@ -105,6 +105,7 @@ describe('pinball: the game', () => {
     run(game, 1);
     game.setPlunger(false);
     run(game, 1);
+    game.ballSaveLeft = 0; // the ball save has its own test
     game.ball.x = 180;
     game.ball.y = HEIGHT + 40; // straight through the gap between the flippers
     game.ball.vy = 100;
@@ -119,6 +120,7 @@ describe('pinball: the game', () => {
       game.setPlunger(true);
       run(game, 0.5);
       game.setPlunger(false);
+      game.ballSaveLeft = 0;
       game.ball.x = 180;
       game.ball.y = HEIGHT + 40;
       run(game, 0.05);
