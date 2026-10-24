@@ -290,18 +290,35 @@ function parseLine(line, context) {
   return entry;
 }
 
+/** A line that is only a number: "200", "5k". It cannot say which horse, so it is never a bet. */
+const isBareNumber = line => /^\d+(?:\.\d+)?k?$/i.test(line.replace(/,/g, '').trim());
+
 /**
- * Reads a message: one bet per line. Returns the bets found; lines that are not bets are kept as
- * `{ unreadable: true, text }` so that nothing a contact wrote is silently dropped. A message with no
- * digit at all (a greeting, a thank-you) gives nothing.
+ * Whether a message is a column or a pile of numbers (somebody's odds, results, a list) and not bets:
+ *   - an odds list in either of the styles of parseOddsList
+ *   - three or more lines of which at least half are only a number
+ */
+function looksLikeNumbers(lines, text) {
+  if (parseOddsList(text)) return true;
+  return lines.length >= 3 && lines.filter(isBareNumber).length * 2 >= lines.length;
+}
+
+/**
+ * Reads a message: one bet per line. Returns the bets found; lines with words that are not bets are kept
+ * as `{ unreadable: true, text }` so that nothing a contact wrote is silently dropped. Ignored altogether:
+ * a message with no digit (a greeting), a message that is mostly numbers (see looksLikeNumbers), a line that
+ * is only a number, and a line with more than four figures.
  */
 function parseBetMessage(text, context = emptyContext()) {
   const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (looksLikeNumbers(lines, text)) return [];
+
   const results = [];
   for (const line of lines) {
+    if (isBareNumber(line)) continue;
     const bet = parseLine(line, context);
     if (bet) results.push({ ...bet, text: line });
-    else if (/\d/.test(line)) results.push({ unreadable: true, text: line, issues: ['could not read this line'] });
+    else if (/\d/.test(line) && (line.match(/\d+(?:\.\d+)?/g) || []).length <= 4) results.push({ unreadable: true, text: line, issues: ['could not read this line'] });
   }
   return results;
 }

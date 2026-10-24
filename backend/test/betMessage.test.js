@@ -196,3 +196,28 @@ test('sentences and stray words are still not bets', () => {
   const result = parseBetMessage('put 500 on the grey one\n300 pounds\n11', withHorses);
   assert.ok(result.every(r => r.unreadable), JSON.stringify(result));
 });
+
+// ---------------------------------------------------------------- piles of numbers are ignored
+
+test('a column of numbers is not a bet', () => {
+  assert.deepEqual(parseBetMessage('1\n200\n1000\n500\n800\n2000\n500', withHorses), []);
+  assert.deepEqual(parseBetMessage('200\n1000\n500', withHorses), []);
+  assert.deepEqual(parseBetMessage('1\n2000\n500\n3000\n1000\n350', withHorses), []); // an odds list, race 1
+});
+
+test('an odds list from a contact is ignored', () => {
+  assert.deepEqual(parseBetMessage('r1\n1 1500\n2 500\n3 700\n6 800', withHorses), []);
+});
+
+test('a line with many numbers, or a bare number, is ignored, and bets next to them are kept', () => {
+  assert.deepEqual(parseBetMessage('1 200 1000 500 800 2000 500', withHorses), []);
+  assert.deepEqual(parseBetMessage('500', withHorses), []);
+  const result = parseBetMessage('11 500x90\n200\n11 5000 420', withHorses);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result.map(r => r.mode), ['f500', 'odds']);
+});
+
+test('a few bets with only one or two plain numbers among them are still bets', () => {
+  const result = parseBetMessage('11 500x90\n2 5k\n3 500 120', withHorses);
+  assert.equal(result.length, 3);
+});
