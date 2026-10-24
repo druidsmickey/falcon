@@ -36,9 +36,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
+          npm install -g npm@11.6.3
           set +e
-          out=$( { node -v; npm -v; npm install --no-audit --no-fund; } 2>&1 )
+          out=$( { node -v; npm -v; npm ci --no-audit --no-fund; } 2>&1 )
           code=$?
           if [ $code -ne 0 ]; then
             echo "::error title=npm-install failed::$(echo "$out" | tail -40 | awk 'BEGIN{ORS="%0A"}{print}')"
