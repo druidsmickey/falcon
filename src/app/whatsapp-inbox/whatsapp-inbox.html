@@ -1,4 +1,4 @@
-<div class="inbox-container">
+<div class="inbox-container" [class.compact]="compact()">
   <header class="top">
     <h2>WhatsApp inbox
       @if (drafts().length > 0) {
@@ -62,14 +62,6 @@
 
   @if (loaded() && drafts().length === 0 && !error()) {
     <p class="empty">Nothing waiting. Bets sent by the contacts you listen to will appear here.</p>
-  }
-
-  @if (compact() && drafts().length > 1) {
-    <nav class="pager" aria-label="Bets to approve">
-      <button type="button" class="ghost" [disabled]="current() === 0" (click)="move(-1)">&lsaquo; Previous</button>
-      <span>{{ current() + 1 }} of {{ drafts().length }}</span>
-      <button type="button" class="ghost" [disabled]="current() >= drafts().length - 1" (click)="move(1)">Next &rsaquo;</button>
-    </nav>
   }
 
   @for (draft of shownDrafts(); track draft.id) {
@@ -168,5 +160,13 @@
         }
       </div>
     </mat-card>
+  }
+
+  @if (compact() && drafts().length > 1) {
+    <nav class="pager" aria-label="Bets to approve">
+      <button type="button" class="ghost" [disabled]="current() === 0" (click)="move(-1)">&lsaquo; Previous</button>
+      <span>{{ current() + 1 }} of {{ drafts().length }}</span>
+      <button type="button" class="ghost" [disabled]="current() >= drafts().length - 1" (click)="move(1)">Next &rsaquo;</button>
+    </nav>
   }
 </div>

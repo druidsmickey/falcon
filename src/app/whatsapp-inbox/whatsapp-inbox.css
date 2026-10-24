@@ -28,12 +28,16 @@ h2 {
   vertical-align: middle;
 }
 
+.compact .betslip-card {
+  margin-bottom: 12px;
+}
+
 .pager {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 6px 0 10px;
+  margin: 0 0 10px;
   font-weight: 600;
 }
 
