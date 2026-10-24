@@ -75,6 +75,7 @@ async function handleIncoming(message) {
         mode: entry.mode,
         amountKind: entry.amountKind,
         amount: entry.amountKind === '?' ? entry.amount : null,
+        rate: entry.amountKind === '?' ? entry.rate : null,
         books: entry.books,
         f500: entry.f500,
         stake: entry.stake,
@@ -127,6 +128,7 @@ const toItem = doc => ({
   mode: doc.mode,
   amountKind: doc.amountKind,
   amount: doc.amount,
+  rate: doc.rate,
   books: doc.books,
   f500: doc.f500,
   stake: doc.stake,
@@ -201,10 +203,11 @@ async function createDemo() {
   const named = inRace[1] || inRace[0];
   const lines = [
     '11 500x90',
-    '2 5000@2000',
+    '2 5000 420',
     '3 5k',
     '1 500',
-    ...(named ? [shorten(named.horseName) + ' 500x90'] : []),
+    '11 500 200',
+    ...(named ? [shorten(named.horseName) + ' 500 on 120'] : []),
     'put 500 on the grey one',
   ];
 
@@ -222,7 +225,7 @@ async function createDemo() {
     if (!entry.unreadable) {
       Object.assign(doc, {
         raceNum: entry.raceNum, horseNum: entry.horseNum, mode: entry.mode, amountKind: entry.amountKind,
-        amount: entry.amountKind === '?' ? entry.amount : null, books: entry.books, f500: entry.f500, stake: entry.stake, odds100: entry.odds100,
+        amount: entry.amountKind === '?' ? entry.amount : null, rate: entry.amountKind === '?' ? entry.rate : null, books: entry.books, f500: entry.f500, stake: entry.stake, odds100: entry.odds100,
       });
     }
     await WhatsappInbox.create(doc);

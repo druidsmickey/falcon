@@ -107,3 +107,27 @@ describe('a bet read from a WhatsApp message', () => {
     expect(problems(draft)).toEqual(['race', 'horse', 'F500 or odds']);
   });
 });
+
+describe('a second figure that could be an F500 or odds', () => {
+  const unclear = () => draftFrom(item({ mode: null, amountKind: '?', amount: 500, rate: 300, books: null, f500: null }));
+
+  it('both figures are kept until the person chooses', () => {
+    const draft = unclear();
+    expect([draft.amount, draft.rate, draft.kind]).toEqual([500, 300, null]);
+    expect(problems(draft)).toEqual(['F500 or odds']);
+  });
+
+  it('choosing F500 makes them books and the F500', () => {
+    const draft = chooseKind(unclear(), 'books');
+    expect([draft.books, draft.f500, draft.rate]).toEqual([500, 300, null]);
+    expect(problems(draft)).toEqual([]);
+    expect(toBetRequest(draft, 'ASCOT', 'X')).toMatchObject({ books: 500, f500: 300, stake: 150000 });
+  });
+
+  it('choosing odds makes them a stake and the odds', () => {
+    const draft = chooseKind(unclear(), 'stake');
+    expect([draft.stake, draft.odds100, draft.rate]).toEqual([500, 300, null]);
+    expect(problems(draft)).toEqual([]);
+    expect(toBetRequest(draft, 'ASCOT', 'X')).toMatchObject({ stake: 500, odds100: 300 });
+  });
+});

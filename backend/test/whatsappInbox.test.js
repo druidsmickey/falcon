@@ -157,25 +157,27 @@ test('the demo adds sample bets that the real parser read, and they can be remov
     { meetingName: 'ASCOT', raceNum: 1, horseNum: 2, horseName: 'Captain Magpie' },
     { meetingName: 'ASCOT', raceNum: 1, horseNum: 3, horseName: 'Lux Star' },
   ]);
-  assert.equal(await inbox.createDemo(), 6);
+  assert.equal(await inbox.createDemo(), 7);
   const { items } = await inbox.listPending();
-  assert.equal(items.length, 6);
+  assert.equal(items.length, 7);
   assert.ok(items.every(i => i.demo && i.clientName === 'DEMO'));
-  assert.equal(items[4].text, 'cap mag 500x90');
-  assert.deepEqual([items[4].horseNum, items[4].books], [2, 500]);
-  assert.equal(items[5].unreadable, true);
-  assert.equal(new Set(items.map(i => i.clientRequestId)).size, 6);
+  assert.equal(items[5].text, 'cap mag 500 on 120');
+  assert.deepEqual([items[5].horseNum, items[5].books, items[5].f500], [2, 500, 120]);
+  assert.deepEqual([items[1].stake, items[1].odds100], [5000, 420]);
+  assert.deepEqual([items[4].amountKind, items[4].amount, items[4].rate], ['?', 500, 200]);
+  assert.equal(items[6].unreadable, true);
+  assert.equal(new Set(items.map(i => i.clientRequestId)).size, 7);
 
   // trying it twice never collides, and no real contact or odds list is created
-  assert.equal(await inbox.createDemo(), 6);
+  assert.equal(await inbox.createDemo(), 7);
   assert.equal(await WhatsappOdds.countDocuments(), 0);
-  assert.equal(await inbox.clearDemo(), 12);
+  assert.equal(await inbox.clearDemo(), 14);
   assert.equal((await inbox.listPending()).items.length, 0);
 });
 
 test('the demo works before any meeting exists', async () => {
-  assert.equal(await inbox.createDemo(), 5);
-  assert.equal((await inbox.listPending()).items.length, 5);
+  assert.equal(await inbox.createDemo(), 6);
+  assert.equal((await inbox.listPending()).items.length, 6);
 });
 
 test('the number of bets waiting for approval follows what arrives and what is decided', async () => {

@@ -2,11 +2,14 @@
 //
 // Messages are short, one bet per line:
 //   11 500x90      horse 1 of race 1 (there are no 11 runners), 500 books at F500 90
-//   11 5000@2000   stake 5000 at odds 2000
-//   11 5000        stake 5000 (the odds are missing)      11 5k   the same, written with a k
-//   1 500          horse 1, 500 books or a stake of 500? (the F500 / odds are missing, and which one it is is not said)
-//   3 11 500x90    race 3, horse 11
-//   cap mag 500x90 the horse is named instead of numbered (see horseMatch.js)
+//   11 5000@420    stake 5000 at odds 420
+//   11 500         one figure: books or a stake? (a stake when written 5k); the person chooses
+//   3 11 500x90    four figures: race 3, horse 11
+//   cap mag 500 120 the horse is named instead of numbered (see horseMatch.js)
+//
+// What sits between the amount and the second figure does not matter (x, @, #, c, z, a space, "on"...).
+// The size of the second figure decides: up to 120 it is an F500 (so the amount is books), from 420 it is
+// odds (so the amount is a stake), in between the person chooses.
 //
 // Nothing here saves anything: it only says what a message seems to mean, and what is still missing or
 // unclear, so that a person can check it (see the inbox of the app).
@@ -108,125 +111,181 @@ function readHorse(digits, explicitRace, context) {
   return { raceNum: context.raceNum, horseNum: n, unsure: true, issues };
 }
 
+/** A second figure up to this is an F500 (so the first one is books); from SECOND_ODDS_FROM it is odds (so the first is a stake). */
+const F500_UP_TO = 120;
+const ODDS_FROM = 420;
+
+const NUMBER = /\d+(?:\.\d+)?k?/g;
+// what may sit between two figures: nothing, a symbol or a short word ("x", "@", "#", "c", "z", "on", "lor", "at")
+const SEPARATOR = /^\s*[a-z#@*×:/\-]{0,5}\s*$/;
+
 /**
- * Reads one line. Returns null if it does not look like a bet.
+ * Reads the figures of a line (everything from the first digit on). Returns null if anything else is in
+ * the way, so that "put 500 on the grey one" is not taken for a bet.
  */
-function parseLine(line, context) {
-  // spaces around x, @ and * are removed only between figures, so that an x inside a horse name is left alone
-  const cleaned = line.toLowerCase().replace(/(\d),(\d)/g, '$1$2').replace(/([\dk])\s*(x|@|\*)\s*(\d)/g, '$1$2$3').replace(/\s+/g, ' ').trim();
-  const match = /^(?:r\s*(\d+)\s+)?(\d+)(?:\s+(\d+))?\s+(\d+(?:\.\d+)?)(k)?(?:(x|@|\*)(\d+(?:\.\d+)?))?$/.exec(cleaned);
-  if (!match) return parseNamedLine(cleaned, context);
-
-  let [, rLabel, first, second, amountText, k, operator, second2] = match;
-  let explicitRace = rLabel ? Number(rLabel) : null;
-  let digits = first;
-  if (second !== undefined) {
-    // "3 11 500x90": race, horse, amount
-    if (explicitRace !== null) return null;
-    explicitRace = Number(first);
-    digits = second;
+function readFigures(rest) {
+  const figures = [];
+  let last = 0;
+  for (const found of rest.matchAll(NUMBER)) {
+    if (!SEPARATOR.test(rest.slice(last, found.index)) || (figures.length === 0 && found.index !== 0)) return null;
+    const text = found[0];
+    const k = text.endsWith('k');
+    figures.push({ value: number(k ? text.slice(0, -1) : text) * (k ? 1000 : 1), k, whole: !k && /^\d+$/.test(text) });
+    last = found.index + text.length;
   }
-
-  const id = readHorse(digits, explicitRace, context);
-  const issues = [...id.issues];
-  const amount = number(amountText) * (k ? 1000 : 1);
-  const entry = {
-    raceNum: id.raceNum,
-    horseNum: id.horseNum,
-    mode: null,
-    books: null,
-    f500: null,
-    stake: null,
-    odds100: null,
-    amountKind: '?',
-    unsure: id.unsure,
-    issues,
-  };
-
-  applyAmount(entry, amount, k, operator, second2);
-
-  if (entry.raceNum === null) issues.push('race not known');
-  return entry;
+  return figures.length > 0 && rest.slice(last).trim() === '' ? figures : null;
 }
 
-/** Fills in the books / stake part of an entry from what was written after the horse. */
-function applyAmount(entry, amount, k, operator, second) {
-  if (operator === 'x' || operator === '*') {
+/**
+ * Works out what the amount and the figure after it are. The kind of separator does not matter ("500x120",
+ * "500 120", "500@120", "500 #120", "500 on 120" all say the same); the size of the second figure does:
+ *   up to 120      books at that F500
+ *   420 and over   a stake at those odds
+ *   in between     could be either, so the person chooses
+ * One figure alone is books or a stake (a stake when it has a k, as in 5k) and the person chooses.
+ */
+function applyAmount(entry, first, second) {
+  const amount = first.value;
+  if (second === null) {
+    if (first.k) {
+      entry.mode = 'odds';
+      entry.stake = amount;
+      entry.amountKind = 'stake';
+      entry.issues.push('odds missing');
+    } else {
+      entry.amountKind = '?';
+      entry.amount = amount;
+      entry.issues.push('books or stake?');
+      entry.unsure = true;
+    }
+    return;
+  }
+
+  const price = second.value;
+  if (price <= F500_UP_TO) {
     entry.mode = 'f500';
     entry.books = amount;
-    entry.f500 = number(second);
+    entry.f500 = price;
     entry.amountKind = 'books';
-  } else if (operator === '@') {
+  } else if (price >= ODDS_FROM) {
     entry.mode = 'odds';
     entry.stake = amount;
-    entry.odds100 = number(second);
+    entry.odds100 = price;
     entry.amountKind = 'stake';
-  } else if (k) {
-    entry.mode = 'odds';
-    entry.stake = amount;
-    entry.amountKind = 'stake';
-    entry.issues.push('odds missing');
   } else {
-    // no way to tell books from a stake: the person decides
     entry.amountKind = '?';
     entry.amount = amount;
-    entry.issues.push('books or stake?');
+    entry.rate = price;
+    entry.issues.push(`${price} could be an F500 (books) or odds (stake)`);
     entry.unsure = true;
   }
 }
 
-/** "cap mag 500x90": the horse is named. Returns null if the line does not end with an amount. */
-function parseNamedLine(cleaned, context) {
-  const match = /^(?:r\s*(\d+)\s+)?([a-z][a-z0-9'.\- ]*?)\s+(\d+(?:\.\d+)?)(k)?(?:(x|@|\*)(\d+(?:\.\d+)?))?$/.exec(cleaned);
-  if (!match) return null;
-  const [, rLabel, name, amountText, k, operator, second] = match;
-  const explicitRace = rLabel ? Number(rLabel) : null;
-
-  const entry = {
-    raceNum: explicitRace ?? context.raceNum,
+function newEntry(raceNum) {
+  return {
+    raceNum,
     horseNum: null,
     mode: null,
     books: null,
     f500: null,
     stake: null,
     odds100: null,
+    rate: null,
     amountKind: '?',
     unsure: false,
     issues: [],
   };
+}
 
+/** "cap mag 500x120": the horse is named instead of numbered. */
+function nameEntry(name, explicitRace, context) {
+  const entry = newEntry(explicitRace ?? context.raceNum);
   const horses = (context.horses || []).filter(h => explicitRace === null || h.raceNum === explicitRace);
   const result = matchHorse(name, horses, explicitRace ?? context.raceNum);
   if (horses.length === 0) {
     entry.unsure = true;
     entry.issues.push(`no horse list to find "${name}" in`);
-  } else if (result.found.length === 0) {
+    return entry;
+  }
+  if (result.found.length === 0) {
     entry.unsure = true;
     entry.issues.push(`horse "${name}" not found`);
-  } else {
-    const [first, ...others] = result.found;
-    entry.raceNum = first.raceNum;
-    entry.horseNum = first.horseNum;
-    if (others.length > 0) {
-      entry.unsure = true;
-      entry.issues.push(`"${name}" could be ${result.found.map(h => `race ${h.raceNum} horse ${h.horseNum} ${h.horseName}`).join(' or ')}`);
-    }
-    if (context.raceNum !== null && explicitRace === null && first.raceNum !== context.raceNum) {
-      entry.unsure = true;
-      entry.issues.push(`race ${first.raceNum}, the odds list is for race ${context.raceNum}`);
-    }
-    // the race is only taken as known when the message says it; the odds list may be for another race
-    if (explicitRace === null && result.elsewhere.length > 0) {
-      entry.unsure = true;
-      entry.issues.push(`"${name}" also fits ${result.elsewhere.map(h => `race ${h.raceNum} horse ${h.horseNum} ${h.horseName}`).join(' or ')}`);
-    }
-    if (!result.sure) {
-      entry.unsure = true;
-      entry.issues.push(`best guess for "${name}": ${first.horseName}`);
-    }
+    return entry;
   }
 
-  applyAmount(entry, number(amountText) * (k ? 1000 : 1), k, operator, second);
+  const [first, ...others] = result.found;
+  entry.raceNum = first.raceNum;
+  entry.horseNum = first.horseNum;
+  if (others.length > 0) {
+    entry.unsure = true;
+    entry.issues.push(`"${name}" could be ${result.found.map(h => `race ${h.raceNum} horse ${h.horseNum} ${h.horseName}`).join(' or ')}`);
+  }
+  if (context.raceNum !== null && explicitRace === null && first.raceNum !== context.raceNum) {
+    entry.unsure = true;
+    entry.issues.push(`race ${first.raceNum}, the odds list is for race ${context.raceNum}`);
+  }
+  // the race is only taken as known when the message says it; the odds list may be for another race
+  if (explicitRace === null && result.elsewhere.length > 0) {
+    entry.unsure = true;
+    entry.issues.push(`"${name}" also fits ${result.elsewhere.map(h => `race ${h.raceNum} horse ${h.horseNum} ${h.horseName}`).join(' or ')}`);
+  }
+  if (!result.sure) {
+    entry.unsure = true;
+    entry.issues.push(`best guess for "${name}": ${first.horseName}`);
+  }
+  return entry;
+}
+
+/**
+ * Reads one line. Returns null if it does not look like a bet.
+ *   <horse number or name> <amount> [<separator>] [<second figure>]
+ * A race can be given first as "r2", or as a number before the horse when the line has four figures.
+ */
+function parseLine(line, context) {
+  let cleaned = line.toLowerCase().replace(/(\d),(?=\d)/g, '$1').replace(/\s+/g, ' ').trim();
+
+  let explicitRace = null;
+  const label = /^r\s*(\d+)\s+(?=\S)/.exec(cleaned);
+  if (label) {
+    explicitRace = Number(label[1]);
+    cleaned = cleaned.slice(label[0].length);
+  }
+
+  const firstDigit = cleaned.search(/\d/);
+  if (firstDigit === -1) return null;
+  const name = cleaned.slice(0, firstDigit).trim();
+  const figures = readFigures(cleaned.slice(firstDigit));
+  if (!figures) return null;
+
+  let entry;
+  let amount;
+  let second = null;
+
+  if (name !== '') {
+    // a horse name, then the amount and maybe a second figure
+    if (!/[a-z]/.test(name) || figures.length > 2) return null;
+    entry = nameEntry(name, explicitRace, context);
+    [amount, second = null] = figures;
+  } else {
+    // a horse number first; with four figures the first two are the race and the horse
+    if (figures.length < 2 || figures.length > 4 || !figures[0].whole) return null;
+    let rest = figures.slice(1);
+    let digits = String(figures[0].value);
+    if (figures.length === 4) {
+      if (explicitRace !== null || !figures[1].whole) return null;
+      explicitRace = figures[0].value;
+      digits = String(figures[1].value);
+      rest = figures.slice(2);
+    }
+    const id = readHorse(digits, explicitRace, context);
+    entry = newEntry(id.raceNum);
+    entry.horseNum = id.horseNum;
+    entry.unsure = id.unsure;
+    entry.issues.push(...id.issues);
+    [amount, second = null] = rest;
+  }
+
+  applyAmount(entry, amount, second);
   if (entry.raceNum === null) entry.issues.push('race not known');
   return entry;
 }

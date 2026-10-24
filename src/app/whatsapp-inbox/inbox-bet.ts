@@ -15,6 +15,8 @@ export interface InboxItem {
   mode: 'f500' | 'odds' | null;
   amountKind: 'books' | 'stake' | '?';
   amount: number | null;
+  /** The second figure when it could be an F500 or odds (121 to 419). */
+  rate?: number | null;
   books: number | null;
   f500: number | null;
   stake: number | null;
@@ -41,6 +43,8 @@ export interface Draft {
   kind: 'books' | 'stake' | null;
   /** The number that was sent when it was not said whether it is books or a stake. */
   amount: number | null;
+  /** The second figure while it is not said whether it is an F500 or odds. */
+  rate: number | null;
   books: number | null;
   f500: number | null;
   stake: number | null;
@@ -85,6 +89,7 @@ export function draftFrom(item: InboxItem): Draft {
     horseNum: item.horseNum,
     kind,
     amount: item.amount,
+    rate: item.rate ?? null,
     books: item.books,
     f500: item.f500,
     stake: item.stake,
@@ -97,9 +102,11 @@ export function draftFrom(item: InboxItem): Draft {
 /** Says what the number that came without "x", "@" or "k" is. */
 export function chooseKind(draft: Draft, kind: 'books' | 'stake'): Draft {
   const amount = draft.amount ?? (kind === 'books' ? draft.stake : draft.books);
+  // a second figure that was waiting becomes the F500 or the odds, whichever is chosen
+  const rate = draft.rate;
   return kind === 'books'
-    ? { ...draft, kind, books: amount, stake: null }
-    : { ...draft, kind, stake: amount, books: null };
+    ? { ...draft, kind, books: amount, stake: null, f500: rate ?? draft.f500, rate: null }
+    : { ...draft, kind, stake: amount, books: null, odds100: rate ?? draft.odds100, rate: null };
 }
 
 const present = (value: number | null): value is number => typeof value === 'number' && Number.isFinite(value);

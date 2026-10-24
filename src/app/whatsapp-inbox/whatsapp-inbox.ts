@@ -198,7 +198,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
 
   /** The second figure: the F500 for books, the odds for a stake. */
   protected rateOf(draft: Draft): number | null {
-    return draft.kind === 'books' ? draft.f500 : draft.kind === 'stake' ? draft.odds100 : null;
+    return draft.kind === 'books' ? draft.f500 : draft.kind === 'stake' ? draft.odds100 : draft.rate;
   }
 
   private numberFrom(event: Event): number | null {
@@ -214,7 +214,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
 
   protected setRate(draft: Draft, event: Event): void {
     const value = this.numberFrom(event);
-    this.change(draft.id, d => (d.kind === 'books' ? { ...d, f500: value } : d.kind === 'stake' ? { ...d, odds100: value } : d));
+    this.change(draft.id, d => (d.kind === 'books' ? { ...d, f500: value } : d.kind === 'stake' ? { ...d, odds100: value } : { ...d, rate: value }));
   }
 
   protected setClient(draft: Draft, event: Event): void {

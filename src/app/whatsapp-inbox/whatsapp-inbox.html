@@ -109,9 +109,9 @@
                    [class.missing]="has(draft, 'books') || has(draft, 'stake')">
           </mat-form-field>
           <mat-form-field appearance="outline" class="f-rate" [class.odds]="draft.kind === 'stake'">
-            <mat-label>{{ draft.kind === 'stake' ? 'Odds' : 'F500' }}</mat-label>
+            <mat-label>{{ draft.kind === 'stake' ? 'Odds' : draft.kind === 'books' ? 'F500' : 'F500 / Odds' }}</mat-label>
             <input matInput type="number" [value]="shown(rateOf(draft))" (input)="setRate(draft, $event)"
-                   [disabled]="draft.kind === null" [class.missing]="has(draft, 'F500') || has(draft, 'odds')">
+                   [class.missing]="has(draft, 'F500') || has(draft, 'odds')">
           </mat-form-field>
           <mat-form-field appearance="outline" class="f-name">
             <mat-label>Name</mat-label>

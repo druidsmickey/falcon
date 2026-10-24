@@ -127,3 +127,72 @@ test('a horse that does not exist is flagged', () => {
   assert.ok(bet.issues.length > 0);
   assert.equal(bet.unsure, true);
 });
+
+// ---------------------------------------------------------------- the size of the second figure decides
+
+const horseList = [
+  { raceNum: 1, horseNum: 1, horseName: 'Dambuster' },
+  { raceNum: 1, horseNum: 2, horseName: 'Captain Magpie' },
+  { raceNum: 1, horseNum: 3, horseName: 'Lux Star' },
+];
+const withHorses = { raceNum: 1, runners: 5, horses: horseList };
+
+test('one figure is books or a stake, never unreadable', () => {
+  for (const text of ['capt mag 500', 'capmag 500', '11 500']) {
+    const bet = one(text, withHorses);
+    assert.deepEqual([bet.amountKind, bet.amount, bet.mode, bet.rate], ['?', 500, null, null], text);
+    assert.ok(bet.issues.includes('books or stake?'), text);
+  }
+  assert.equal(one('capt mag 500', withHorses).horseNum, 2);
+  assert.equal(one('11 500', withHorses).horseNum, 1);
+});
+
+test('a second figure up to 120 is an F500: books at that price, whatever sits between', () => {
+  const texts = ['capt mag 500x120', 'capt mag 500 120', '11 500@120', '11 500 #120', '11 500c120', '11 500z120', '11 500 lor 120', '11 500 on 120', '11 500 x 120', '11 500*120'];
+  for (const text of texts) {
+    const bet = one(text, withHorses);
+    assert.deepEqual([bet.mode, bet.books, bet.f500, bet.stake, bet.odds100, bet.amountKind, bet.unsure], ['f500', 500, 120, null, null, 'books', false], text);
+  }
+  assert.equal(one('11 500 90', withHorses).f500, 90);
+  assert.equal(one('11 500 1', withHorses).f500, 1);
+});
+
+test('a second figure from 420 is odds: a stake at that price, whatever sits between', () => {
+  const texts = ['capt mag 5000x420', 'capt mag 5000 420', '11 5000@420', '11 5000 #420', '11 5000c420', '11 5000z420', '11 5000 lor 420', '11 5000 on 420', '11 5000 x 420'];
+  for (const text of texts) {
+    const bet = one(text, withHorses);
+    assert.deepEqual([bet.mode, bet.stake, bet.odds100, bet.books, bet.f500, bet.amountKind, bet.unsure], ['odds', 5000, 420, null, null, 'stake', false], text);
+  }
+  assert.equal(one('11 5000 2000', withHorses).odds100, 2000);
+  assert.equal(one('11 5k 420', withHorses).stake, 5000);
+});
+
+test('the separator no longer decides: x with a big second figure is a stake, @ with a small one is books', () => {
+  const x = one('11 5000x420', withHorses);
+  assert.deepEqual([x.mode, x.stake, x.odds100], ['odds', 5000, 420]);
+  const at = one('11 500@120', withHorses);
+  assert.deepEqual([at.mode, at.books, at.f500], ['f500', 500, 120]);
+});
+
+test('a second figure between 121 and 419 is left for the person, with both figures kept', () => {
+  for (const text of ['11 500 200', 'capt mag 500x300', '11 500@419', '11 500 121']) {
+    const bet = one(text, withHorses);
+    assert.equal(bet.amountKind, '?', text);
+    assert.equal(bet.amount, 500, text);
+    assert.ok(bet.rate >= 121 && bet.rate <= 419, text);
+    assert.equal(bet.unsure, true, text);
+    assert.ok(bet.issues.some(i => /could be an F500/.test(i)), text);
+  }
+});
+
+test('four figures are race, horse, amount and second figure', () => {
+  const bet = one('3 11 500 120', withHorses);
+  assert.deepEqual([bet.raceNum, bet.horseNum, bet.mode, bet.books, bet.f500], [3, 11, 'f500', 500, 120]);
+  const odds = one('3 11 5000@420', withHorses);
+  assert.deepEqual([odds.raceNum, odds.mode, odds.stake, odds.odds100], [3, 'odds', 5000, 420]);
+});
+
+test('sentences and stray words are still not bets', () => {
+  const result = parseBetMessage('put 500 on the grey one\n300 pounds\n11', withHorses);
+  assert.ok(result.every(r => r.unreadable), JSON.stringify(result));
+});

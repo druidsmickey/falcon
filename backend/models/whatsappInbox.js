@@ -21,6 +21,8 @@ const whatsappInboxSchema = new mongoose.Schema({
   mode: { type: String, enum: ['f500', 'odds', null], default: null },
   amountKind: { type: String, enum: ['books', 'stake', '?'], default: '?' },
   amount: { type: Number, default: null },
+  // the second figure when it is not clear whether it is an F500 or odds (121 to 419)
+  rate: { type: Number, default: null },
   books: { type: Number, default: null },
   f500: { type: Number, default: null },
   stake: { type: Number, default: null },
