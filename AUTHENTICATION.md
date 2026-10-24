@@ -88,7 +88,7 @@ JWT_SECRET=a-long-random-string
 
 - **HTTPS.** The apps are served over plain HTTP, so passwords and tokens travel unencrypted. Put a domain and a free Let's Encrypt certificate in front of the server. This is the most important remaining item.
 - **One kind of user.** There is no screen to add users or roles; every user can do everything, including deleting a meeting.
-- **Meetings are deleted automatically.** At every login the server deletes meetings older than 6 days, with all their bets. The age counts from when the meeting was first created (saving it again does not restart it), and the **selected meeting is never deleted**. Export or print what must be kept.
+- **Meetings are deleted automatically.** At every login the server deletes meetings older than 6 days, with all their bets. This applies to every meeting, selected or not. The age counts from when the meeting was first input (saving its races again does not restart it). Export or print what must be kept.
 - **Known package warnings.** `npm audit` in `backend/` still reports 11 findings, all inside `whatsapp-web.js` and its Puppeteer dependency (the browser that drives WhatsApp Web). They cannot be reached from the web.
 
 ## Protections in place

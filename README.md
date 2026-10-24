@@ -107,7 +107,7 @@ More detail for the server and for WhatsApp: [DIGITAL_OCEAN_SETUP.md](DIGITAL_OC
 - You are logged out after **4 minutes without using the app** (no click, tap or typing; also when the tab is hidden, the window is minimised or left on another screen, or the computer sleeps). Details in [AUTHENTICATION.md](AUTHENTICATION.md).
 - Wrong passwords are limited: after 10 failures for one user name from one address, or 100 from one address, login is refused for 15 minutes.
 - Logging out clears the data saved in the browser for offline use.
-- Meetings older than **6 days** are deleted, with their bets, at the next login. The age counts from when the meeting was first created (saving it again does not restart it) and the **selected meeting is never deleted**. Print or export what you need before then.
+- Meetings older than **6 days** are deleted, with their bets, at the next login. This applies to every meeting, selected or not. The age counts from when the meeting was first input; saving its races again does not restart it. Print or export what you need before then.
 - The server checks every bet it receives: stake, books and payout must agree with the F500 or odds that were entered, and only known fields are stored.
 
 ## Known issues

@@ -40,18 +40,17 @@ async function purgeExpiredMeetings() {
   try {
     const cutoff = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
 
-    // Find the earliest createdAt per meetingName. The selected meeting is the one in use,
-    // so it is never removed.
+    // Find the earliest createdAt per meetingName. Every meeting is removed 6 days after it was
+    // first input, whether it is the selected one or not.
     const meetings = await Init.aggregate([
       {
         $group: {
           _id: "$meetingName",
-          firstCreated: { $min: "$createdAt" },
-          selected: { $max: "$selected" }
+          firstCreated: { $min: "$createdAt" }
         }
       },
       {
-        $match: { firstCreated: { $lt: cutoff }, selected: { $ne: true } }
+        $match: { firstCreated: { $lt: cutoff } }
       }
     ]);
 
