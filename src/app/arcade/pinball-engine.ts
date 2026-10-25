@@ -519,29 +519,17 @@ export class Pinball {
 
   // ---------------------------------------------------------------- drawing
 
-  draw(ctx: CanvasRenderingContext2D): void {
-    const theme = this.theme;
-    const emojiFont = (size: number) => `${size}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+  /** The table's background and walls never change, so they are drawn once and copied (the glow is slow to draw on a phone). */
+  private backdrop: HTMLCanvasElement | null = null;
 
+  private drawBackdrop(ctx: CanvasRenderingContext2D): void {
+    const theme = this.theme;
     const background = ctx.createLinearGradient(0, 0, 0, HEIGHT);
     background.addColorStop(0, theme.sky[0]);
     background.addColorStop(1, theme.sky[1]);
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // faint pictures on the table, drifting a little
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.13;
-    ctx.font = emojiFont(34);
-    theme.scatter.forEach((icon, i) => {
-      const x = 70 + ((i * 97) % 240);
-      const y = 120 + ((i * 131) % 380);
-      ctx.fillText(icon, x + Math.sin(this.clock * 0.6 + i) * 6, y + Math.cos(this.clock * 0.5 + i * 2) * 6);
-    });
-    ctx.globalAlpha = 1;
-
-    // walls
     ctx.lineCap = 'round';
     ctx.lineWidth = 5;
     ctx.strokeStyle = theme.wall;
@@ -554,6 +542,38 @@ export class Pinball {
       ctx.stroke();
     }
     ctx.shadowBlur = 0;
+  }
+
+  /** `scale` is how many pixels the canvas has for each unit of the table. */
+  draw(ctx: CanvasRenderingContext2D, scale = 2): void {
+    const theme = this.theme;
+    const emojiFont = (size: number) => `${size}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+
+    if (!this.backdrop && typeof document !== 'undefined') {
+      const layer = document.createElement('canvas');
+      layer.width = WIDTH * scale;
+      layer.height = HEIGHT * scale;
+      const layerContext = layer.getContext('2d');
+      if (layerContext) {
+        layerContext.scale(scale, scale);
+        this.drawBackdrop(layerContext);
+        this.backdrop = layer;
+      }
+    }
+    if (this.backdrop) ctx.drawImage(this.backdrop, 0, 0, WIDTH, HEIGHT);
+    else this.drawBackdrop(ctx);
+
+    // faint pictures on the table, drifting a little
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.13;
+    ctx.font = emojiFont(34);
+    theme.scatter.forEach((icon, i) => {
+      const x = 70 + ((i * 97) % 240);
+      const y = 120 + ((i * 131) % 380);
+      ctx.fillText(icon, x + Math.sin(this.clock * 0.6 + i) * 6, y + Math.cos(this.clock * 0.5 + i * 2) * 6);
+    });
+    ctx.globalAlpha = 1;
 
     // targets
     for (const target of this.targets) {
@@ -577,7 +597,7 @@ export class Pinball {
       ctx.arc(bumper.x, bumper.y, bumper.radius * swell, 0, Math.PI * 2);
       ctx.fillStyle = lit ? theme.bumperLit : theme.bumper;
       ctx.shadowColor = lit ? theme.bumperLit : theme.bumper;
-      ctx.shadowBlur = lit ? 22 : 10;
+      ctx.shadowBlur = lit ? 22 : 0;
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.beginPath();

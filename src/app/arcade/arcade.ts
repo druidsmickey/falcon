@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { ArcadeSound } from './arcade-sound';
 import { ArcadeStore } from './arcade-store';
@@ -30,6 +30,7 @@ export class Arcade implements AfterViewInit, OnDestroy {
   protected readonly data = signal(this.store.load());
   protected readonly theme = signal<Theme | null>(null);
 
+  private readonly zone = inject(NgZone);
   private readonly title = inject(Title);
   // the page is called Pinball while the game is shown, and gets its own name back when it is left (in the app the game is a tab)
   private readonly previousTitle = this.title.getTitle();
@@ -54,11 +55,14 @@ export class Arcade implements AfterViewInit, OnDestroy {
       const game = this.game;
       if (game) {
         game.step(seconds);
-        game.draw(ctx);
+        game.draw(ctx, 2);
       }
       this.frame = requestAnimationFrame(loop);
     };
-    this.frame = requestAnimationFrame(loop);
+    // the game moves 60 times a second and must not make the whole app check itself each time (that made the buttons lag)
+    this.zone.runOutsideAngular(() => {
+      this.frame = requestAnimationFrame(loop);
+    });
   }
 
   ngOnDestroy(): void {
