@@ -231,10 +231,10 @@ describe('the saved scores', () => {
   });
 
   it('keeps the best score of each table separately and counts the games', () => {
-    expect(store.record('cars', 5000)).toBe(true);
-    expect(store.record('cars', 3000)).toBe(false);
-    expect(store.record('cars', 7000)).toBe(true);
-    expect(store.record('ocean', 100)).toBe(true);
+    expect(store.finish('cars', { score: 5000, stars: 0, xp: 0 }).isBest).toBe(true);
+    expect(store.finish('cars', { score: 3000, stars: 0, xp: 0 }).isBest).toBe(false);
+    expect(store.finish('cars', { score: 7000, stars: 0, xp: 0 }).isBest).toBe(true);
+    expect(store.finish('ocean', { score: 100, stars: 0, xp: 0 }).isBest).toBe(true);
     const data = store.load();
     expect(data.best.cars).toBe(7000);
     expect(data.games.cars).toBe(3);
@@ -264,12 +264,12 @@ describe('the saved scores', () => {
 
   it('works when the browser will not store anything', () => {
     const blocked = new ArcadeStore({ getItem: () => { throw new Error('no'); }, setItem: () => { throw new Error('no'); } });
-    expect(() => blocked.record('dino', 10)).not.toThrow();
+    expect(() => blocked.finish('dino', { score: 10, stars: 0, xp: 0 })).not.toThrow();
     expect(blocked.load().best.dino).toBe(0);
   });
 
   it('what is stored says nothing about the app', () => {
-    store.record('dino', 1234);
+    store.finish('dino', { score: 1234, stars: 0, xp: 0 });
     expect(ARCADE_KEY).not.toMatch(/itb|bet|duress|vault/i);
     expect(saved[ARCADE_KEY]).not.toMatch(/itb|bet|duress|vault/i);
   });

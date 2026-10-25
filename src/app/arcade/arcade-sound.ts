@@ -34,6 +34,23 @@ const TONES: Record<GameEvent, Tone[]> = {
     { from: 1100, to: 1100, seconds: 0.1, type: 'triangle', volume: 0.12 },
     { from: 1320, to: 1320, seconds: 0.3, type: 'triangle', volume: 0.12 },
   ],
+  lane: [{ from: 700, to: 900, seconds: 0.07, type: 'sine', volume: 0.1 }],
+  saucer: [
+    { from: 300, to: 600, seconds: 0.12, type: 'sine', volume: 0.1 },
+    { from: 600, to: 300, seconds: 0.12, type: 'sine', volume: 0.1 },
+  ],
+  multiball: [
+    { from: 520, to: 520, seconds: 0.08, type: 'square', volume: 0.08 },
+    { from: 660, to: 660, seconds: 0.08, type: 'square', volume: 0.08 },
+    { from: 780, to: 780, seconds: 0.08, type: 'square', volume: 0.08 },
+    { from: 1040, to: 1040, seconds: 0.22, type: 'square', volume: 0.08 },
+  ],
+  mission: [
+    { from: 660, to: 660, seconds: 0.1, type: 'triangle', volume: 0.12 },
+    { from: 990, to: 990, seconds: 0.1, type: 'triangle', volume: 0.12 },
+    { from: 1320, to: 1320, seconds: 0.3, type: 'triangle', volume: 0.12 },
+  ],
+  nudge: [{ from: 120, to: 60, seconds: 0.12, type: 'sawtooth', volume: 0.09 }],
   over: [
     { from: 400, to: 300, seconds: 0.25, type: 'square', volume: 0.08 },
     { from: 300, to: 200, seconds: 0.25, type: 'square', volume: 0.08 },

@@ -1,15 +1,49 @@
-<main class="arcade" [class.playing]="theme()">
+<main class="arcade" [class.playing]="theme()"
+      (pointerdown)="pointerDown($event)" (pointermove)="pointerMove($event)"
+      (pointerup)="pointerUp($event)" (pointercancel)="pointerUp($event)">
   @if (theme(); as current) {
     <header class="bar">
       <button type="button" class="small" (click)="menu()" aria-label="Back to the tables">&larr; Tables</button>
       <span class="name">{{ current.icon }} {{ current.name }}</span>
-      <button type="button" class="small" (click)="toggleSound()" [attr.aria-label]="data().muted ? 'Sound off' : 'Sound on'">
-        {{ data().muted ? '🔇' : '🔊' }}
-      </button>
+      <span class="tools">
+        <button type="button" class="small" (click)="togglePause()" [attr.aria-label]="paused() ? 'Continue' : 'Pause'">
+          {{ paused() ? '▶' : '⏸' }}
+        </button>
+        <button type="button" class="small" (click)="toggleSound()" [attr.aria-label]="data().muted ? 'Sound off' : 'Sound on'">
+          {{ data().muted ? '🔇' : '🔊' }}
+        </button>
+      </span>
     </header>
   } @else {
     <h1>PINBALL</h1>
-    <p class="intro">Pick a table. Chain hits for a bigger multiplier, light all four targets, and beat your best.</p>
+
+    <!-- experience, level and the daily streak -->
+    <section class="rank" aria-label="Your level">
+      <div class="rank-top">
+        <strong class="level">Level {{ level().level }}</strong>
+        @if (data().streak > 0) {
+          <span class="streak">&#128293; {{ data().streak }}-day streak</span>
+        }
+      </div>
+      <div class="xpbar" role="progressbar" [attr.aria-valuenow]="level().into" aria-valuemin="0" [attr.aria-valuemax]="level().needed">
+        <span class="xpfill" [style.width.%]="level().fraction * 100"></span>
+      </div>
+      <div class="xptext">{{ level().into }} / {{ level().needed }} XP to level {{ level().level + 1 }}</div>
+    </section>
+
+    <!-- the balls unlocked by the levels -->
+    <section class="chips" aria-label="Ball style">
+      @for (style of balls; track style.id) {
+        <button type="button" class="chip" [class.chosen]="isChosen(style)" [disabled]="!isUnlocked(style)" (click)="chooseBall(style)"
+                [attr.aria-label]="style.name + (isUnlocked(style) ? ' ball' : ' ball, unlocked at level ' + style.level)">
+          <span class="dot" [style.background]="swatch(style)"></span>
+          <span>{{ style.name }}</span>
+          @if (!isUnlocked(style)) { <small>Lv {{ style.level }}</small> }
+        </button>
+      }
+    </section>
+
+    <p class="intro">Pick a table. Chain hits, light the lanes and the targets, find the mystery saucers and finish the missions.</p>
 
     <div class="tables">
       @for (item of themes; track item.id; let i = $index) {
@@ -18,6 +52,7 @@
           <span class="icon">{{ item.icon }}</span>
           <span class="title">{{ item.name }}</span>
           <span class="tagline">{{ item.tagline }}</span>
+          <span class="stars" [attr.aria-label]="data().stars[item.id] + ' of 3 stars'">{{ stars(data().stars[item.id]) }}</span>
           <span class="score">
             @if (data().best[item.id] > 0) {
               Best {{ format(data().best[item.id]) }} &middot; {{ data().games[item.id] }} {{ data().games[item.id] === 1 ? 'game' : 'games' }}
@@ -34,20 +69,9 @@
   <canvas #table class="table" [hidden]="!theme()" aria-label="Pinball table"></canvas>
 
   @if (theme()) {
-    <div class="pads">
-      <button type="button" class="pad" aria-label="Left flipper"
-              (pointerdown)="press('left', true)" (pointerup)="press('left', false)"
-              (pointerleave)="press('left', false)" (pointercancel)="press('left', false)">&#9664;</button>
-      <button type="button" class="pad launch" aria-label="Launch"
-              (pointerdown)="press('launch', true)" (pointerup)="press('launch', false)"
-              (pointerleave)="press('launch', false)" (pointercancel)="press('launch', false)">LAUNCH</button>
-      <button type="button" class="pad" aria-label="Right flipper"
-              (pointerdown)="press('right', true)" (pointerup)="press('right', false)"
-              (pointerleave)="press('right', false)" (pointercancel)="press('right', false)">&#9654;</button>
-    </div>
-
-    <p class="hint">Keyboard: &larr; &rarr; flippers, space to launch, Esc for the tables</p>
+    <p class="hint hint-touch">Left / right half: flippers &middot; hold to launch &middot; swipe up to nudge</p>
+    <p class="hint hint-keys">Z and / flippers &middot; space launch &middot; N nudge &middot; P pause &middot; Esc tables</p>
   } @else {
-    <p class="hint">Press 1 to 4 on a keyboard</p>
+    <p class="hint hint-keys">Press 1 to 4 on a keyboard</p>
   }
 </main>

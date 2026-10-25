@@ -10,6 +10,18 @@ export interface BumperSpot {
   radius: number;
 }
 
+/** What a mission counts: hits on the bumpers, all four targets lit, visits to a mystery saucer, lanes completed, or the longest combo. */
+export type MissionKind = 'bumper' | 'clear' | 'saucer' | 'lane' | 'combo';
+
+export interface MissionDef {
+  kind: MissionKind;
+  goal: number;
+  /** Shown on the table, short. */
+  text: string;
+  /** Points for finishing it (not multiplied). */
+  reward: number;
+}
+
 export interface Theme {
   id: ThemeId;
   name: string;
@@ -34,13 +46,17 @@ export interface Theme {
   meter: { name: string; stages: string[]; levelUp: string };
   bumpers: BumperSpot[];
   clear: string;
+  /** The missions, one after the other, then round again. */
+  missions: MissionDef[];
+  /** The scores for one, two and three stars. */
+  stars: [number, number, number];
 }
 
 export const THEMES: Theme[] = [
   {
     id: 'dino',
-    name: 'Dino Island',
-    tagline: 'Hatch the eggs before the volcano erupts',
+    name: 'Dino Rampage',
+    tagline: 'Stampede through the jungle',
     icon: '🦖',
     sky: ['#1b2a10', '#3b1d0b'],
     wall: '#84cc16',
@@ -59,11 +75,18 @@ export const THEMES: Theme[] = [
       { x: 190, y: 210, radius: 26 },
     ],
     clear: 'STAMPEDE!',
+    stars: [5000, 15000, 30000],
+    missions: [
+      { kind: 'bumper', goal: 12, text: 'Hatch 12 eggs: hit the bumpers', reward: 1500 },
+      { kind: 'saucer', goal: 1, text: 'Find the mystery nest', reward: 2000 },
+      { kind: 'clear', goal: 1, text: 'Light all four targets', reward: 3000 },
+      { kind: 'combo', goal: 10, text: 'Chain 10 hits', reward: 2500 },
+    ],
   },
   {
     id: 'cars',
-    name: 'Turbo Circuit',
-    tagline: 'Rack up laps and beat the clock',
+    name: 'Turbo Garage',
+    tagline: 'Cars and motorbikes: rack up the laps',
     icon: '🏎️',
     sky: ['#111827', '#3f0d12'],
     wall: '#f43f5e',
@@ -83,11 +106,18 @@ export const THEMES: Theme[] = [
       { x: 285, y: 265, radius: 22 },
     ],
     clear: 'CHEQUERED FLAG!',
+    stars: [6000, 17000, 34000],
+    missions: [
+      { kind: 'bumper', goal: 12, text: 'Take 12 corners: hit the bumpers', reward: 1500 },
+      { kind: 'lane', goal: 1, text: 'Light all four boost lanes', reward: 2500 },
+      { kind: 'saucer', goal: 1, text: 'Visit the pit stop', reward: 2000 },
+      { kind: 'combo', goal: 10, text: 'Run a 10-hit streak', reward: 2500 },
+    ],
   },
   {
     id: 'plants',
-    name: 'Secret Garden',
-    tagline: 'Make your tree grow, one bloom at a time',
+    name: 'Jungle Grove',
+    tagline: 'Plants and trees: grow your tree, one bloom at a time',
     icon: '🌳',
     sky: ['#052e1c', '#123524'],
     wall: '#4ade80',
@@ -108,11 +138,18 @@ export const THEMES: Theme[] = [
       { x: 225, y: 385, radius: 20 },
     ],
     clear: 'IN FULL BLOOM!',
+    stars: [5500, 16000, 32000],
+    missions: [
+      { kind: 'bumper', goal: 14, text: 'Pollinate 14 flowers', reward: 1500 },
+      { kind: 'clear', goal: 1, text: 'Grow all four sprouts', reward: 3000 },
+      { kind: 'saucer', goal: 1, text: 'Find the hidden spring', reward: 2000 },
+      { kind: 'lane', goal: 1, text: 'Light all four sun lanes', reward: 2500 },
+    ],
   },
   {
     id: 'ocean',
     name: 'Deep Blue',
-    tagline: 'Dive deeper among the sharks and whales',
+    tagline: 'Fish, sharks and whales: dive deeper',
     icon: '🐋',
     sky: ['#06304f', '#020c24'],
     wall: '#22d3ee',
@@ -132,6 +169,13 @@ export const THEMES: Theme[] = [
       { x: 170, y: 410, radius: 19 },
     ],
     clear: 'SCHOOL OF FISH!',
+    stars: [5000, 15000, 30000],
+    missions: [
+      { kind: 'bumper', goal: 12, text: 'Dive past 12 creatures', reward: 1500 },
+      { kind: 'saucer', goal: 1, text: 'Open the treasure chest', reward: 2000 },
+      { kind: 'clear', goal: 1, text: 'Gather the school of fish', reward: 3000 },
+      { kind: 'combo', goal: 12, text: 'Ride a 12-hit wave', reward: 2500 },
+    ],
   },
 ];
 

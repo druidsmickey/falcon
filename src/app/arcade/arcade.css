@@ -5,6 +5,7 @@
 }
 
 .arcade {
+  min-height: calc(100dvh - 60px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -39,34 +40,6 @@ h1 {
   .table {
     height: min(62dvh, 700px);
   }
-}
-
-.pads {
-  display: flex;
-  gap: 10px;
-  width: min(92vw, 420px);
-}
-
-.pad {
-  flex: 1;
-  min-height: 60px;
-  border: none;
-  border-radius: 12px;
-  background: #1e293b;
-  color: #e2e8f0;
-  font: 700 1.2rem sans-serif;
-  touch-action: none;
-}
-
-.pad:active {
-  background: #334155;
-}
-
-.launch {
-  flex: 1.4;
-  background: #b45309;
-  font-size: 0.95rem;
-  letter-spacing: 0.1em;
 }
 
 .hint {
@@ -174,8 +147,111 @@ h1 {
 }
 
 /* the keyboard hint is no use on a touch screen */
+
+.hint-touch {
+  display: none;
+}
+
 @media (hover: none) {
-  .hint {
+  .hint-touch {
+    display: block;
+  }
+
+  .hint-keys {
     display: none;
   }
+}
+
+/* ---------------------------------------------------------------- level, streak and ball styles */
+
+.tools {
+  display: flex;
+  gap: 6px;
+}
+
+.rank {
+  width: min(94vw, 460px);
+  color: #e2e8f0;
+  font-family: sans-serif;
+}
+
+.rank-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.level {
+  font-size: 1.1rem;
+}
+
+.streak {
+  color: #fbbf24;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.xpbar {
+  height: 10px;
+  margin: 6px 0 4px;
+  border-radius: 6px;
+  background: #1e293b;
+  overflow: hidden;
+}
+
+.xpfill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #a78bfa);
+  transition: width 0.4s;
+}
+
+.xptext {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: min(94vw, 460px);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font: 600 0.8rem sans-serif;
+}
+
+.chip.chosen {
+  border-color: #38bdf8;
+}
+
+.chip:disabled {
+  opacity: 0.45;
+}
+
+.chip small {
+  color: #94a3b8;
+}
+
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+
+.card .stars {
+  color: #fbbf24;
+  letter-spacing: 0.15em;
 }
