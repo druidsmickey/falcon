@@ -159,8 +159,8 @@ test('a loose match is flagged as a best guess', () => {
   }
 });
 
-test('numbers still work, and sentences are still not bets', () => {
+test('numbers still work, and a sentence with a figure keeps its amount', () => {
   assert.equal(bet('11 500x90', { raceNum: 1, runners: 5, horses }).horseNum, 1);
   const result = parseBetMessage('please put 500 on the grey one', context);
-  assert.equal(result[0].unreadable, true);
+  assert.deepEqual([result[0].amountKind, result[0].amount, result[0].unsure], ['?', 500, true]);
 });

@@ -111,11 +111,10 @@ test('several bets in one message, one per line', () => {
   assert.equal(bets[2].stake, 1000);
 });
 
-test('lines that are not bets are kept, chat without numbers is dropped', () => {
-  const result = parseBetMessage('thanks\nput 500 on the favourite\n11 500x90', race1of5);
-  assert.equal(result.length, 2);
-  assert.equal(result[0].unreadable, true);
-  assert.equal(result[0].text, 'put 500 on the favourite');
+test('a sentence with a figure is read loosely, chat without numbers is dropped', () => {
+  const result = parseBetMessage('thanks\nput 500 on the favourite\n11 500x90\n1 2 3 4 5 6 7', race1of5);
+  assert.equal(result.length, 2); // the line of seven figures is ignored
+  assert.deepEqual([result[0].text, result[0].amountKind, result[0].amount, result[0].unsure], ['put 500 on the favourite', '?', 500, true]);
   assert.equal(result[1].horseNum, 1);
   assert.deepEqual(parseBetMessage('good morning!'), []);
   assert.deepEqual(parseBetMessage(''), []);
@@ -192,9 +191,33 @@ test('four figures are race, horse, amount and second figure', () => {
   assert.deepEqual([odds.raceNum, odds.mode, odds.stake, odds.odds100], [3, 'odds', 5000, 420]);
 });
 
-test('sentences and stray words are still not bets', () => {
-  const result = parseBetMessage('put 500 on the grey one\n300 pounds\n11', withHorses);
-  assert.ok(result.every(r => r.unreadable), JSON.stringify(result));
+test('"put 500 on the grey one": the 500 is the amount, books or a stake, and the horse is left to the person', () => {
+  const bet = one('put 500 on the grey one', withHorses);
+  assert.deepEqual([bet.amountKind, bet.amount, bet.mode, bet.horseNum, bet.unsure], ['?', 500, null, null, true]);
+  assert.ok(bet.issues.includes('books or stake?'));
+  assert.ok(bet.issues.some(i => /not found/.test(i)));
+});
+
+test('the words of a loose line are tried as the horse name', () => {
+  const grey = [...horseList, { raceNum: 1, horseNum: 4, horseName: 'Grey Dawn' }];
+  const bet = one('put 500 on the grey one', { raceNum: 1, runners: 5, horses: grey });
+  assert.deepEqual([bet.horseNum, bet.amountKind, bet.amount, bet.unsure], [4, '?', 500, true]);
+  const k = one('put 5k on dambuster', withHorses);
+  assert.deepEqual([k.horseNum, k.stake, k.odds100], [1, 5000, null]);
+  const priced = one('put 500 on lux at 120', withHorses);
+  assert.deepEqual([priced.horseNum, priced.mode, priced.books, priced.f500], [3, 'f500', 500, 120]);
+});
+
+test('a loose line with no horse in it keeps the amount and says the horse is missing', () => {
+  const bet = one('300 pounds', withHorses);
+  assert.deepEqual([bet.horseNum, bet.amountKind, bet.amount], [null, '?', 300]);
+  assert.ok(bet.issues.includes('horse not given'));
+});
+
+test('three or four figures among words are still unreadable', () => {
+  const result = parseBetMessage('call me on 0771 55 4321', withHorses);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].unreadable, true);
 });
 
 // ---------------------------------------------------------------- piles of numbers are ignored

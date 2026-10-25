@@ -241,7 +241,7 @@ function nameEntry(name, explicitRace, context) {
  *   <horse number or name> <amount> [<separator>] [<second figure>]
  * A race can be given first as "r2", or as a number before the horse when the line has four figures.
  */
-function parseLine(line, context) {
+function parseStrict(line, context) {
   let cleaned = line.toLowerCase().replace(/(\d),(?=\d)/g, '$1').replace(/\s+/g, ' ').trim();
 
   let explicitRace = null;
@@ -288,6 +288,44 @@ function parseLine(line, context) {
   applyAmount(entry, amount, second);
   if (entry.raceNum === null) entry.issues.push('race not known');
   return entry;
+}
+
+// words that carry no horse name: "put 500 on the grey one"
+const FILLER = new Set(['put', 'bet', 'on', 'the', 'a', 'an', 'one', 'of', 'at', 'for', 'to', 'me', 'my', 'please', 'pls', 'plz', 'with', 'in', 'is', 'and', 'x', 'win', 'book', 'books', 'stake', 'pounds', 'pound', 'gbp']);
+
+/**
+ * A line with words and one or two figures that does not fit the usual shapes, such as "put 500 on the grey
+ * one": the first figure is the amount (books or a stake, the person chooses), a second figure is read as usual,
+ * and what is left of the words is tried as the horse name. Always marked unsure.
+ */
+function parseLoose(line, context) {
+  const lower = line.toLowerCase().replace(/(\d),(?=\d)/g, '$1');
+  const found = [...lower.matchAll(/\d+(?:\.\d+)?k?/g)];
+  if (found.length < 1 || found.length > 2 || !/[a-z]/.test(lower)) return null;
+
+  const words = lower.replace(/\d+(?:\.\d+)?k?/g, ' ').split(/[^a-z']+/).filter(w => w && !FILLER.has(w)).join(' ');
+  const [first, second] = found.map(f => {
+    const k = f[0].endsWith('k');
+    return { value: number(k ? f[0].slice(0, -1) : f[0]) * (k ? 1000 : 1), k };
+  });
+
+  let entry;
+  if (words.replace(/[^a-z]/g, '').length >= 3) {
+    entry = nameEntry(words, null, context);
+  } else {
+    entry = newEntry(context.raceNum);
+    entry.issues.push('horse not given');
+  }
+  applyAmount(entry, first, second ?? null);
+  entry.unsure = true;
+  entry.issues.push('read loosely from the words');
+  if (entry.raceNum === null) entry.issues.push('race not known');
+  return entry;
+}
+
+/** The usual shapes first, then a loose reading of lines with words. */
+function parseLine(line, context) {
+  return parseStrict(line, context) ?? parseLoose(line, context);
 }
 
 /** A line that is only a number: "200", "5k". It cannot say which horse, so it is never a bet. */

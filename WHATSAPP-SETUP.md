@@ -108,7 +108,7 @@ Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a 
 - Messages are stored on the server for 7 days, then deleted. Only the lines with numbers in them are kept.
 - Odds lists are recognised only when sent from the linked account itself. Whether broadcast lists are visible to the linked session depends on WhatsApp, so check the first one after setting this up (the green line at the top of the Inbox shows the race it found).
 - Contacts using the newer hidden-number WhatsApp ids may not match the saved number.
-- Reading free text ("put 500 on the grey") needs the AI step, which is not built yet; those lines appear as unreadable.
+- Free text is read **loosely**: in a line like "put 500 on the grey one" the 500 is taken as the amount (books or a stake, you choose; a second figure is read as usual), filler words (put, on, the, one...) are dropped and the rest ("grey") is tried as the horse name. The card is marked unsure. Only lines with three or four figures among words stay "unreadable", and lines with more than four figures are ignored. Understanding real sentences properly needs the AI step, which is not built yet.
 
 ## Security notes
 

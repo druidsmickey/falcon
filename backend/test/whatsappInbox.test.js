@@ -74,12 +74,11 @@ test('the same message arriving twice is stored once', async () => {
   assert.equal((await inbox.listPending()).items.length, 2);
 });
 
-test('one message with several lines gives several bets, and unreadable lines are kept for a person', async () => {
+test('one message with several lines gives several bets, and a sentence with a figure keeps its amount', async () => {
   await inbox.handleIncoming(message('1 500x90\nput 500 on the grey\nthanks'));
   const { items } = await inbox.listPending();
   assert.equal(items.length, 2);
-  assert.equal(items[1].unreadable, true);
-  assert.equal(items[1].unsure, true);
+  assert.deepEqual([items[1].unreadable, items[1].unsure, items[1].amountKind, items[1].amount, items[1].horseNum], [false, true, '?', 500, null]);
 });
 
 test('the latest odds list decides how 11 is read', async () => {
@@ -165,7 +164,7 @@ test('the demo adds sample bets that the real parser read, and they can be remov
   assert.deepEqual([items[5].horseNum, items[5].books, items[5].f500], [2, 500, 120]);
   assert.deepEqual([items[1].stake, items[1].odds100], [5000, 420]);
   assert.deepEqual([items[4].amountKind, items[4].amount, items[4].rate], ['?', 500, 200]);
-  assert.equal(items[6].unreadable, true);
+  assert.deepEqual([items[6].amountKind, items[6].amount, items[6].horseNum, items[6].unsure], ['?', 500, null, true]);
   assert.equal(new Set(items.map(i => i.clientRequestId)).size, 7);
 
   // trying it twice never collides, and no real contact or odds list is created
