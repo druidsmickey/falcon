@@ -9,7 +9,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 10px 8px 16px;
+  padding: 10px 8px calc(28px + env(safe-area-inset-bottom));
   user-select: none;
   -webkit-user-select: none;
 }
@@ -26,12 +26,19 @@ h1 {
 }
 
 .table {
-  height: min(70vh, 700px);
+  /* shorter than the screen, so that the buttons under it stay above the phone's own toolbar */
+  height: min(62vh, 700px);
   aspect-ratio: 400 / 700;
   max-width: 100%;
   border: 2px solid #1e293b;
   border-radius: 12px;
   box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);
+}
+
+@supports (height: 100dvh) {
+  .table {
+    height: min(62dvh, 700px);
+  }
 }
 
 .pads {
@@ -163,5 +170,12 @@ h1 {
 @media (max-width: 360px) {
   .tables {
     grid-template-columns: 1fr;
+  }
+}
+
+/* the keyboard hint is no use on a touch screen */
+@media (hover: none) {
+  .hint {
+    display: none;
   }
 }
