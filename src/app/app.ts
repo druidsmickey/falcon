@@ -14,14 +14,18 @@ import { ChangePassword } from './change-password/change-password';
 import { DeviceSecurity } from './device-security/device-security';
 import { Whatsapp } from './whatsapp/whatsapp';
 import { WhatsappInbox } from './whatsapp-inbox/whatsapp-inbox';
+import { Arcade } from './arcade/arcade';
 import { InboxCountService } from './whatsapp-inbox/inbox-count.service';
 import { AuthService } from './services/auth.service';
 import { OfflineSyncService } from './services/offline-sync.service';
 import { environment } from '../environments/environment';
 
+/** The tab that is open after logging in: Pinball, the one after Password (see app.html). */
+const PINBALL_TAB = 12;
+
 @Component({
   selector: 'app-root',
-  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword, DeviceSecurity, WhatsappInbox],
+  imports: [MatTabsModule, Dataentry, Single, Chart, Whatsapp, ListdataComponent, Winners, Reports, Params, Init, Merge, ChangePassword, DeviceSecurity, WhatsappInbox, Arcade],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -34,6 +38,8 @@ export class App {
   // Raising this number builds all the tabs again, so that they show the data that was just synced. A
   // page reload cannot be used for that: it would lock the app (the key lives in memory only).
   protected readonly refreshKey = signal(0);
+  // The open tab is kept here so that it stays open when the tabs are built again after a sync.
+  protected readonly tabIndex = signal(PINBALL_TAB);
   private offlineSync = inject(OfflineSyncService);
   protected readonly syncState = this.offlineSync.state;
   private connectivityTimer: ReturnType<typeof setInterval> | null = null;

@@ -38,6 +38,10 @@ What this does **not** do:
 - It cannot protect against someone who already copied the browser's files and the password, and a short or common password can be guessed offline. Use a long password.
 - Until HTTPS is set up the traffic between the browser and the server is not encrypted (see below).
 
+## The Pinball tab
+
+The same game is also a tab in the app (after Password), and **it is the tab that opens after logging in**, instead of Entry. Anyone looking over your shoulder at login sees a pinball game; press Entry (or any tab) to work. The scores are the same ones the duress code's game uses. Leaving the tab closes the game, and the page gets its name back.
+
 ## Erase this device
 
 The same tab has **Erase this device**: it does the same wipe but goes back to the login page. Use it before giving the device away. It warns first if bets are still waiting to be sent.

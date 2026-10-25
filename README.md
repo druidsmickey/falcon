@@ -22,6 +22,7 @@ The same code is deployed as two separate apps, **Phantom** and **Detori**, each
 | Params | Horse names, Special and Rule 4 withdrawals with times and deduction % |
 | Init | Create a meeting, its races and number of horses; choose the selected meeting; delete a meeting |
 | Password | Change your password |
+| Pinball | A pinball game with four tables. It is the tab that opens after logging in |
 | Online / Sync | Connection status and the offline queue |
 
 Only one meeting is *selected* at a time. All tabs work on the selected meeting, except Merge.

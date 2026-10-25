@@ -6,7 +6,7 @@
 }
 
 @for (key of [refreshKey()]; track key) {
-<mat-tab-group [disablePagination]="true">
+<mat-tab-group [disablePagination]="true" [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)">
   <mat-tab label="Entry">
     <ng-template matTabContent>
       <app-dataentry></app-dataentry>
@@ -72,6 +72,11 @@
     <ng-template matTabContent>
       <app-change-password></app-change-password>
       <app-device-security></app-device-security>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Pinball">
+    <ng-template matTabContent>
+      <app-arcade></app-arcade>
     </ng-template>
   </mat-tab>
   <mat-tab label="">

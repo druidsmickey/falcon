@@ -30,8 +30,12 @@ export class Arcade implements AfterViewInit, OnDestroy {
   protected readonly data = signal(this.store.load());
   protected readonly theme = signal<Theme | null>(null);
 
+  private readonly title = inject(Title);
+  // the page is called Pinball while the game is shown, and gets its own name back when it is left (in the app the game is a tab)
+  private readonly previousTitle = this.title.getTitle();
+
   constructor() {
-    inject(Title).setTitle('Pinball');
+    this.title.setTitle('Pinball');
     this.sound.muted = this.data().muted;
   }
 
@@ -59,6 +63,7 @@ export class Arcade implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.frame);
+    if (this.previousTitle) this.title.setTitle(this.previousTitle);
   }
 
   // ---------------------------------------------------------------- tables
