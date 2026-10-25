@@ -1,4 +1,4 @@
-<main class="arcade" [class.playing]="theme()"
+<main class="arcade" [class.playing]="theme()" [style.background]="backdrop()"
       (pointerdown)="pointerDown($event)" (pointermove)="pointerMove($event)"
       (pointerup)="pointerUp($event)" (pointercancel)="pointerUp($event)">
   @if (theme(); as current) {

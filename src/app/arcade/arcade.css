@@ -17,6 +17,26 @@
 
 .arcade.playing {
   touch-action: none;
+  gap: 4px;
+  padding: 4px 0 0;
+  min-height: calc(100dvh - 48px);
+}
+
+/* while playing the screen is the table: a thin header, no hint */
+.arcade.playing .bar {
+  width: 100%;
+  padding: 0 6px;
+  box-sizing: border-box;
+}
+
+.arcade.playing .small {
+  min-height: 34px;
+  min-width: 40px;
+  padding: 0 10px;
+}
+
+.arcade.playing .hint {
+  display: none;
 }
 
 h1 {
@@ -27,18 +47,16 @@ h1 {
 }
 
 .table {
-  /* as tall as the screen allows, leaving room for the tab bar, the header and the phone's own toolbar */
-  height: min(calc(100vh - 190px), 780px);
+  /* as tall as the screen allows: only the thin header (and the tab bar, in the app) are taken off. --reserve is set by the page. */
+  height: min(calc(100vh - var(--reserve, 98px)), 780px);
   aspect-ratio: 400 / 780;
   max-width: 100%;
-  border: 2px solid #1e293b;
-  border-radius: 12px;
-  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
 }
 
 @supports (height: 100dvh) {
   .table {
-    height: min(calc(100dvh - 190px), 780px);
+    height: min(calc(100dvh - var(--reserve, 98px)), 780px);
   }
 }
 

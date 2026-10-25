@@ -39,6 +39,7 @@ export class Arcade implements AfterViewInit, OnDestroy {
   private readonly store = new ArcadeStore();
   private readonly sound = new ArcadeSound();
   private readonly zone = inject(NgZone);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = inject(Title);
   // the page is called Pinball while the game is shown, and gets its own name back when it is left (in the app the game is a tab)
   private readonly previousTitle = this.title.getTitle();
@@ -61,7 +62,17 @@ export class Arcade implements AfterViewInit, OnDestroy {
     this.sound.muted = this.data().muted;
   }
 
+  /** The colours of the table behind the whole screen, so that it looks as wide as the screen. */
+  protected backdrop(): string | null {
+    const theme = this.theme();
+    return theme ? `linear-gradient(180deg, ${theme.sky[0]}, ${theme.sky[1]})` : null;
+  }
+
   ngAfterViewInit(): void {
+    // what the table leaves free: 50px for the thin header, and the tab bar when the game is a tab of the app
+    const inApp = !!this.host.nativeElement.closest('.mat-mdc-tab-body');
+    this.host.nativeElement.style.setProperty('--reserve', inApp ? '98px' : '50px');
+
     const canvas = this.canvas().nativeElement;
     // the picture is drawn at twice the size so that it stays sharp on phones
     canvas.width = WIDTH * 2;
