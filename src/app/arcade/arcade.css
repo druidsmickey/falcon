@@ -27,9 +27,9 @@ h1 {
 }
 
 .table {
-  /* shorter than the screen, so that the buttons under it stay above the phone's own toolbar */
-  height: min(62vh, 700px);
-  aspect-ratio: 400 / 700;
+  /* as tall as the screen allows, leaving room for the tab bar, the header and the phone's own toolbar */
+  height: min(calc(100vh - 190px), 780px);
+  aspect-ratio: 400 / 780;
   max-width: 100%;
   border: 2px solid #1e293b;
   border-radius: 12px;
@@ -38,7 +38,7 @@ h1 {
 
 @supports (height: 100dvh) {
   .table {
-    height: min(62dvh, 700px);
+    height: min(calc(100dvh - 190px), 780px);
   }
 }
 

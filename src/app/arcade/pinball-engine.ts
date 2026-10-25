@@ -28,7 +28,9 @@ export interface Ball extends Vec {
 }
 
 export const WIDTH = 400;
-export const HEIGHT = 700;
+/** How much longer the table is than the first one (700): the flippers, the lane and the bottom walls sit this much lower. */
+export const EXTRA_LENGTH = 80;
+export const HEIGHT = 700 + EXTRA_LENGTH;
 export const BALL_RADIUS = 9;
 
 const GRAVITY = 1100;
@@ -40,7 +42,7 @@ const FLIPPER_SPEED = 20; // radians per second
 const REST_ANGLE = (28 * Math.PI) / 180;
 const UP_ANGLE = -(32 * Math.PI) / 180;
 const LANE_X = 362;
-const LANE_BALL_Y = 640;
+const LANE_BALL_Y = 640 + EXTRA_LENGTH;
 const BALLS_PER_GAME = 3;
 
 export function closestPointOnSegment(p: Vec, a: Vec, b: Vec): Vec {
@@ -208,12 +210,13 @@ function buildWalls(): Segment[] {
   }
   for (let i = 0; i < points.length - 1; i++) add(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
 
-  add(20, cy, 20, 520); // left wall
-  add(380, cy, 380, 690); // right wall, all the way down the lane
-  add(340, 330, 340, 690); // the wall between the playfield and the lane (open above y = 330)
-  add(LANE_X - 22, 666, LANE_X + 18, 666, 0.1); // floor of the lane
-  add(20, 520, 105, 600, 0.45); // slope to the left flipper
-  add(340, 520, 255, 600, 0.45); // slope to the right flipper
+  const down = EXTRA_LENGTH;
+  add(20, cy, 20, 520 + down); // left wall
+  add(380, cy, 380, 690 + down); // right wall, all the way down the lane
+  add(340, 330, 340, 690 + down); // the wall between the playfield and the lane (open above y = 330)
+  add(LANE_X - 22, 666 + down, LANE_X + 18, 666 + down, 0.1); // floor of the lane
+  add(20, 520 + down, 105, 600 + down, 0.45); // slope to the left flipper
+  add(340, 520 + down, 255, 600 + down, 0.45); // slope to the right flipper
   return walls;
 }
 
@@ -228,8 +231,8 @@ export class Pinball {
   /** The four lanes at the top: lit when the ball ran through them. */
   readonly lanes: boolean[] = LANE_XS.map(() => false);
   readonly flippers: Flipper[] = [
-    { pivot: { x: 105, y: 600 }, side: 1, angle: REST_ANGLE, turning: 0, pressed: false },
-    { pivot: { x: 255, y: 600 }, side: -1, angle: REST_ANGLE, turning: 0, pressed: false },
+    { pivot: { x: 105, y: 600 + EXTRA_LENGTH }, side: 1, angle: REST_ANGLE, turning: 0, pressed: false },
+    { pivot: { x: 255, y: 600 + EXTRA_LENGTH }, side: -1, angle: REST_ANGLE, turning: 0, pressed: false },
   ];
 
   score = 0;
@@ -1090,14 +1093,14 @@ export class Pinball {
     ctx.textAlign = 'left';
     ctx.font = 'bold 10px sans-serif';
     ctx.fillStyle = theme.accent;
-    ctx.fillText('MISSION ' + Math.min(this.missionProgress, mission.goal) + '/' + mission.goal, 26, 664);
+    ctx.fillText('MISSION ' + Math.min(this.missionProgress, mission.goal) + '/' + mission.goal, 26, HEIGHT - 36);
     ctx.font = '10px sans-serif';
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(mission.text.length > 26 ? mission.text.slice(0, 25) + '…' : mission.text, 26, 677);
+    ctx.fillText(mission.text.length > 26 ? mission.text.slice(0, 25) + '…' : mission.text, 26, HEIGHT - 23);
     ctx.textAlign = 'right';
     ctx.fillStyle = this.nudgesLeft > 0 ? '#94a3b8' : '#ef4444';
     ctx.font = '10px sans-serif';
-    ctx.fillText('NUDGE ' + this.nudgesLeft, 330, 677);
+    ctx.fillText('NUDGE ' + this.nudgesLeft, 330, HEIGHT - 23);
 
     // messages
     ctx.textAlign = 'center';
@@ -1115,7 +1118,7 @@ export class Pinball {
     if (this.phase === 'ready') {
       ctx.font = '16px sans-serif';
       ctx.fillStyle = '#cbd5e1';
-      ctx.fillText('Hold anywhere, let go to launch', 190, 500);
+      ctx.fillText('Hold anywhere, let go to launch', 190, 540);
     } else if (this.phase === 'over') {
       this.drawOver(ctx);
     }

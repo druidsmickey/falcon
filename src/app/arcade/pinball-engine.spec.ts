@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  Ball, BALL_RADIUS, closestPointOnSegment, collideWithCircle, collideWithSegment, HEIGHT, Pinball, WIDTH,
+  Ball, BALL_RADIUS, closestPointOnSegment, collideWithCircle, collideWithSegment, EXTRA_LENGTH, HEIGHT, Pinball, WIDTH,
 } from './pinball-engine';
 
 const ball = (x: number, y: number, vx = 0, vy = 0): Ball => ({ x, y, vx, vy });
@@ -157,10 +157,10 @@ describe('pinball: the game', () => {
   it('a flipper hits a ball that rolls onto it and sends it up', () => {
     const game = new Pinball();
     game.phase = 'playing';
-    game.ball = { x: 140, y: 615, vx: 0, vy: 0 }; // on the left flipper, which is pressed
+    game.ball = { x: 140, y: 615 + EXTRA_LENGTH, vx: 0, vy: 0 }; // on the left flipper, which is pressed
     game.setLeft(true);
     run(game, 0.12);
-    expect(game.ball.y).toBeLessThan(590);
+    expect(game.ball.y).toBeLessThan(590 + EXTRA_LENGTH);
   });
 
   it('the ball stays on or near the table through a long game with button mashing', () => {
