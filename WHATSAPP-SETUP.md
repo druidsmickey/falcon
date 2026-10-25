@@ -1,30 +1,30 @@
 # WhatsApp tab
 
-Send messages, reports and photos to clients from the app, through your own WhatsApp account. It uses `whatsapp-web.js`, which drives a headless Chromium browser on the **server** and links to your phone as a "Linked device".
+Connects the app to your own WhatsApp account, and lets you choose whose messages are read as bets (they arrive in the **Inbox** tab, see below). It uses `whatsapp-web.js`, which drives a headless Chromium browser on the **server** and links to your phone as a "Linked device".
 
-The tab has four parts:
+The tab has two parts:
 
 | Part | What it does |
 |---|---|
-| **Connection** | Connect or disconnect WhatsApp, show the QR code, reset the session, test that the server can start Chrome |
-| **Contacts** | Add contacts by hand or import them from your WhatsApp, delete contacts |
-| **Groups** | Create, edit and delete groups of contacts (a group is only a sending list kept in the app) |
-| **Send Message** | Send text to one contact, several contacts or a whole group; send a photo to a group; see and delete what was sent |
+| **WhatsApp (connection)** | Connect or disconnect WhatsApp, show the QR code, reset the session, test that the server can start Chrome |
+| **Contacts** | One button, **Sync contacts from the phone**, copies the contacts of the phone. For each contact you type a **nickname** and tick whether to **listen** to it |
+
+Sending messages, groups of contacts and sending reports or photos are **no longer in the app**. The server routes for them are still there (see the API list) but nothing in the app uses them.
 
 ## Before you start
 
-- **Each app has its own WhatsApp session.** Phantom and Detori run as separate server processes, so each needs its own QR scan and counts as its own "linked device". One WhatsApp account can have several linked devices, so both apps may use the same number, but they will then send from the same account and each runs its own Chrome (memory). Never copy one app's `.wwebjs_auth` folder to the other.
+- **Each app has its own WhatsApp session.** Phantom and Detori run as separate server processes, so each needs its own QR scan and counts as its own "linked device". One WhatsApp account can have several linked devices, so both apps may use the same number, but each runs its own Chrome (memory). Never copy one app's `.wwebjs_auth` folder to the other.
 - The server needs **Chromium** and enough memory. See [DIGITAL_OCEAN_SETUP.md](DIGITAL_OCEAN_SETUP.md).
 - The session is saved on the server in `backend/.wwebjs_auth/` (next to `server.js`). **Never commit or share this folder: it is a logged-in copy of your WhatsApp.** It is in `.gitignore`. A deployment does not remove it.
 
 ## Connecting
 
-1. Open the **WhatsApp** tab, then **Connection**.
+1. Open the **WhatsApp** tab.
 2. Press **Initialize WhatsApp** and wait (about 10 to 20 seconds) for the QR code.
 3. On your phone: WhatsApp, Settings, **Linked devices**, **Link a device**, scan the QR code.
 4. The status changes to **Connected**. After that the server reconnects by itself; you only scan again if you disconnect, press **Reset & New QR**, or WhatsApp ends the session.
 
-Buttons on Connection:
+Buttons:
 - **Refresh Status:** check the state again.
 - **Disconnect:** close the connection (the saved session stays).
 - **Reset & New QR:** delete the saved session and show a new QR code. Use this if the connection is stuck or authentication fails.
@@ -32,36 +32,23 @@ Buttons on Connection:
 
 The QR code image is drawn in your browser. The text that links a device to your WhatsApp is not sent to any outside website. The server also prints the QR code in its own log.
 
-## Contacts
+## Contacts: nickname and who to listen to
 
-- **Add by hand:** name and number with the country code and no `+`, spaces or dashes (for example `61412345678`). The app adds `@c.us` itself.
-- **Import from WhatsApp:** fetches the contacts of the linked phone, you tick the ones to import. Contacts already in the list are skipped.
-- Contacts are saved in the app's database. Deleting a contact also removes it from every group.
+1. Press **Sync contacts from the phone** (WhatsApp must be connected). It copies every person in the phone's address book that has a name; groups and your own number are left out. Press it again whenever you add contacts on the phone. Contacts already saved keep their nickname and listen choice, and only their name follows the phone.
+2. For each contact type a **nickname**. It is the client name the bets are entered under; without one the contact name is used.
+3. Tick the contacts to **listen** to. Nobody is listened to until you tick them. Use the search box, and **Listened to only**, to find them in a long list.
 
-## Sending
-
-- **To contacts:** tick one or more contacts, write the message, send. Several contacts are sent in batches of 7 with a 1 second pause, to stay within WhatsApp's limits.
-- **To a group:** choose the group (it is remembered for next time), write the message and send. Each send is saved in the history below.
-- **Photo to a group:** press the camera button, take or pick a photo. It is shrunk (longest side 1920 px, JPEG) before sending. The text box, if filled, becomes the caption.
-- **History:** messages sent to the selected group are listed. You can copy one back into the text box, or **delete** one: this removes it **for everyone** in each contact's chat (WhatsApp only allows this for a limited time after sending).
-- Formatting: `*bold*`, `_italic_`, `~strikethrough~`.
-- If a chat had unread messages, the app marks it unread again after sending, so you do not lose track of it.
-
-There are no message templates in the app.
+Contacts are saved in the app's database. Changes save as soon as you leave the nickname box or tick a contact.
 
 ## API (all need a login token)
 
 Connection: `GET /api/whatsapp/status`, `POST /initialize`, `POST /disconnect`, `POST /reset`, `GET /test-puppeteer`.
 
-Contacts: `GET /contacts`, `POST /contacts`, `DELETE /contacts/:id`, `GET /whatsapp-contacts`, `POST /import-contacts`.
+Contacts: `POST /sync-contacts` (copy the phone's contacts), `GET /contacts`, `POST /contacts`, `DELETE /contacts/:id`, `GET /whatsapp-contacts`, `POST /import-contacts`. Nickname and listen: `GET /api/whatsapp-inbox/contacts`, `PATCH /api/whatsapp-inbox/contacts/:id`.
 
-Groups: `GET /groups`, `POST /groups`, `PUT /groups/:id`, `DELETE /groups/:id`.
+Routes the app no longer uses: groups (`GET/POST /groups`, `PUT/DELETE /groups/:id`), sending (`POST /send-message`, `/send-bulk`, `/send-to-group`, `/send-image-to-group`, `/send-report`, `GET /messages/:groupId`, `POST /delete-messages`) and chat "keep unread" tracking (`POST /mark-keep-unread`, `/unmark-keep-unread`).
 
-Sending: `POST /send-message`, `POST /send-bulk`, `POST /send-to-group`, `POST /send-image-to-group`, `POST /send-report`, `GET /messages/:groupId`, `POST /delete-messages`.
-
-Chat "keep unread" tracking: `POST /mark-keep-unread`, `POST /unmark-keep-unread`.
-
-All paths start with `/api/whatsapp`.
+All paths start with `/api/whatsapp` unless written in full.
 
 ## Troubleshooting
 
@@ -88,8 +75,7 @@ All paths start with `/api/whatsapp`.
 The server can read the bets your contacts send and list them in the **Inbox** tab for you to confirm. Nothing is entered until you press **Confirm**.
 
 **Set up**
-1. Import your contacts in the WhatsApp tab as usual.
-2. In the Inbox tab open **Who I listen to**, tick the contacts to listen to and give each a **nickname**. The nickname is the client name the bets are entered under; without one the contact name is used. Nobody is listened to until you tick them.
+1. In the **WhatsApp** tab connect WhatsApp, press **Sync contacts from the phone**, give each contact a **nickname** and tick the ones to **listen** to (see above). Nobody is listened to until you tick them.
 3. Send your **odds lists** (from the broadcast list) from the linked account. The latest one tells the app which race is running and how many horses it has.
 
 **What a message can look like** (one bet per line)

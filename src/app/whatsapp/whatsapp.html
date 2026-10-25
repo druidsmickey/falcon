@@ -1,463 +1,95 @@
-<div class="whatsapp-container">
-  <h2>WhatsApp Messaging</h2>
+<div class="whatsapp">
+  <!-- the connection -->
+  <mat-card class="connection">
+    <mat-card-header>
+      <mat-card-title>WhatsApp</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="status-indicator">
+        <span class="status-dot" [style.background-color]="statusColor()"></span>
+        <span class="status-text">{{ statusText() }}</span>
+      </div>
 
-  <mat-tab-group>
-    <!-- Send Message Tab -->
-    <mat-tab label="Send Message">
-      <div class="tab-content">
-        <mat-card>
-          <mat-card-content>
-            @if (!status().isReady) {
-              <div class="warning-message">
-                <mat-icon>warning</mat-icon>
-                WhatsApp is not connected. Please go to the Connection tab and initialize WhatsApp first.
-              </div>
-            }
+      @if (statusMessage()) {
+        <div class="status-message">{{ statusMessage() }}</div>
+      }
 
-            <div class="group-selection">
-              @if (groups().length === 0) {
-                <p class="hint-text">No groups available. Create one in the Groups tab first.</p>
-              } @else {
-                <div class="group-radio-list">
-                  <h4 style="margin: 10px 0 5px; font-size: 0.9em; color: #666;">Groups:</h4>
-                  <mat-radio-group [(ngModel)]="selectedGroup" (ngModelChange)="saveSelectedGroup()" class="group-radio-group">
-                    @for (group of groups(); track group.id) {
-                      <mat-radio-button [value]="group.id" class="group-radio-button">
-                        <mat-icon style="vertical-align: middle; margin-right: 5px; font-size: 18px;">group</mat-icon>
-                        {{ group.name }}
-                      </mat-radio-button>
-                    }
-                  </mat-radio-group>
-                </div>
-              }
-            </div>
+      @if (loading()) {
+        <div class="loading-container">
+          <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+        </div>
+      }
+    </mat-card-content>
+    <mat-card-actions class="actions">
+      @if (!status().isReady) {
+        <button mat-raised-button color="primary" (click)="initializeWhatsApp()" [disabled]="loading()">Initialize WhatsApp</button>
+      } @else {
+        <button mat-raised-button color="warn" (click)="disconnectWhatsApp()" [disabled]="loading()">Disconnect</button>
+      }
+      <button mat-raised-button (click)="checkStatus()" [disabled]="loading()">Refresh Status</button>
+      @if (!status().isReady) {
+        <button mat-raised-button color="accent" (click)="resetWhatsApp()" [disabled]="loading()">Reset &amp; New QR</button>
+        <button mat-stroked-button (click)="testPuppeteer()" [disabled]="loading()">Test Server</button>
+      }
+    </mat-card-actions>
 
-            <mat-form-field appearance="outline" class="message-field">
-              <mat-label>Message / Caption</mat-label>
-              <textarea matInput 
-                        [(ngModel)]="message"
-                        rows="8"
-                        placeholder="Type your message here or leave empty for photos..."></textarea>
-              <mat-hint>Use *bold*, _italic_, ~strikethrough~ for formatting. Text will be used as photo caption.</mat-hint>
-            </mat-form-field>
-          </mat-card-content>
-          <mat-card-actions>
-            <button mat-raised-button color="primary" 
-                    (click)="sendMessageToGroup()"
-                    [disabled]="!status().isReady || loading() || !selectedGroup() || !message()">
-              <mat-icon>send</mat-icon>
-              Send Message
-            </button>
-            <button mat-raised-button color="accent"
-                    (click)="triggerCamera()"
-                    [disabled]="!status().isReady || loading() || !selectedGroup()">
-              <mat-icon>photo_camera</mat-icon>
-              Send Photo
-            </button>
-            <button mat-stroked-button (click)="message.set('Close')">
-              Quick: Close
-            </button>
-            <input #cameraInput type="file" accept="image/*" 
-                   (change)="onImageSelected($event)" style="display: none;">
-          </mat-card-actions>
-        </mat-card>
+    @if (status().qrCode) {
+      <mat-card-content>
+        <div class="qr-code-container">
+          <h3>Scan this QR code with WhatsApp:</h3>
+          <img [src]="qrImage()" alt="WhatsApp QR Code" class="qr-code">
+          <p class="qr-instructions">
+            1. Open WhatsApp on your phone<br>
+            2. Go to Settings &gt; Linked Devices<br>
+            3. Tap "Link a Device"<br>
+            4. Scan this QR code
+          </p>
+        </div>
+      </mat-card-content>
+    }
+  </mat-card>
 
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Message History</mat-card-title>
-            @if (sentMessages().length > 0) {
-              <button mat-icon-button color="warn" 
-                      (click)="deleteAllMessages()"
-                      [disabled]="loading()"
-                      matTooltip="Delete all messages">
-                <mat-icon>delete_sweep</mat-icon>
-              </button>
-            }
-          </mat-card-header>
-          <mat-card-content>
-            @if (!selectedGroup()) {
-              <p class="hint-text">Select a group to view message history</p>
-            } @else if (sentMessages().length === 0) {
-              <p class="hint-text">No messages sent yet</p>
-            } @else {
-              <div class="message-history-list">
-                <mat-list>
-                  @for (msg of sentMessages(); track msg.id) {
-                    <mat-list-item>
-                      <div class="message-item">
-                        <div class="message-content" (click)="copyMessageToField(msg.message)">
-                          <div class="message-text">{{ msg.message }}</div>
-                          <div class="message-meta">
-                            <span class="message-date">🕐 {{ msg.sentAt | date:'short' }}</span>
-                            <span class="message-contacts">{{ msg.contactCount }} recipients</span>
-                          </div>
-                        </div>
-                        <button mat-icon-button color="warn" 
-                                (click)="deleteSingleMessage(msg.id)"
-                                matTooltip="Delete message">
-                          <mat-icon>delete</mat-icon>
-                        </button>
-                      </div>
-                    </mat-list-item>
-                  }
-                </mat-list>
-              </div>
-            }
-          </mat-card-content>
-        </mat-card>
+  <!-- the contacts: one button to copy them from the phone, then a nickname and who to listen to -->
+  <mat-card class="contacts">
+    <mat-card-header>
+      <mat-card-title>Contacts ({{ listened() }} listened to)</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <button mat-raised-button color="primary" class="sync" (click)="syncContacts()" [disabled]="syncing() || !status().isReady">
+        {{ syncing() ? 'Syncing...' : 'Sync contacts from the phone' }}
+      </button>
 
-        @if (statusMessage()) {
-          <mat-card class="status-card">
-            <mat-card-content>
-              <div class="message-status">
-                <mat-icon>info</mat-icon>
-                {{ statusMessage() }}
-              </div>
-            </mat-card-content>
-          </mat-card>
+      @if (error()) {
+        <p class="banner" role="alert">{{ error() }}</p>
+      }
+
+      @if (contacts().length === 0) {
+        <p class="hint">No contacts yet. Connect WhatsApp, then press the button.</p>
+      } @else {
+        <div class="filters">
+          <input type="search" class="search" placeholder="Search name, nickname or number" [value]="search()" (input)="setSearch($event)"
+                 aria-label="Search contacts">
+          <label class="only">
+            <input type="checkbox" [checked]="onlyListened()" (change)="onlyListened.set($any($event.target).checked)">
+            <span>Listened to only</span>
+          </label>
+        </div>
+
+        <p class="hint">Tick a contact to read the bets it sends (they arrive in the Inbox). The nickname is the client name the bets are entered under; without one the contact name is used.</p>
+
+        @for (contact of shown(); track contact.id) {
+          <div class="contact">
+            <label class="check">
+              <input type="checkbox" [checked]="contact.listen" (change)="setListen(contact, $any($event.target).checked)">
+              <span class="name">{{ contact.name }}</span>
+            </label>
+            <input class="nick" type="text" placeholder="Nickname" [value]="contact.nickname" maxlength="100"
+                   (change)="setNickname(contact, $event)" [attr.aria-label]="'Nickname for ' + contact.name">
+          </div>
+        } @empty {
+          <p class="hint">No contact matches.</p>
         }
-      </div>
-    </mat-tab>
-
-    <!-- Connection Tab -->
-    <mat-tab label="Connection">
-      <div class="tab-content">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>WhatsApp Status</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="status-indicator">
-              <span class="status-dot" [style.background-color]="getStatusColor()"></span>
-              <span class="status-text">{{ getStatusText() }}</span>
-            </div>
-
-            @if (statusMessage()) {
-              <div class="status-message">{{ statusMessage() }}</div>
-            }
-
-            @if (loading()) {
-              <div class="loading-container">
-                <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-              </div>
-            }
-          </mat-card-content>
-          <mat-card-actions>
-            @if (!status().isReady) {
-              <button mat-raised-button color="primary" 
-                      (click)="initializeWhatsApp()"
-                      [disabled]="loading()">
-                Initialize WhatsApp
-              </button>
-            }
-            @if (status().isReady) {
-              <button mat-raised-button color="warn" 
-                      (click)="disconnectWhatsApp()"
-                      [disabled]="loading()">
-                Disconnect
-              </button>
-            }
-            <button mat-raised-button (click)="checkStatus()"
-                    [disabled]="loading()">
-              Refresh Status
-            </button>
-            @if (!status().isReady) {
-              <button mat-raised-button color="accent"
-                      (click)="resetWhatsApp()"
-                      [disabled]="loading()"
-                      matTooltip="Clear session and generate new QR code">
-                <mat-icon>refresh</mat-icon>
-                Reset & New QR
-              </button>
-              <button mat-stroked-button 
-                      (click)="testPuppeteer()"
-                      [disabled]="loading()"
-                      matTooltip="Test if Chrome can launch (for debugging)">
-                <mat-icon>bug_report</mat-icon>
-                Test Server
-              </button>
-            }
-          </mat-card-actions>
-          
-          @if (status().qrCode) {
-            <mat-card-content>
-              <div class="qr-code-container">
-                <h3>Scan this QR code with WhatsApp:</h3>
-                <img [src]="qrImage()" 
-                     alt="WhatsApp QR Code" 
-                     class="qr-code">
-                <p class="qr-instructions">
-                  1. Open WhatsApp on your phone<br>
-                  2. Go to Settings > Linked Devices<br>
-                  3. Tap "Link a Device"<br>
-                  4. Scan this QR code
-                </p>
-              </div>
-            </mat-card-content>
-          }
-        </mat-card>
-      </div>
-    </mat-tab>
-
-    <!-- Contacts Tab -->
-    <mat-tab label="Contacts">
-      <div class="tab-content">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Add New Contact</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="import-section">
-              <p><strong>Import from WhatsApp:</strong></p>
-              <button mat-raised-button color="accent" 
-                      (click)="fetchWhatsAppContacts()"
-                      [disabled]="!status().isReady || importLoading()">
-                <mat-icon>contacts</mat-icon>
-                Fetch WhatsApp Contacts
-              </button>
-              @if (!status().isReady) {
-                <p class="hint-text">Connect WhatsApp first to import contacts</p>
-              }
-            </div>
-
-            <mat-divider style="margin: 20px 0;"></mat-divider>
-
-            <p><strong>Or add manually:</strong></p>
-            <div class="add-contact-form">
-              <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Name</mat-label>
-                <input matInput 
-                       [(ngModel)]="newContactName"
-                       placeholder="Enter contact name">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Phone Number</mat-label>
-                <input matInput 
-                       [(ngModel)]="newContactNumber"
-                       placeholder="e.g., 1234567890 or 1234567890@c.us">
-                <mat-hint>Include country code without + (e.g., 1234567890)</mat-hint>
-              </mat-form-field>
-
-              <button mat-raised-button color="primary" 
-                      (click)="addContact()"
-                      [disabled]="loading()">
-                <mat-icon>add</mat-icon>
-                Add Contact
-              </button>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="contacts-list-card">
-          <mat-card-header>
-            <mat-card-title>Contacts ({{ contacts().length }})</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            @if (contacts().length === 0) {
-              <p class="no-contacts">No contacts added yet</p>
-            } @else {
-              <mat-list>
-                @for (contact of contacts(); track contact.id) {
-                  <mat-list-item>
-                    <div class="contact-item">
-                      <mat-checkbox 
-                        [checked]="selectedContacts().has(contact.id)"
-                        (change)="toggleContactSelection(contact.id)">
-                      </mat-checkbox>
-                      <div class="contact-info">
-                        <span class="contact-name">{{ contact.name }}</span>
-                        <span class="contact-number">{{ contact.number }}</span>
-                      </div>
-                      <button mat-icon-button color="warn" 
-                              (click)="deleteContact(contact.id)">
-                        <mat-icon>delete</mat-icon>
-                      </button>
-                    </div>
-                  </mat-list-item>
-                }
-              </mat-list>
-            }
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </mat-tab>
-
-    <!-- Groups Tab -->
-    <mat-tab label="Groups">
-      <div class="tab-content">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ editingGroup() ? 'Edit Group' : 'Create New Group' }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <mat-form-field appearance="outline" class="form-field">
-              <mat-label>Group Name</mat-label>
-              <input matInput 
-                     [(ngModel)]="newGroupName"
-                     placeholder="e.g., VIP Clients, Daily Updates">
-            </mat-form-field>
-
-            <div class="group-contact-selection">
-              <p><strong>Select Contacts for Group:</strong></p>
-              
-              @if (contacts().length === 0) {
-                <p class="no-contacts">No contacts available. Add contacts first.</p>
-              } @else {
-                <div class="selection-controls">
-                  <p>Selected: {{ selectedContactsForGroup().size }} / {{ contacts().length }} contacts</p>
-                  <div class="selection-buttons">
-                    <button mat-button (click)="selectAllContactsForGroup()">Select All</button>
-                    <button mat-button (click)="deselectAllContactsForGroup()">Deselect All</button>
-                  </div>
-                </div>
-
-                <div class="contact-selection-list">
-                  <mat-list>
-                    @for (contact of contacts(); track contact.id) {
-                      <mat-list-item>
-                        <div class="contact-item-simple">
-                          <mat-checkbox 
-                            [checked]="selectedContactsForGroup().has(contact.id)"
-                            (change)="toggleContactForGroup(contact.id)">
-                            {{ contact.name }}
-                          </mat-checkbox>
-                        </div>
-                      </mat-list-item>
-                    }
-                  </mat-list>
-                </div>
-              }
-            </div>
-          </mat-card-content>
-          <mat-card-actions>
-            @if (editingGroup()) {
-              <button mat-raised-button color="primary" 
-                      (click)="updateGroup()"
-                      [disabled]="loading() || !newGroupName() || selectedContactsForGroup().size === 0">
-                <mat-icon>save</mat-icon>
-                Update Group
-              </button>
-              <button mat-button (click)="cancelGroupEdit()">
-                Cancel
-              </button>
-            } @else {
-              <button mat-raised-button color="primary" 
-                      (click)="createGroup()"
-                      [disabled]="loading() || !newGroupName() || selectedContactsForGroup().size === 0">
-                <mat-icon>add</mat-icon>
-                Create Group
-              </button>
-            }
-          </mat-card-actions>
-        </mat-card>
-
-        <mat-card class="groups-list-card">
-          <mat-card-header>
-            <mat-card-title>My Groups ({{ groups().length }})</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            @if (groups().length === 0) {
-              <p class="no-contacts">No groups created yet</p>
-            } @else {
-              <mat-list>
-                @for (group of groups(); track group.id) {
-                  <mat-list-item>
-                    <div class="group-item">
-                      <div class="group-info">
-                        <span class="group-name">
-                          <mat-icon>group</mat-icon>
-                          {{ group.name }}
-                        </span>
-                        <span class="group-details">
-                          {{ group.contactCount }} contact(s) 
-                        </span>
-                      </div>
-                      <div class="group-actions">
-                        <button mat-icon-button color="primary" 
-                                (click)="editGroup(group)"
-                                matTooltip="Edit">
-                          <mat-icon>edit</mat-icon>
-                        </button>
-                        <button mat-icon-button color="warn" 
-                                (click)="deleteGroup(group.id)"
-                                matTooltip="Delete">
-                          <mat-icon>delete</mat-icon>
-                        </button>
-                      </div>
-                    </div>
-                  </mat-list-item>
-                }
-              </mat-list>
-            }
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </mat-tab>
-
-
-  </mat-tab-group>
-
-  <!-- Import WhatsApp Contacts Dialog -->
-  @if (showImportDialog()) {
-    <div class="import-dialog-overlay" (click)="cancelImport()">
-      <div class="import-dialog" (click)="$event.stopPropagation()">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Import WhatsApp Contacts</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            @if (importLoading()) {
-              <div class="loading-container">
-                <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-                <p>Loading...</p>
-              </div>
-            } @else {
-              <div class="selection-controls">
-                <p>Selected: {{ selectedWhatsAppContacts().size }} / {{ whatsappContacts().length }} contacts</p>
-                <div class="selection-buttons">
-                  <button mat-button (click)="selectAllWhatsAppContacts()">Select All</button>
-                  <button mat-button (click)="deselectAllWhatsAppContacts()">Deselect All</button>
-                </div>
-              </div>
-
-              <div class="import-contacts-list">
-                @if (whatsappContacts().length === 0) {
-                  <p class="no-contacts">No WhatsApp contacts found</p>
-                } @else {
-                  <mat-list>
-                    @for (contact of whatsappContacts(); track contact.number) {
-                      <mat-list-item>
-                        <div class="contact-item">
-                          <mat-checkbox 
-                            [checked]="selectedWhatsAppContacts().has(contact.number)"
-                            (change)="toggleWhatsAppContactSelection(contact.number)">
-                          </mat-checkbox>
-                          <div class="contact-info">
-                            <span class="contact-name">{{ contact.name }}</span>
-                            <span class="contact-number">{{ contact.number }}</span>
-                          </div>
-                        </div>
-                      </mat-list-item>
-                    }
-                  </mat-list>
-                }
-              </div>
-            }
-          </mat-card-content>
-          <mat-card-actions>
-            <button mat-raised-button color="primary" 
-                    (click)="importSelectedContacts()"
-                    [disabled]="importLoading() || selectedWhatsAppContacts().size === 0">
-              <mat-icon>download</mat-icon>
-              Import Selected
-            </button>
-            <button mat-button (click)="cancelImport()" [disabled]="importLoading()">
-              Cancel
-            </button>
-          </mat-card-actions>
-        </mat-card>
-      </div>
-    </div>
-  }
+      }
+    </mat-card-content>
+  </mat-card>
 </div>

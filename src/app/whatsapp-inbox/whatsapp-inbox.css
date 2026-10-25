@@ -98,55 +98,6 @@ button.ghost:disabled {
   cursor: not-allowed;
 }
 
-/* ---------------------------------------------------------------- who is listened to */
-
-.listen {
-  margin: 8px 0 14px;
-  padding: 6px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-}
-
-.listen summary {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.contact {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-top: 1px solid #f1f5f9;
-}
-
-.check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1 1 160px;
-  min-height: 44px;
-}
-
-.check input {
-  width: 22px;
-  height: 22px;
-}
-
-.nick {
-  flex: 1 1 200px;
-  min-height: 44px;
-  padding: 0 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
 /* ---------------------------------------------------------------- saved bets (as the last bet of the Entry page) */
 
 .saved {

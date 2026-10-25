@@ -1,6 +1,6 @@
 # ITB
 
-Bet-taking and settlement tool for horse racing. Staff enter bets against a meeting's races, the app keeps a live book (books, profit and loss, average) per horse, and works out each client's profit or loss at the end, including special withdrawals, Rule 4 deductions and dead heats. Reports can be printed and sent to clients over WhatsApp.
+Bet-taking and settlement tool for horse racing. Staff enter bets against a meeting's races, the app keeps a live book (books, profit and loss, average) per horse, and works out each client's profit or loss at the end, including special withdrawals, Rule 4 deductions and dead heats. Reports can be printed. Bets sent by clients in WhatsApp are read into an inbox for approval.
 
 The same code is deployed as two separate apps, **Phantom** and **Detori**, each with its own database and users.
 
@@ -14,7 +14,8 @@ The same code is deployed as two separate apps, **Phantom** and **Detori**, each
 | Entry | Fast bet entry: pick race, horse, client, books/odds, tax |
 | Single | One race at a time: live books, P&L and average per horse, tap a horse to bet |
 | Chart | All races side by side with the same figures |
-| WhatsApp | Connect WhatsApp, manage contacts and groups, send messages, reports and images |
+| Inbox | Bets read from WhatsApp messages, to check and save |
+| WhatsApp | Connect WhatsApp, copy the phone's contacts, give each a nickname and choose whom to listen to |
 | List | Every bet of the meeting, search, cancel/uncancel, print |
 | Winners | Tick the winner of each race (several for a dead heat) |
 | Reports | Client reports: detail and summary (Collect / Pay), add-ons, print |

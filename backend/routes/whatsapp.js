@@ -10,6 +10,7 @@ const WhatsappContact = require('../models/whatsappContact');
 const WhatsappGroup = require('../models/whatsappGroup');
 const WhatsappMessage = require('../models/whatsappMessage');
 const whatsappInbox = require('../lib/whatsappInbox');
+const { usableContacts, syncContacts } = require('../lib/contactSync');
 
 // Configure multer for memory storage with 50MB limit
 const upload = multer({ 
@@ -532,6 +533,20 @@ router.get('/whatsapp-contacts', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching WhatsApp contacts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST: Copy all the contacts of the phone into the saved contacts (existing ones keep their nickname and listen choice)
+router.post('/sync-contacts', async (req, res) => {
+  try {
+    if (!client || !isReady) {
+      return res.status(400).json({ error: 'WhatsApp is not connected' });
+    }
+    const result = await syncContacts(usableContacts(await client.getContacts()));
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error syncing contacts:', error);
     res.status(500).json({ error: error.message });
   }
 });

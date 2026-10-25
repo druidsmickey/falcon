@@ -25,22 +25,6 @@
     <p class="banner" role="alert">{{ error() }}</p>
   }
 
-  <details class="listen">
-    <summary>Who I listen to ({{ listened() }})</summary>
-    @if (contacts().length === 0) {
-      <p class="hint">No contacts saved yet. Import them in the WhatsApp tab first.</p>
-    }
-    @for (contact of contacts(); track contact.id) {
-      <div class="contact">
-        <label class="check">
-          <input type="checkbox" [checked]="contact.listen" (change)="setListen(contact, $any($event.target).checked)">
-          <span>{{ contact.name }}</span>
-        </label>
-        <input class="nick" type="text" placeholder="Nickname (else the name is used)" [value]="contact.nickname"
-               maxlength="100" (change)="setNickname(contact, $event)" [attr.aria-label]="'Nickname for ' + contact.name">
-      </div>
-    }
-  </details>
 
   <!-- The bets that were saved from here, shown the way the Entry page shows its last bet -->
   @if (saved().length > 0) {
@@ -62,7 +46,7 @@
   }
 
   @if (loaded() && drafts().length === 0 && !error()) {
-    <p class="empty">Nothing waiting. Bets sent by the contacts you listen to will appear here.</p>
+    <p class="empty">Nothing waiting. Bets sent by the contacts you listen to will appear here. Choose who to listen to in the WhatsApp tab.</p>
   }
 
   @for (draft of shownDrafts(); track draft.id) {

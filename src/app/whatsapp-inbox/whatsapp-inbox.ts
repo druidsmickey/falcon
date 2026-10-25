@@ -20,14 +20,6 @@ interface OddsList {
   odds: { horseNum: number; odds: number }[];
 }
 
-interface ListenContact {
-  id: string;
-  name: string;
-  number: string;
-  nickname: string;
-  listen: boolean;
-}
-
 interface HorseButton {
   horseNum: number;
   horseName: string;
@@ -81,7 +73,6 @@ export class WhatsappInbox implements OnInit, OnDestroy {
   protected readonly drafts = signal<Draft[]>([]);
   protected readonly saved = signal<SavedBet[]>([]);
   protected readonly odds = signal<OddsList | null>(null);
-  protected readonly contacts = signal<ListenContact[]>([]);
   protected readonly races = signal<SelectedRace[]>([]);
   protected readonly params = signal<HorseParam[]>([]);
   protected readonly error = signal('');
@@ -93,7 +84,6 @@ export class WhatsappInbox implements OnInit, OnDestroy {
   private readonly position = signal(0);
   protected readonly current = computed(() => Math.min(this.position(), Math.max(0, this.drafts().length - 1)));
   protected readonly shownDrafts = computed(() => (this.compact() ? this.drafts().slice(this.current(), this.current() + 1) : this.drafts()));
-  protected readonly listened = computed(() => this.contacts().filter(c => c.listen).length);
 
   async ngOnInit(): Promise<void> {
     if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
@@ -101,7 +91,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
       this.compact.set(phone.matches);
       phone.addEventListener('change', event => this.compact.set(event.matches));
     }
-    await Promise.all([this.refresh(), this.loadContacts(), this.loadMeeting()]);
+    await Promise.all([this.refresh(), this.loadMeeting()]);
     this.timer = setInterval(() => void this.refresh(), 5000);
   }
 
@@ -139,15 +129,6 @@ export class WhatsappInbox implements OnInit, OnDestroy {
     }
   }
 
-  private async loadContacts(): Promise<void> {
-    try {
-      const result = await firstValueFrom(this.http.get<{ contacts: ListenContact[] }>(`${this.api}/contacts`));
-      this.contacts.set(result.contacts);
-    } catch {
-      // shown when the inbox itself cannot be loaded
-    }
-  }
-
   private async loadMeeting(): Promise<void> {
     try {
       this.races.set((await this.meetingData.getSelectedRaces()).slice().sort((a, b) => a.raceNum - b.raceNum));
@@ -155,28 +136,6 @@ export class WhatsappInbox implements OnInit, OnDestroy {
     } catch {
       this.races.set([]);
       this.params.set([]);
-    }
-  }
-
-  // ---------------------------------------------------------------- who is listened to
-
-  protected async setListen(contact: ListenContact, listen: boolean): Promise<void> {
-    await this.saveContact(contact, { listen });
-  }
-
-  protected async setNickname(contact: ListenContact, event: Event): Promise<void> {
-    const nickname = (event.target as HTMLInputElement).value.trim();
-    if (nickname === contact.nickname) return;
-    await this.saveContact(contact, { nickname });
-    await this.refresh();
-  }
-
-  private async saveContact(contact: ListenContact, changes: Partial<Pick<ListenContact, 'listen' | 'nickname'>>): Promise<void> {
-    try {
-      await firstValueFrom(this.http.patch(`${this.api}/contacts/${contact.id}`, changes));
-      this.contacts.update(list => list.map(c => (c.id === contact.id ? { ...c, ...changes } : c)));
-    } catch {
-      this.error.set('That change could not be saved.');
     }
   }
 

@@ -14,13 +14,13 @@ The app manages horse racing meetings, tracks bets (sales/purchases), calculates
 ### Frontend (`src/app/`)
 - **Routing**: Login page → authenticated tabs (home) with route guards
 - **Main App** ([app.ts](../src/app/app.ts)): Tab-based interface importing all feature components
-- **Features as tabs**: `dataentry`, `single`, `chart`, `whatsapp`, `list`, `winners`, `reports`, `merge`, `params`, `init`, `change-password` (plus the Online/Sync and Logout buttons in the tab bar)
+- **Features as tabs**: `dataentry`, `single`, `chart`, `whatsapp-inbox`, `whatsapp` (connection and contacts only), `list`, `winners`, `reports`, `merge`, `params`, `init`, `change-password` (plus the Online/Sync and Logout buttons in the tab bar)
 - **Auth System**: `guards/auth.guard.ts` protects routes, `interceptors/auth.interceptor.ts` adds JWT to requests, `services/auth.service.ts` manages login/logout with activity tracking
 
 ### Backend (`backend/`)
 - **Entry**: `server.js` - Express server with MongoDB connection
 - **Models**: `models/bets.js` (bet records), `models/init.js` (meetings/races), `models/params.js` (horse parameters), `models/syncAudit.js` (offline sync log), `models/whatsapp*.js` (contacts, groups, messages), `model/user.js` (authentication), `model/report.js` (client add-ons)
-- **Routes**: `routes/auth.js` (login, password change), `routes/whatsapp.js` (WhatsApp client, contacts, groups, sending)
+- **Routes**: `routes/auth.js` (login, password change), `routes/whatsapp.js` (WhatsApp client, contacts, sync of the phone's contacts, and the old group/sending routes the app no longer uses), `routes/whatsappInbox.js` (inbox, nickname and listen)
 - **Helpers and tests**: `lib/save.js` (checks the rows of the Params and Init pages and prepares the in-place writes; the winner flag is simply not touched), `lib/db.js` (removes leftover duplicate rows and builds the unique indexes at start-up), `lib/params.js` (checks single-horse updates), `lib/bets.js` (checks every incoming bet: amounts must agree with the F500 or odds), `lib/ratelimit.js` (login attempt limits), `test/` (run with `npm test` in `backend/`)
 - **API Base**: All endpoints prefixed with `/api/` except `/auth/`
 

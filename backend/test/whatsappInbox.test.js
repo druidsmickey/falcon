@@ -190,3 +190,43 @@ test('the number of bets waiting for approval follows what arrives and what is d
   await inbox.decide(items[1].id, 'dismissed');
   assert.equal(await inbox.countPending(), 1);
 });
+
+// ---------------------------------------------------------------- copying the contacts of the phone
+
+const { usableContacts, syncContacts } = require('../lib/contactSync');
+const phone = (name, number, over = {}) => ({ name, id: { _serialized: number }, isUser: true, isMe: false, ...over });
+
+test('only named people are taken from the phone, once each', () => {
+  const list = usableContacts([
+    phone('Ann Smith', '1@c.us'),
+    phone('Ann Smith again', '1@c.us'),
+    phone('A Group', '2@g.us', { isUser: false }),
+    phone('Me', '3@c.us', { isMe: true }),
+    phone('', '4@c.us'),
+    phone(undefined, '5@c.us'),
+    { name: 'No id', isUser: true },
+    phone('  Bob Jones ', '6@c.us'),
+    null,
+  ]);
+  assert.deepEqual(list, [{ number: '1@c.us', name: 'Ann Smith' }, { number: '6@c.us', name: 'Bob Jones' }]);
+  assert.deepEqual(usableContacts(undefined), []);
+});
+
+test('syncing adds new contacts and keeps the nickname and listen choice of saved ones', async () => {
+  // beforeEach saved Ann (nickname Annie, listening), Bob and Cat
+  const result = await syncContacts([
+    { number: '4477001@c.us', name: 'Ann Smith-Jones' },
+    { number: '4477002@c.us', name: 'Bob Jones' },
+    { number: '9@c.us', name: 'Dan New' },
+  ]);
+  assert.deepEqual(result, { total: 3, added: 1, renamed: 1 });
+
+  const ann = await WhatsappContact.findOne({ number: '4477001@c.us' });
+  assert.deepEqual([ann.name, ann.nickname, ann.listen], ['Ann Smith-Jones', 'Annie', true]);
+  const dan = await WhatsappContact.findOne({ number: '9@c.us' });
+  assert.deepEqual([dan.name, dan.nickname, dan.listen], ['Dan New', '', false]);
+  assert.equal(await WhatsappContact.countDocuments(), 4);
+
+  // a second sync changes nothing
+  assert.deepEqual(await syncContacts([{ number: '9@c.us', name: 'Dan New' }]), { total: 1, added: 0, renamed: 0 });
+});
