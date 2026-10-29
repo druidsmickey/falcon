@@ -307,7 +307,7 @@ async function handleOwn(message) {
 
 /** Messages older than this are not taken up by the fallback below (it is for what the live events missed). */
 const POLL_WINDOW_MS = 3 * 60 * 60 * 1000;
-const POLL_EVERY_MS = 20 * 1000;
+const POLL_EVERY_MS = 60 * 1000;
 const POLL_MESSAGES_PER_CHAT = 15;
 
 /**
