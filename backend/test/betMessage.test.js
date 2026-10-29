@@ -263,3 +263,61 @@ test('the amount with a k is the amount wherever it stands, and without a k noth
   const plain = one('3 500 90');
   assert.deepEqual([plain.horseNum, plain.books, plain.f500], [3, 500, 90]);
 });
+
+// ---------------------------------------------------------------- only races and horses that exist in the meeting
+
+const meeting = (() => {
+  const horses = [];
+  for (let race = 1; race <= 8; race++) {
+    const count = race === 6 ? 10 : race === 3 ? 12 : 6;
+    for (let horse = 1; horse <= count; horse++) horses.push({ raceNum: race, horseNum: horse, horseName: `R${race}H${horse}` });
+  }
+  return horses;
+})();
+const eight = { raceNum: 5, runners: 6, horses: meeting };
+
+test('"13" is race 1 horse 3 when there are 8 races and no race has 13 horses', () => {
+  const bet = one('13 2k@200', eight);
+  assert.deepEqual([bet.raceNum, bet.horseNum], [1, 3]);
+  assert.equal(bet.unsure, true); // the odds list is for race 5
+  assert.ok(bet.issues.some(i => /odds list is for race 5/.test(i)));
+});
+
+test('a race or a horse that does not exist in the meeting is never proposed', () => {
+  // 8 races: 13, 21 (race 21) and 99 do not exist as races; horse 13 exists nowhere
+  const none = one('99 500x90', eight);
+  assert.deepEqual([none.horseNum, none.unsure], [null, true]);
+  assert.match(none.issues[0], /"99" is not a horse of this meeting/);
+  assert.match(none.issues[0], /races 1, 2, 3, 4, 5, 6, 7, 8/);
+
+  // 9x: race 9 does not exist
+  assert.equal(one('92 5k', eight).horseNum, null);
+  // horse 3 of race 6, and horse 8 of race 6 (it has 10 horses)
+  assert.deepEqual([one('25k 68 @ 650', eight).raceNum, one('25k 68 @ 650', eight).horseNum], [6, 8]);
+  // race 4 has no horse 8
+  assert.equal(one('48 5k', eight).horseNum, null);
+});
+
+test('when the current race has that horse and the digits also fit a race and horse, the person is told', () => {
+  const bet = one('13 5k', { raceNum: 3, runners: 12, horses: meeting }); // race 3 has 12 horses: horse 13 does not exist
+  assert.deepEqual([bet.raceNum, bet.horseNum], [1, 3]);
+  const both = one('12 5k', { raceNum: 3, runners: 12, horses: meeting }); // horse 12 of race 3, or race 1 horse 2
+  assert.deepEqual([both.raceNum, both.horseNum, both.unsure], [3, 12, true]);
+  assert.match(both.issues[0], /horse 12, or race 1 horse 2/);
+});
+
+test('a written race must exist, with that horse', () => {
+  const noRace = one('r13 2 5k', eight);
+  assert.deepEqual([noRace.raceNum, noRace.horseNum, noRace.unsure], [13, 2, true]);
+  assert.match(noRace.issues[0], /there is no race 13 in this meeting/);
+  const noHorse = one('r4 9 5k', eight);
+  assert.match(noHorse.issues[0], /race 4 has no horse 9/);
+  const fine = one('r6 9 5k', eight);
+  assert.deepEqual([fine.raceNum, fine.horseNum, fine.unsure], [6, 9, false]);
+});
+
+test('with one race in the meeting and no odds list, that race is the current one', () => {
+  const single = meeting.filter(h => h.raceNum === 2);
+  const bet = one('3 5k', { raceNum: null, runners: null, horses: single });
+  assert.deepEqual([bet.raceNum, bet.horseNum, bet.unsure], [2, 3, false]);
+});

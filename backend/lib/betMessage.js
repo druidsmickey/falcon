@@ -72,16 +72,30 @@ function parseOddsList(text) {
 function readHorse(digits, explicitRace, context) {
   const issues = [];
   const known = context.runners !== null;
-  const horseOk = n => n >= 1 && n <= (known ? context.runners : MAX_HORSE);
+
+  // When the horses of the meeting are known, a race and horse only count if they exist there: "13" is not
+  // race 13 when the meeting has 8 races, nor horse 13 when no race has 13 horses.
+  const list = context.horses || [];
+  const hasList = list.length > 0;
+  const exists = (race, horse) => list.some(h => h.raceNum === race && h.horseNum === horse);
+  const races = new Set(list.map(h => h.raceNum));
+  // without an odds list the race is still known when the meeting has only one
+  const currentRace = context.raceNum !== null ? context.raceNum : hasList && races.size === 1 ? [...races][0] : null;
 
   if (explicitRace !== null) {
     const horse = Number(digits);
     if (horse < 1 || horse > MAX_HORSE) issues.push('horse number not recognised');
-    return { raceNum: explicitRace, horseNum: horse, unsure: false, issues };
+    else if (hasList && !races.has(explicitRace)) issues.push(`there is no race ${explicitRace} in this meeting`);
+    else if (hasList && !exists(explicitRace, horse)) issues.push(`race ${explicitRace} has no horse ${horse}`);
+    return { raceNum: explicitRace, horseNum: horse, unsure: issues.length > 0, issues };
   }
 
   const n = Number(digits);
-  const asHorse = horseOk(n) ? { raceNum: context.raceNum, horseNum: n } : null;
+  const asHorse = (hasList
+    ? currentRace !== null && exists(currentRace, n)
+    : n >= 1 && n <= (known ? context.runners : MAX_HORSE))
+    ? { raceNum: currentRace, horseNum: n }
+    : null;
 
   // "11" can also be race 1 horse 1: the digits are split in every possible place
   const splits = [];
@@ -89,23 +103,32 @@ function readHorse(digits, explicitRace, context) {
     const race = Number(digits.slice(0, at));
     const horse = Number(digits.slice(at));
     if (digits[at] === '0' || race < 1 || race > MAX_RACE) continue;
+    if (hasList) {
+      if (exists(race, horse)) splits.push({ raceNum: race, horseNum: horse });
+      continue;
+    }
     const limit = race === context.raceNum && known ? context.runners : MAX_HORSE;
     if (horse >= 1 && horse <= limit) splits.push({ raceNum: race, horseNum: horse });
   }
 
   if (asHorse && splits.length === 0) {
-    if (context.raceNum === null) issues.push('race not known yet (no odds list received)');
+    if (currentRace === null) issues.push('race not known yet (no odds list received)');
     return { ...asHorse, unsure: false, issues };
   }
   if (!asHorse && splits.length >= 1) {
     const chosen = splits[0];
     if (splits.length > 1) issues.push(`could be race ${splits.map(s => s.raceNum + ' horse ' + s.horseNum).join(' or race ')}`);
-    if (context.raceNum !== null && chosen.raceNum !== context.raceNum) issues.push(`race ${chosen.raceNum}, the odds list is for race ${context.raceNum}`);
-    return { ...chosen, unsure: splits.length > 1 || (context.raceNum !== null && chosen.raceNum !== context.raceNum), issues };
+    if (currentRace !== null && chosen.raceNum !== currentRace) issues.push(`race ${chosen.raceNum}, the odds list is for race ${currentRace}`);
+    return { ...chosen, unsure: splits.length > 1 || (currentRace !== null && chosen.raceNum !== currentRace), issues };
   }
   if (asHorse && splits.length >= 1) {
     issues.push(`horse ${asHorse.horseNum}, or race ${splits[0].raceNum} horse ${splits[0].horseNum}?`);
     return { ...asHorse, unsure: true, issues };
+  }
+  if (hasList) {
+    // nothing in the meeting fits: the person picks, instead of a race or horse that does not exist being proposed
+    issues.push(`"${digits}" is not a horse of this meeting, nor a race and horse (it has races ${[...races].sort((a, b) => a - b).join(', ')})`);
+    return { raceNum: currentRace, horseNum: null, unsure: true, issues };
   }
   issues.push('horse number not recognised');
   return { raceNum: context.raceNum, horseNum: n, unsure: true, issues };
