@@ -229,3 +229,45 @@ test('syncing adds new contacts and keeps the nickname and listen choice of save
   // a second sync changes nothing
   assert.deepEqual(await syncContacts([{ number: '9@c.us', name: 'Dan New' }]), { total: 1, added: 0, renamed: 0 });
 });
+
+// ---------------------------------------------------------------- hidden ids, and explaining what happened to a message
+
+test('a sender named by a hidden id is found through its contact', async () => {
+  const hidden = message('11 500x90', { from: '55501234567890@lid', getContact: async () => ({ id: { _serialized: '4477001@c.us' }, number: '4477001' }) });
+  assert.equal(await inbox.handleIncoming(hidden), 1);
+  assert.equal((await inbox.listPending()).items[0].clientName, 'ANNIE');
+
+  // when the contact cannot be asked, the phone number inside the contact is enough
+  const byNumber = message('2 5k', { from: '999@lid', getContact: async () => ({ id: { _serialized: '999@lid' }, number: '4477002' }) });
+  assert.equal(await inbox.handleIncoming(byNumber), 1);
+
+  const failing = message('3 5k', { from: '4477001@c.us', getContact: async () => { throw new Error('gone'); } });
+  assert.equal(await inbox.handleIncoming(failing), 1);
+});
+
+test('the server says what it did with each message', async () => {
+  inbox.clearActivity();
+  await inbox.handleIncoming(message('11 500x90')); // Ann, listened to
+  await inbox.handleIncoming(message('hello', { from: '4477001@c.us' })); // nothing to read
+  await inbox.handleIncoming(message('1 5k', { from: '4477003@c.us' })); // Cat, saved but not listened to
+  await inbox.handleIncoming(message('1 5k', { from: '9999999@c.us' })); // not saved
+  const m = message('1 5k\n2 5k', { from: '4477002@c.us' });
+  await inbox.handleIncoming(m);
+  await inbox.handleIncoming(m); // the same message again
+
+  const log = inbox.getActivity();
+  const results = log.map(a => a.result).reverse();
+  assert.deepEqual(results, [
+    'added 1 bet to the inbox',
+    'nothing to read in it (no bet, or only numbers)',
+    'contact is saved but not ticked to listen to',
+    'not a saved contact: press "Sync contacts from the phone"',
+    'added 2 bets to the inbox',
+    'already in the inbox',
+  ]);
+  // the text is only kept for contacts that are listened to
+  assert.equal(log.find(a => a.name === 'Cat Silent').text, null);
+  assert.equal(log.find(a => a.from === '9999999').text, null);
+  assert.equal(log[log.length - 1].text, '11 500x90');
+  assert.equal(log.length <= 30, true);
+});

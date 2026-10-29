@@ -49,6 +49,29 @@
     }
   </mat-card>
 
+  <!-- what the server did with the latest messages: explains a bet that did not reach the Inbox -->
+  <mat-card class="activity">
+    <mat-card-header>
+      <mat-card-title>Messages received</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @for (item of activity(); track item.at + item.from) {
+        <div class="received">
+          <div class="received-top">
+            <strong>{{ item.name || item.from }}</strong>
+            <span class="time">{{ item.at | date: 'HH:mm:ss' }}</span>
+          </div>
+          @if (item.text) {
+            <div class="said">{{ item.text }}</div>
+          }
+          <div class="result">{{ item.result }}</div>
+        </div>
+      } @empty {
+        <p class="hint">Nothing received since the server started. If a contact sent a message and it is not here, WhatsApp is not delivering it to the server: check that it says Connected above.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
   <!-- the contacts: one button to copy them from the phone, then a nickname and who to listen to -->
   <mat-card class="contacts">
     <mat-card-header>

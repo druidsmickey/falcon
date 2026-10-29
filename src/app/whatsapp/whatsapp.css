@@ -153,3 +153,36 @@ mat-card {
   font-size: 1rem;
   box-sizing: border-box;
 }
+
+/* ---------------------------------------------------------------- messages received */
+
+.received {
+  padding: 8px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.received-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.time {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.said {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #e2e8f0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.result {
+  color: #475569;
+  font-size: 0.85rem;
+}

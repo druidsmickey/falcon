@@ -39,6 +39,11 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET: what the server did with the latest messages (to find out why one did not arrive)
+router.get('/activity', (req, res) => {
+  res.json({ messages: inbox.getActivity() });
+});
+
 // GET: how many bets wait for approval (shown on the tab)
 router.get('/count', async (req, res) => {
   try {

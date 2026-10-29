@@ -26,18 +26,54 @@ async function currentContext() {
   return { raceNum: latest ? latest.raceNum : null, runners: latest ? latest.runners : null, horses };
 }
 
-async function findListenedContact(sender) {
-  if (!sender) return null;
-  const exact = await WhatsappContact.findOne({ number: sender, listen: true });
-  if (exact) return exact;
-  // the same person written another way (with or without the @c.us part)
-  const digits = digitsOf(sender);
-  if (digits.length < 6) return null;
-  const candidates = await WhatsappContact.find({ listen: true });
-  return candidates.find(c => digitsOf(c.number) === digits) || null;
+/**
+ * The ids a message can be matched on. WhatsApp sometimes names the sender with a hidden id ("...@lid") that is
+ * not the phone number, so the contact the message belongs to is asked for as well.
+ */
+async function senderCandidates(message) {
+  const ids = [message.author, message.from];
+  if (typeof message.getContact === 'function') {
+    try {
+      const contact = await message.getContact();
+      if (contact) {
+        ids.push(contact.id && contact.id._serialized);
+        if (contact.number) ids.push(contact.number + '@c.us');
+        if (contact.id && contact.id.user) ids.push(contact.id.user + '@c.us');
+      }
+    } catch {
+      // the other ids are still tried
+    }
+  }
+  return [...new Set(ids.filter(Boolean))];
 }
 
+/** The saved contact that one of the ids belongs to (listened to or not), or null. */
+async function findContact(candidates) {
+  if (candidates.length === 0) return null;
+  const exact = await WhatsappContact.findOne({ number: { $in: candidates } });
+  if (exact) return exact;
+  // the same person written another way (with or without the @c.us part)
+  const digits = candidates.map(digitsOf).filter(d => d.length >= 6);
+  if (digits.length === 0) return null;
+  const all = await WhatsappContact.find();
+  return all.find(c => digits.includes(digitsOf(c.number))) || null;
+}
+
+// What the server did with the latest messages, so that a message that did not arrive can be explained
+// (shown in the WhatsApp tab). Kept in memory only; the text is only kept for contacts that are listened to.
+const activity = [];
+const ACTIVITY_LIMIT = 30;
+
+function record(entry) {
+  activity.unshift({ at: new Date().toISOString(), ...entry });
+  if (activity.length > ACTIVITY_LIMIT) activity.length = ACTIVITY_LIMIT;
+}
+
+const getActivity = () => activity.map(a => ({ ...a }));
+const clearActivity = () => { activity.length = 0; };
+
 const sentAtOf = message => new Date((Number(message.timestamp) || Date.now() / 1000) * 1000);
+const preview = text => String(text).replace(/\s+/g, ' ').trim().slice(0, 60);
 
 /** A message from a contact that is listened to: every bet in it goes to the inbox. Returns how many were added. */
 async function handleIncoming(message) {
@@ -47,9 +83,17 @@ async function handleIncoming(message) {
   const messageId = message.id && message.id._serialized;
   if (!messageId) return 0;
 
-  const sender = message.author || message.from;
-  const contact = await findListenedContact(sender);
-  if (!contact) return 0;
+  const candidates = await senderCandidates(message);
+  const contact = await findContact(candidates);
+  const who = digitsOf(message.author || message.from) || 'unknown';
+  if (!contact) {
+    record({ from: who, name: null, text: null, result: 'not a saved contact: press "Sync contacts from the phone"' });
+    return 0;
+  }
+  if (!contact.listen) {
+    record({ from: who, name: contact.name, text: null, result: 'contact is saved but not ticked to listen to' });
+    return 0;
+  }
 
   const parsed = parseBetMessage(message.body, await currentContext());
   let added = 0;
@@ -86,6 +130,12 @@ async function handleIncoming(message) {
     const result = await WhatsappInbox.updateOne({ key }, { $setOnInsert: doc }, { upsert: true });
     if (result.upsertedCount) added += 1;
   }
+
+  let result;
+  if (parsed.length === 0) result = 'nothing to read in it (no bet, or only numbers)';
+  else if (added === 0) result = 'already in the inbox';
+  else result = added === 1 ? 'added 1 bet to the inbox' : `added ${added} bets to the inbox`;
+  record({ from: who, name: contact.name, text: preview(message.body), result });
   return added;
 }
 
@@ -240,4 +290,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };

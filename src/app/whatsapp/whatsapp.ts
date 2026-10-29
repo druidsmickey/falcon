@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -31,13 +32,22 @@ interface ListenContact {
   listen: boolean;
 }
 
+/** What the server did with a message it received (to explain why a bet did not reach the inbox). */
+interface ActivityItem {
+  at: string;
+  from: string;
+  name: string | null;
+  text: string | null;
+  result: string;
+}
+
 /**
  * The WhatsApp tab: the connection to WhatsApp, one button that copies the contacts of the phone, and for each
  * contact the nickname bets are entered under and whether its messages are read (they then arrive in the Inbox).
  */
 @Component({
   selector: 'app-whatsapp',
-  imports: [MatButtonModule, MatCardModule, MatProgressSpinnerModule],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatProgressSpinnerModule],
   templateUrl: './whatsapp.html',
   styleUrl: './whatsapp.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,6 +65,7 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected readonly search = signal('');
   protected readonly onlyListened = signal(false);
   protected readonly error = signal('');
+  protected readonly activity = signal<ActivityItem[]>([]);
 
   protected readonly listened = computed(() => this.contacts().filter(c => c.listen).length);
   protected readonly shown = computed(() => {
@@ -71,9 +82,11 @@ export class Whatsapp implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.checkStatus();
     void this.loadContacts();
+    void this.loadActivity();
     // while not connected the status (and the QR code) is checked every 3 seconds
     this.timer = setInterval(() => {
       if (this.status().status !== 'ready') void this.checkStatus();
+      void this.loadActivity();
     }, 3000);
   }
 
@@ -177,6 +190,17 @@ export class Whatsapp implements OnInit, OnDestroy {
         if (this.lastQrText === qrText) this.qrImage.set(image);
       })
       .catch(error => console.error('Error drawing the QR code:', error));
+  }
+
+  // ---------------------------------------------------------------- what was received
+
+  protected async loadActivity(): Promise<void> {
+    try {
+      const result = await firstValueFrom(this.http.get<{ messages: ActivityItem[] }>(`${this.api}/api/whatsapp-inbox/activity`));
+      this.activity.set(result.messages.slice(0, 15));
+    } catch {
+      // the next check tries again
+    }
   }
 
   // ---------------------------------------------------------------- the contacts
