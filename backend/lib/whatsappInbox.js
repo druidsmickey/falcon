@@ -69,19 +69,31 @@ function record(entry) {
   if (activity.length > ACTIVITY_LIMIT) activity.length = ACTIVITY_LIMIT;
 }
 
+const recentIds = new Set();
 const getActivity = () => activity.map(a => ({ ...a }));
-const clearActivity = () => { activity.length = 0; };
+const clearActivity = () => { activity.length = 0; recentIds.clear(); };
 
 const sentAtOf = message => new Date((Number(message.timestamp) || Date.now() / 1000) * 1000);
 const preview = text => String(text).replace(/\s+/g, ' ').trim().slice(0, 60);
 
 /** A message from a contact that is listened to: every bet in it goes to the inbox. Returns how many were added. */
 async function handleIncoming(message) {
-  if (!message || message.fromMe || message.isStatus || !message.body) return 0;
+  if (!message || message.fromMe || message.isStatus) return 0;
   if (/@broadcast$/.test(message.from || '')) return 0;
 
   const messageId = message.id && message.id._serialized;
   if (!messageId) return 0;
+
+  // WhatsApp can announce a message twice (both events are listened to), but it is read once
+  if (recentIds.has(messageId)) return 0;
+  recentIds.add(messageId);
+  if (recentIds.size > 500) recentIds.delete(recentIds.values().next().value);
+  console.log('WhatsApp inbox: message received from', digitsOf(message.author || message.from) || 'unknown');
+
+  if (!message.body) {
+    record({ from: digitsOf(message.author || message.from) || 'unknown', name: null, text: null, result: 'no text in it (photo, voice note or similar)' });
+    return 0;
+  }
 
   const candidates = await senderCandidates(message);
   const contact = await findContact(candidates);
@@ -159,8 +171,9 @@ function attach(client) {
   const guard = (name, handler) => message => {
     handler(message).catch(error => console.error(`WhatsApp inbox (${name}):`, error.message));
   };
+  // some versions of the library only announce a message with one of the two events, so both are used
   client.on('message', guard('incoming', handleIncoming));
-  client.on('message_create', guard('own', handleOwn));
+  client.on('message_create', guard('created', message => (message && message.fromMe ? handleOwn(message) : handleIncoming(message))));
 }
 
 // ---------------------------------------------------------------- what the app asks for

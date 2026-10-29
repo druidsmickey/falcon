@@ -253,7 +253,7 @@ test('the server says what it did with each message', async () => {
   await inbox.handleIncoming(message('1 5k', { from: '9999999@c.us' })); // not saved
   const m = message('1 5k\n2 5k', { from: '4477002@c.us' });
   await inbox.handleIncoming(m);
-  await inbox.handleIncoming(m); // the same message again
+  assert.equal(await inbox.handleIncoming(m), 0); // the same message announced again is read once
 
   const log = inbox.getActivity();
   const results = log.map(a => a.result).reverse();
@@ -263,11 +263,42 @@ test('the server says what it did with each message', async () => {
     'contact is saved but not ticked to listen to',
     'not a saved contact: press "Sync contacts from the phone"',
     'added 2 bets to the inbox',
-    'already in the inbox',
   ]);
   // the text is only kept for contacts that are listened to
   assert.equal(log.find(a => a.name === 'Cat Silent').text, null);
   assert.equal(log.find(a => a.from === '9999999').text, null);
   assert.equal(log[log.length - 1].text, '11 500x90');
   assert.equal(log.length <= 30, true);
+});
+
+test('a message without text is noted, and a message announced twice is read once', async () => {
+  inbox.clearActivity();
+  const photo = message('', { from: '4477001@c.us', body: '' });
+  assert.equal(await inbox.handleIncoming(photo), 0);
+  assert.equal(inbox.getActivity()[0].result, 'no text in it (photo, voice note or similar)');
+
+  const m = message('1 500x90');
+  assert.equal(await inbox.handleIncoming(m), 1);
+  assert.equal(await inbox.handleIncoming({ ...m }), 0);
+  assert.equal(await WhatsappInbox.countDocuments(), 1);
+});
+
+test('both message events of the client feed the inbox', async () => {
+  const handlers = {};
+  inbox.attach({ on: (name, handler) => { handlers[name] = handler; } });
+  assert.deepEqual(Object.keys(handlers).sort(), ['message', 'message_create']);
+
+  const m = message('2 5k');
+  handlers.message_create(m); // an incoming message announced only by message_create
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.equal(await WhatsappInbox.countDocuments(), 1);
+
+  handlers.message(m); // announced again by message: not read twice
+  await new Promise(resolve => setTimeout(resolve, 200));
+  assert.equal(await WhatsappInbox.countDocuments(), 1);
+
+  const own = message('r1\n1 1500\n2 500', { fromMe: true, from: 'me@c.us' });
+  handlers.message_create(own);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.equal(await WhatsappOdds.countDocuments(), 1);
 });
