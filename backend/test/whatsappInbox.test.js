@@ -453,10 +453,35 @@ test('the trace says what the server did with each announcement', async () => {
     'done: added 1 bet to the inbox',
     'done: not a saved contact',
     'done: no text in it',
-    'dropped: the message has no id',
+    'done: nothing to read in it (no bet, or only numbers)',
   ]);
   const first = inbox.getTrace()[4];
   assert.equal(first.fromMe, true);
   assert.equal(inbox.getTrace()[1].type, 'e2e_notification');
   assert.ok(inbox.getTrace().length <= 20);
+});
+
+test('a message without WhatsApp id is read, once, under an id made from the message', async () => {
+  inbox.clearActivity();
+  const bare = { type: 'chat', from: '4477001@c.us', body: '41 20k @ 1000', timestamp: 1790000100, fromMe: false };
+  assert.equal(await inbox.handleIncoming(bare), 1);
+  assert.equal(await inbox.handleIncoming({ ...bare }), 0); // announced again
+  const [bet] = (await inbox.listPending()).items;
+  assert.deepEqual([bet.clientName, bet.raceNum, bet.horseNum, bet.stake, bet.odds100], ['ANNIE', 4, 1, 20000, 1000]);
+
+  // a different message, or the same text sent later, is a different message
+  assert.equal(await inbox.handleIncoming({ ...bare, timestamp: 1790000200 }), 1);
+  assert.equal(await inbox.handleIncoming({ ...bare, body: '25k 68 @ 650' }), 1);
+  assert.equal((await inbox.listPending()).items.length, 3);
+});
+
+test('the id of a message is taken from whichever form WhatsApp gives it in', () => {
+  assert.equal(inbox.messageIdOf({ id: { _serialized: 'false_1@c.us_ABC' } }), 'false_1@c.us_ABC');
+  assert.equal(inbox.messageIdOf({ id: 'plain-id' }), 'plain-id');
+  assert.equal(inbox.messageIdOf({ from: 'x@c.us', id: { fromMe: false, remote: '1@c.us', id: 'ABC' } }), 'false_1@c.us_ABC_');
+  const made = inbox.messageIdOf({ from: '1@c.us', body: 'hi', timestamp: 5 });
+  assert.match(made, /^made-[0-9a-f]{32}$/);
+  assert.equal(made, inbox.messageIdOf({ from: '1@c.us', body: 'hi', timestamp: 5 }));
+  assert.notEqual(made, inbox.messageIdOf({ from: '1@c.us', body: 'hi', timestamp: 6 }));
+  assert.equal(inbox.messageIdOf(null), null);
 });

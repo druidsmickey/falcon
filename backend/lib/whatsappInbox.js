@@ -9,6 +9,23 @@ const Init = require('../models/init');
 const Params = require('../models/params');
 const { parseBetMessage, parseOddsList, emptyContext } = require('./betMessage');
 
+/**
+ * A name for a message that is the same every time the message is announced. WhatsApp's own id is used when the
+ * message has one (in its serialized form, or built from its parts); some messages arrive without, and then the
+ * name is made from who sent it, when, and what it says, so that no message is dropped for lacking an id.
+ */
+function messageIdOf(message) {
+  if (!message || typeof message !== 'object') return null;
+  const id = message.id;
+  if (typeof id === 'string' && id) return id;
+  if (id && typeof id === 'object') {
+    if (id._serialized) return String(id._serialized);
+    if (id.id) return [id.fromMe ? 'true' : 'false', id.remote || message.from || '', id.id, id.participant || ''].join('_');
+  }
+  const basis = [message.from || '', message.author || '', message.timestamp || '', message.body || '', message.type || ''].join('|');
+  return 'made-' + crypto.createHash('sha1').update(basis).digest('hex').slice(0, 32);
+}
+
 const requestIdFor = key => 'wa-' + crypto.createHash('sha1').update(key).digest('hex').slice(0, 24);
 const digitsOf = id => String(id || '').split('@')[0].replace(/\D/g, '');
 
@@ -108,7 +125,7 @@ const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEve
 const countedIds = new Set();
 const getCounters = () => ({ startedAt, ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
 function noteEvent(message) {
-  const id = message && message.id && message.id._serialized;
+  const id = messageIdOf(message);
   if (id) {
     if (countedIds.has(id)) return;
     countedIds.add(id);
@@ -146,7 +163,7 @@ function traceEntry(message) {
     fromMe: !!message.fromMe,
     isStatus: !!message.isStatus,
     hasBody: !!message.body,
-    hasId: !!(message.id && message.id._serialized),
+    hasId: !!(message.id && (typeof message.id === 'string' || message.id._serialized || message.id.id)),
     branch: 'announced',
   };
   trace.unshift(entry);
@@ -177,7 +194,7 @@ async function handleIncoming(message) {
   if (message.fromMe || message.isStatus) { mark(message, 'ignored: sent by you, or a status'); return 0; }
   if (/@broadcast$/.test(message.from || '')) { mark(message, 'ignored: broadcast'); return 0; }
 
-  const messageId = message.id && message.id._serialized;
+  const messageId = messageIdOf(message);
   if (!messageId) { mark(message, 'dropped: the message has no id'); return 0; }
 
   // WhatsApp can announce a message twice (both events are listened to), but it is read once
@@ -277,7 +294,7 @@ async function handleIncoming(message) {
 async function handleOwn(message) {
   if (!message || !message.fromMe || !message.body) return false;
   const list = parseOddsList(message.body);
-  const messageId = message.id && message.id._serialized;
+  const messageId = messageIdOf(message);
   if (!list || !messageId) return false;
 
   const result = await WhatsappOdds.updateOne(
@@ -486,4 +503,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
