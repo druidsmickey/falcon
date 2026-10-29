@@ -74,6 +74,8 @@ All paths start with `/api/whatsapp` unless written in full.
 
 ## Reading bets from messages (Inbox tab)
 
+Messages reach the inbox two ways: WhatsApp announces them as they arrive, and, in case that fails, every 20 seconds the server also asks the chat of each listened contact for its latest messages (only those from the last 3 hours). A message seen both ways is read once, and bets sent while the connection was down are picked up when it is back. The **Messages received** card in the WhatsApp tab shows how many messages WhatsApp announced and how many times the chats were checked.
+
 The server can read the bets your contacts send and list them in the **Inbox** tab for you to confirm. Nothing is entered until you press **Confirm**.
 
 **Set up**

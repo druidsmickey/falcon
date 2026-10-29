@@ -70,8 +70,23 @@ function record(entry) {
 }
 
 const recentIds = new Set();
+// How many times WhatsApp announced something, whatever was done with it: tells "WhatsApp sends nothing" from
+// "WhatsApp sends it and the server ignores it".
+const counters = { events: 0, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, polled: 0, lastPollAt: null };
+const getCounters = () => ({ ...counters, ignored: { ...counters.ignored } });
+function noteEvent(message) {
+  counters.events += 1;
+  counters.lastEventAt = new Date().toISOString();
+  if (message && message.fromMe) counters.ignored.fromMe += 1;
+  else if (message && message.isStatus) counters.ignored.status += 1;
+  else if (message && /@broadcast$/.test(message.from || '')) counters.ignored.broadcast += 1;
+}
 const getActivity = () => activity.map(a => ({ ...a }));
-const clearActivity = () => { activity.length = 0; recentIds.clear(); };
+const clearActivity = () => {
+  activity.length = 0;
+  recentIds.clear();
+  Object.assign(counters, { events: 0, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 } });
+};
 
 const sentAtOf = message => new Date((Number(message.timestamp) || Date.now() / 1000) * 1000);
 const preview = text => String(text).replace(/\s+/g, ' ').trim().slice(0, 60);
@@ -166,14 +181,70 @@ async function handleOwn(message) {
   return !!result.upsertedCount;
 }
 
+/** Messages older than this are not taken up by the fallback below (it is for what the live events missed). */
+const POLL_WINDOW_MS = 3 * 60 * 60 * 1000;
+const POLL_EVERY_MS = 20 * 1000;
+const POLL_MESSAGES_PER_CHAT = 15;
+
+/**
+ * The live events can fail (WhatsApp changes its web page, a hidden id, a lost event). So the chats of the
+ * contacts that are listened to are also asked for their latest messages now and then; what is new goes the same
+ * way as a live message, and a message seen both ways is read once. This also picks up bets sent while the
+ * connection was down, once it is back. Returns how many bets were added.
+ */
+async function pollListened(client, now = Date.now()) {
+  const contacts = await WhatsappContact.find({ listen: true });
+  let added = 0;
+  for (const contact of contacts) {
+    let chat;
+    try {
+      chat = await client.getChatById(contact.number);
+    } catch {
+      continue; // not ready yet, or no chat with this contact
+    }
+    if (!chat || typeof chat.fetchMessages !== 'function') continue;
+    let messages = [];
+    try {
+      messages = await chat.fetchMessages({ limit: POLL_MESSAGES_PER_CHAT });
+    } catch {
+      continue;
+    }
+    // oldest first, so that bets come in the order they were sent
+    for (const message of [...messages].sort((x, y) => (x.timestamp || 0) - (y.timestamp || 0))) {
+      if (!message || message.fromMe || (Number(message.timestamp) || 0) * 1000 < now - POLL_WINDOW_MS) continue;
+      added += await handleIncoming(message);
+    }
+  }
+  counters.polled += 1;
+  counters.lastPollAt = new Date().toISOString();
+  return added;
+}
+
 /** Starts listening on a WhatsApp client. Errors are logged, never thrown into the client. */
-function attach(client) {
+function attach(client, { pollEveryMs = POLL_EVERY_MS } = {}) {
   const guard = (name, handler) => message => {
     handler(message).catch(error => console.error(`WhatsApp inbox (${name}):`, error.message));
   };
   // some versions of the library only announce a message with one of the two events, so both are used
-  client.on('message', guard('incoming', handleIncoming));
-  client.on('message_create', guard('created', message => (message && message.fromMe ? handleOwn(message) : handleIncoming(message))));
+  client.on('message', guard('incoming', async message => { noteEvent(message); return handleIncoming(message); }));
+  client.on('message_create', guard('created', async message => {
+    noteEvent(message);
+    return message && message.fromMe ? handleOwn(message) : handleIncoming(message);
+  }));
+
+  // the fallback, while this client lives
+  if (pollEveryMs > 0 && typeof client.once === 'function') {
+    let running = false;
+    const timer = setInterval(() => {
+      if (running) return;
+      running = true;
+      pollListened(client)
+        .catch(error => console.error('WhatsApp inbox (poll):', error.message))
+        .finally(() => { running = false; });
+    }, pollEveryMs);
+    if (typeof timer.unref === 'function') timer.unref();
+    client.once('disconnected', () => clearInterval(timer));
+  }
 }
 
 // ---------------------------------------------------------------- what the app asks for
@@ -303,4 +374,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };

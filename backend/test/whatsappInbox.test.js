@@ -302,3 +302,60 @@ test('both message events of the client feed the inbox', async () => {
   await new Promise(resolve => setTimeout(resolve, 300));
   assert.equal(await WhatsappOdds.countDocuments(), 1);
 });
+
+// ---------------------------------------------------------------- the fallback: asking the chats for their latest messages
+
+const fakeClient = chats => ({
+  getChatById: async id => {
+    if (!chats[id]) throw new Error('no chat');
+    return { fetchMessages: async () => chats[id] };
+  },
+});
+const sent = (body, ago = 60, over = {}) => message(body, { timestamp: Math.floor(Date.now() / 1000) - ago, ...over });
+
+test('messages the live events missed are taken from the chats of the listened contacts', async () => {
+  inbox.clearActivity();
+  const missed = sent('11 500x90', 120);
+  const older = sent('2 5k', 5 * 3600); // too old: from before the connection came back
+  const mine = sent('3 5k', 30, { fromMe: true });
+  const client = fakeClient({ '4477001@c.us': [missed, older, mine], '4477003@c.us': [sent('4 5k')] }); // Cat is not listened to
+  assert.equal(await inbox.pollListened(client), 1);
+  const { items } = await inbox.listPending();
+  assert.deepEqual(items.map(i => i.text), ['11 500x90']);
+  assert.equal(items[0].clientName, 'ANNIE');
+  assert.equal(inbox.getCounters().polled, 1);
+});
+
+test('a message seen by an event and by the fallback is read once, and bets come in the order they were sent', async () => {
+  inbox.clearActivity();
+  const first = sent('1 500x90', 300);
+  const second = sent('2 500x90', 100);
+  await inbox.handleIncoming(second); // the live event for the second one
+  const client = fakeClient({ '4477001@c.us': [second, first] });
+  assert.equal(await inbox.pollListened(client), 1); // only the first is new
+  const { items } = await inbox.listPending();
+  assert.equal(items.length, 2);
+  assert.equal(await inbox.pollListened(client), 0);
+});
+
+test('the fallback copes with chats that cannot be opened', async () => {
+  const client = fakeClient({}); // no chats at all
+  assert.equal(await inbox.pollListened(client), 0);
+  const broken = { getChatById: async () => ({ fetchMessages: async () => { throw new Error('page closed'); } }) };
+  assert.equal(await inbox.pollListened(broken), 0);
+});
+
+test('what WhatsApp announced is counted, also when it is ignored', async () => {
+  inbox.clearActivity();
+  const handlers = {};
+  inbox.attach({ on: (name, h) => { handlers[name] = h; } }, { pollEveryMs: 0 });
+  handlers.message(message('1 5k'));
+  handlers.message_create(message('x', { fromMe: true, from: 'me@c.us' }));
+  handlers.message_create(message('y', { isStatus: true, from: 'status@broadcast' }));
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const c = inbox.getCounters();
+  assert.equal(c.events, 3);
+  assert.equal(c.ignored.fromMe, 1);
+  assert.equal(c.ignored.status, 1);
+  assert.ok(c.lastEventAt);
+});

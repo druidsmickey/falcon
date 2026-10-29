@@ -55,6 +55,15 @@
       <mat-card-title>Messages received</mat-card-title>
     </mat-card-header>
     <mat-card-content>
+      @if (counters(); as c) {
+        <p class="counters">
+          WhatsApp has announced <strong>{{ c.events }}</strong> messages since the server started
+          @if (c.lastEventAt) { (the last at {{ c.lastEventAt | date: 'HH:mm:ss' }}) }
+          &middot; ignored: {{ c.ignored.fromMe }} sent by you, {{ c.ignored.status }} statuses, {{ c.ignored.broadcast }} broadcasts
+          &middot; chats of the listened contacts checked {{ c.polled }} times
+          @if (c.lastPollAt) { (the last at {{ c.lastPollAt | date: 'HH:mm:ss' }}) }
+        </p>
+      }
       @for (item of activity(); track item.at + item.from) {
         <div class="received">
           <div class="received-top">

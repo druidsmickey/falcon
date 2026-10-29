@@ -186,3 +186,13 @@ mat-card {
   color: #475569;
   font-size: 0.85rem;
 }
+
+.counters {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}

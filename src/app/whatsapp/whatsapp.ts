@@ -41,6 +41,15 @@ interface ActivityItem {
   result: string;
 }
 
+/** How many times WhatsApp announced something to the server (the ignored ones included), and the fallback checks. */
+interface Counters {
+  events: number;
+  lastEventAt: string | null;
+  ignored: { fromMe: number; status: number; broadcast: number };
+  polled: number;
+  lastPollAt: string | null;
+}
+
 /**
  * The WhatsApp tab: the connection to WhatsApp, one button that copies the contacts of the phone, and for each
  * contact the nickname bets are entered under and whether its messages are read (they then arrive in the Inbox).
@@ -66,6 +75,7 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected readonly onlyListened = signal(false);
   protected readonly error = signal('');
   protected readonly activity = signal<ActivityItem[]>([]);
+  protected readonly counters = signal<Counters | null>(null);
 
   protected readonly listened = computed(() => this.contacts().filter(c => c.listen).length);
   protected readonly shown = computed(() => {
@@ -196,8 +206,9 @@ export class Whatsapp implements OnInit, OnDestroy {
 
   protected async loadActivity(): Promise<void> {
     try {
-      const result = await firstValueFrom(this.http.get<{ messages: ActivityItem[] }>(`${this.api}/api/whatsapp-inbox/activity`));
+      const result = await firstValueFrom(this.http.get<{ messages: ActivityItem[]; counters?: Counters }>(`${this.api}/api/whatsapp-inbox/activity`));
       this.activity.set(result.messages.slice(0, 15));
+      this.counters.set(result.counters ?? null);
     } catch {
       // the next check tries again
     }
