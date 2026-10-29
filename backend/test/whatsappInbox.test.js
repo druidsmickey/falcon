@@ -405,3 +405,33 @@ test('messages from other people are counted as such, and errors are counted wit
   assert.equal(c.errors, 1);
   assert.match(c.lastError, /cannot read the sender/);
 });
+
+test('a question to WhatsApp that never answers does not hold a message up', async () => {
+  inbox.clearActivity();
+  inbox.setLookupTimeout(150);
+  try {
+    const never = new Promise(() => undefined);
+    const hidden = message('41 20k @ 1000', { from: '123456789@lid', getContact: () => never, client: { getContactLidAndPhone: () => never } });
+    const started = Date.now();
+    assert.equal(await inbox.handleIncoming(hidden), 0);
+    assert.ok(Date.now() - started < 2000, 'took too long');
+    const [entry] = inbox.getActivity();
+    assert.match(entry.result, /did not say who it is in time/);
+    assert.equal(inbox.getCounters().results.notSaved, 1);
+
+    // a sender that is known from the message itself needs no question at all
+    const known = message('11 500x90', { getContact: () => never });
+    const t = Date.now();
+    assert.equal(await inbox.handleIncoming(known), 1);
+    assert.ok(Date.now() - t < 100);
+  } finally {
+    inbox.setLookupTimeout(4000);
+  }
+});
+
+test('the answer of WhatsApp is used when it comes in time', async () => {
+  inbox.clearActivity();
+  const slow = message('2 5k', { from: '555@lid', getContact: () => new Promise(resolve => setTimeout(() => resolve({ id: { _serialized: '4477002@c.us' }, number: '4477002' }), 50)) });
+  assert.equal(await inbox.handleIncoming(slow), 1);
+  assert.equal((await inbox.listPending()).items[0].clientName, 'BOB JONES');
+});

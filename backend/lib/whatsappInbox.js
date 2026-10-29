@@ -26,38 +26,55 @@ async function currentContext() {
   return { raceNum: latest ? latest.raceNum : null, runners: latest ? latest.runners : null, horses };
 }
 
-/**
- * The ids a message can be matched on. WhatsApp sometimes names the sender with a hidden id ("...@lid") that is
- * not the phone number, so the contact the message belongs to is asked for as well.
- */
-async function senderCandidates(message) {
-  const ids = [message.author, message.from];
+// Asking WhatsApp for more about a sender goes through its web page and can take long or never answer, so
+// every such question has a time limit and a message is never held up by it.
+let lookupTimeoutMs = 4000;
+const setLookupTimeout = ms => { lookupTimeoutMs = ms; };
 
-  // a hidden id ("...@lid") is turned into the phone number by WhatsApp itself
-  const client = message.client;
-  if (client && typeof client.getContactLidAndPhone === 'function') {
-    const hidden = ids.filter(id => /@lid$/.test(id || ''));
-    if (hidden.length > 0) {
-      try {
-        for (const pair of (await client.getContactLidAndPhone(hidden)) || []) ids.push(pair && pair.pn);
-      } catch {
-        // the other ids are still tried
-      }
+function withTimeout(promise, ms, what) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${what} took more than ${Math.round(ms / 1000)} seconds`)), ms);
+    Promise.resolve(promise).then(
+      value => { clearTimeout(timer); resolve(value); },
+      error => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
+/** The ids the message itself names: the sender, and the group when it came from one. */
+const knownIds = message => [...new Set([message.author, message.from].filter(Boolean))];
+
+/**
+ * More ids for the same sender, asked of WhatsApp: a hidden id ("...@lid") has a phone number, and the contact
+ * of the message knows its own. Returns what was found; `timedOut` says if WhatsApp did not answer in time.
+ */
+async function moreIds(message) {
+  const ids = [];
+  let timedOut = false;
+  const ask = async (promise, what, use) => {
+    try {
+      use(await withTimeout(promise, lookupTimeoutMs, what));
+    } catch (error) {
+      if (/took more than/.test(String(error && error.message))) timedOut = true;
     }
+  };
+
+  const client = message.client;
+  const hidden = knownIds(message).filter(id => /@lid$/.test(id));
+  if (hidden.length > 0 && client && typeof client.getContactLidAndPhone === 'function') {
+    await ask(client.getContactLidAndPhone(hidden), 'finding the phone number of a hidden id', pairs => {
+      for (const pair of pairs || []) ids.push(pair && pair.pn);
+    });
   }
   if (typeof message.getContact === 'function') {
-    try {
-      const contact = await message.getContact();
-      if (contact) {
-        ids.push(contact.id && contact.id._serialized);
-        if (contact.number) ids.push(contact.number + '@c.us');
-        if (contact.id && contact.id.user) ids.push(contact.id.user + '@c.us');
-      }
-    } catch {
-      // the other ids are still tried
-    }
+    await ask(message.getContact(), 'asking for the contact of a message', contact => {
+      if (!contact) return;
+      ids.push(contact.id && contact.id._serialized);
+      if (contact.number) ids.push(contact.number + '@c.us');
+      if (contact.id && contact.id.user) ids.push(contact.id.user + '@c.us');
+    });
   }
-  return [...new Set(ids.filter(Boolean))];
+  return { ids: ids.filter(Boolean), timedOut };
 }
 
 /** The saved contact that one of the ids belongs to (listened to or not), or null. */
@@ -134,12 +151,26 @@ async function handleIncoming(message) {
     return 0;
   }
 
-  const candidates = await senderCandidates(message);
-  const contact = await findContact(candidates);
-  const who = [message.author, message.from].filter(Boolean).join(' / ') || 'unknown';
+  // the ids in the message first, which costs nothing; WhatsApp is only asked when they are not enough
+  const known = knownIds(message);
+  let contact = await findContact(known);
+  let timedOut = false;
+  if (!contact) {
+    const more = await moreIds(message);
+    timedOut = more.timedOut;
+    contact = await findContact([...known, ...more.ids]);
+  }
+  const who = known.join(' / ') || 'unknown';
   if (!contact) {
     counters.results.notSaved += 1;
-    record({ from: who, name: null, text: null, result: 'not a saved contact: press "Sync contacts from the phone"' });
+    record({
+      from: who,
+      name: null,
+      text: null,
+      result: timedOut
+        ? 'sender not found: WhatsApp did not say who it is in time (press "Sync contacts from the phone" and try again)'
+        : 'not a saved contact: press "Sync contacts from the phone"',
+    });
     return 0;
   }
   if (!contact.listen) {
@@ -251,7 +282,7 @@ async function pollListened(client, now = Date.now()) {
 /** Starts listening on a WhatsApp client. Errors are logged, never thrown into the client. */
 function attach(client, { pollEveryMs = POLL_EVERY_MS } = {}) {
   const guard = (name, handler) => message => {
-    handler(message).catch(error => {
+    withTimeout(handler(message), 30000, 'reading a message').catch(error => {
       counters.errors += 1;
       counters.lastError = String(error && error.message || error).slice(0, 160);
       console.error(`WhatsApp inbox (${name}):`, error && error.message);
@@ -406,4 +437,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
