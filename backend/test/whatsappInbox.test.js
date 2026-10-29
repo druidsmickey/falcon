@@ -13,6 +13,14 @@ const inbox = require('../lib/whatsappInbox');
 
 let mongod;
 let counter = 0;
+
+// a meeting of 8 races with 6 horses each (10 in race 6), so that "41" is race 4 horse 1
+async function seedMeeting() {
+  await Init.create({ meetingName: 'ASCOT', raceNum: 1, numHorse: 6, raceName: 'R1', selected: true });
+  const rows = [];
+  for (let race = 1; race <= 8; race++) for (let horse = 1; horse <= (race === 6 ? 10 : 6); horse++) rows.push({ meetingName: 'ASCOT', raceNum: race, horseNum: horse, horseName: 'H' + race + horse });
+  await Params.create(rows);
+}
 const message = (body, over = {}) => ({ id: { _serialized: 'msg-' + ++counter }, body, from: '4477001@c.us', fromMe: false, timestamp: 1790000000 + counter, ...over });
 const ownList = body => message(body, { fromMe: true, from: 'me@c.us', to: '123@broadcast' });
 
@@ -362,6 +370,7 @@ test('what WhatsApp announced is counted, also when it is ignored', async () => 
 
 test('a hidden sender id is turned into the phone number by WhatsApp', async () => {
   inbox.clearActivity();
+  await seedMeeting();
   const client = { getContactLidAndPhone: async ids => ids.map(lid => ({ lid, pn: '4477001@c.us' })) };
   const m = message('41 20k @ 1000', { from: '123456789@lid', client });
   assert.equal(await inbox.handleIncoming(m), 1);
@@ -463,6 +472,7 @@ test('the trace says what the server did with each announcement', async () => {
 
 test('a message without WhatsApp id is read, once, under an id made from the message', async () => {
   inbox.clearActivity();
+  await seedMeeting();
   const bare = { type: 'chat', from: '4477001@c.us', body: '41 20k @ 1000', timestamp: 1790000100, fromMe: false };
   assert.equal(await inbox.handleIncoming(bare), 1);
   assert.equal(await inbox.handleIncoming({ ...bare }), 0); // announced again
@@ -484,4 +494,15 @@ test('the id of a message is taken from whichever form WhatsApp gives it in', ()
   assert.equal(made, inbox.messageIdOf({ from: '1@c.us', body: 'hi', timestamp: 5 }));
   assert.notEqual(made, inbox.messageIdOf({ from: '1@c.us', body: 'hi', timestamp: 6 }));
   assert.equal(inbox.messageIdOf(null), null);
+});
+
+test('without Params nothing is checked: the numbers are read as written, and flagged only when they could mean two things', async () => {
+  inbox.clearActivity();
+  await inbox.handleIncoming(message('7 500x90')); // no Params, no odds list
+  await inbox.handleIncoming(message('41 20k @ 1000'));
+  const { items } = await inbox.listPending();
+  assert.deepEqual([items[0].raceNum, items[0].horseNum, items[0].unsure], [null, 7, false]);
+  // 41 could be horse 41 or race 4 horse 1, and nothing can say which
+  assert.deepEqual([items[1].horseNum, items[1].unsure], [41, true]);
+  assert.ok(items[1].issues.some(i => /race 4 horse 1/.test(i)));
 });

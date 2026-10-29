@@ -73,7 +73,7 @@ function readHorse(digits, explicitRace, context) {
   const issues = [];
   const known = context.runners !== null;
 
-  // When the horses of the meeting are known, a race and horse only count if they exist there: "13" is not
+  // When the horses of the meeting are known (Params), a race and horse only count if they exist there: "13" is not
   // race 13 when the meeting has 8 races, nor horse 13 when no race has 13 horses.
   const list = context.horses || [];
   const hasList = list.length > 0;
@@ -84,7 +84,7 @@ function readHorse(digits, explicitRace, context) {
 
   if (explicitRace !== null) {
     const horse = Number(digits);
-    if (horse < 1 || horse > MAX_HORSE) issues.push('horse number not recognised');
+    if (horse < 1) issues.push('horse number not recognised');
     else if (hasList && !races.has(explicitRace)) issues.push(`there is no race ${explicitRace} in this meeting`);
     else if (hasList && !exists(explicitRace, horse)) issues.push(`race ${explicitRace} has no horse ${horse}`);
     return { raceNum: explicitRace, horseNum: horse, unsure: issues.length > 0, issues };
@@ -93,7 +93,7 @@ function readHorse(digits, explicitRace, context) {
   const n = Number(digits);
   const asHorse = (hasList
     ? currentRace !== null && exists(currentRace, n)
-    : n >= 1 && n <= (known ? context.runners : MAX_HORSE))
+    : n >= 1 && (!known || n <= context.runners))
     ? { raceNum: currentRace, horseNum: n }
     : null;
 
@@ -102,12 +102,13 @@ function readHorse(digits, explicitRace, context) {
   for (let at = 1; at < digits.length; at++) {
     const race = Number(digits.slice(0, at));
     const horse = Number(digits.slice(at));
-    if (digits[at] === '0' || race < 1 || race > MAX_RACE) continue;
+    if (digits[at] === '0' || race < 1) continue;
     if (hasList) {
       if (exists(race, horse)) splits.push({ raceNum: race, horseNum: horse });
       continue;
     }
-    const limit = race === context.raceNum && known ? context.runners : MAX_HORSE;
+    // with no Params to check against, the only limit is the number of runners of the odds list, for its own race
+    const limit = race === context.raceNum && known ? context.runners : Infinity;
     if (horse >= 1 && horse <= limit) splits.push({ raceNum: race, horseNum: horse });
   }
 
