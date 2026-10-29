@@ -121,7 +121,7 @@ mat-card {
 
 .contact {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   padding: 6px 0;
@@ -132,7 +132,9 @@ mat-card {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1 1 180px;
+  /* the name takes what the nickname box leaves, so the two stay on one line, also on a phone */
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 44px;
 }
 
@@ -142,7 +144,8 @@ mat-card {
 }
 
 .nick {
-  flex: 1 1 180px;
+  flex: 0 0 46%;
+  min-width: 0;
   min-height: 44px;
   padding: 0 10px;
   border: 1px solid #cbd5e1;
