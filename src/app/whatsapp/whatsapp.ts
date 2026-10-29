@@ -56,6 +56,7 @@ interface TraceItem {
 
 /** How many times WhatsApp announced something to the server (the ignored ones included), and the fallback checks. */
 interface Counters {
+  startedAt?: string;
   events: number;
   fromOthers?: number;
   errors?: number;

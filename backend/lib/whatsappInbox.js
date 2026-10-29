@@ -102,10 +102,11 @@ function record(entry) {
 const recentIds = new Set();
 // How many times WhatsApp announced something, whatever was done with it: tells "WhatsApp sends nothing" from
 // "WhatsApp sends it and the server ignores it".
+const startedAt = new Date().toISOString();
 const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
 // WhatsApp announces a message with two events; it is counted once
 const countedIds = new Set();
-const getCounters = () => ({ ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
+const getCounters = () => ({ startedAt, ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
 function noteEvent(message) {
   const id = message && message.id && message.id._serialized;
   if (id) {

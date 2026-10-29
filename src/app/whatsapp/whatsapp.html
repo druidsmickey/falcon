@@ -57,6 +57,7 @@
     <mat-card-content>
       @if (counters(); as c) {
         <p class="counters">
+          @if (c.startedAt) { Server started at <strong>{{ c.startedAt | date: 'HH:mm:ss' }}</strong> &middot; }
           WhatsApp has announced <strong>{{ c.events }}</strong> messages since the server started
           @if (c.lastEventAt) { (the last at {{ c.lastEventAt | date: 'HH:mm:ss' }}) }
           &middot; from other people: <strong>{{ c.fromOthers ?? 0 }}</strong>
@@ -73,8 +74,10 @@
           @if (c.lastPollAt) { (the last at {{ c.lastPollAt | date: 'HH:mm:ss' }}) }
         </p>
       }
-      @if (trace().length > 0) {
-        <details class="trace">
+      @if (trace().length === 0) {
+        <p class="hint">No announcement has been traced yet. When WhatsApp announces a message, what the server did with it is listed here.</p>
+      } @else {
+        <details class="trace" open>
           <summary>What the server did with the latest announcements ({{ trace().length }})</summary>
           @for (t of trace(); track t.at + t.branch) {
             <div class="trace-row">
