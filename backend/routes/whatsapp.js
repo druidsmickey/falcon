@@ -11,6 +11,7 @@ const WhatsappGroup = require('../models/whatsappGroup');
 const WhatsappMessage = require('../models/whatsappMessage');
 const whatsappInbox = require('../lib/whatsappInbox');
 const { usableContacts, syncContacts } = require('../lib/contactSync');
+const { sessionExists, autostartEnabled, shouldReconnect } = require('../lib/whatsappAutostart');
 
 // Configure multer for memory storage with 50MB limit
 const upload = multer({ 
@@ -117,6 +118,17 @@ function clearAuthSession() {
   } catch (error) {
     console.error('Error clearing auth session:', error);
   }
+}
+
+// Connect again by itself: after a restart of the server, and after the connection was lost.
+let reconnectTimer = null;
+function scheduleReconnect(seconds = 30) {
+  if (reconnectTimer || !autostartEnabled() || !sessionExists(authPath)) return;
+  console.log(`WhatsApp will connect again in ${seconds} seconds`);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (!client && sessionExists(authPath)) initializeClient();
+  }, seconds * 1000);
 }
 
 // Initialize WhatsApp Client
@@ -265,6 +277,8 @@ function initializeClient() {
       clearTimeout(initializationTimeout);
       initializationTimeout = null;
     }
+    // a lost connection is taken up again by itself (unless the phone logged this device out)
+    if (shouldReconnect(reason)) scheduleReconnect();
   });
 
   console.log('📱 Calling client.initialize()...');
@@ -1465,5 +1479,11 @@ router.post('/send-image-to-group', upload.single('image'), async (req, res) => 
     res.status(500).json({ error: error.message });
   }
 });
+
+// After a restart the saved session is taken up again, so that the inbox works without pressing Initialize
+if (autostartEnabled() && sessionExists(authPath)) {
+  console.log('A saved WhatsApp session was found: connecting in 10 seconds');
+  scheduleReconnect(10);
+}
 
 module.exports = router;

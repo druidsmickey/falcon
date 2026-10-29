@@ -30,6 +30,8 @@ Buttons:
 - **Reset & New QR:** delete the saved session and show a new QR code. Use this if the connection is stuck or authentication fails.
 - **Test Server:** checks that Chrome can start on the server and shows the version or the problem.
 
+**It reconnects by itself.** The server restarts at every deploy and reboot. When a saved session exists, it connects again about 10 seconds after the start without anyone pressing Initialize, and it connects again 30 seconds after a lost connection, unless the phone logged the device out (then a new QR code is needed). Set `WHATSAPP_AUTOSTART=false` in `backend/.env` to switch this off (for example on a development computer that has a saved session).
+
 The QR code image is drawn in your browser. The text that links a device to your WhatsApp is not sent to any outside website. The server also prints the QR code in its own log.
 
 ## Contacts: nickname and who to listen to

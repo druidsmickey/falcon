@@ -72,7 +72,7 @@ test.before(async () => {
   base = `http://127.0.0.1:${port}`;
   child = spawn(process.execPath, ['server.js'], {
     cwd: backendDir,
-    env: { ...process.env, PORT: String(port), MONGODB_URI: uri, JWT_SECRET: SECRET, CORS_ORIGINS: 'http://allowed.example' },
+    env: { ...process.env, PORT: String(port), WHATSAPP_AUTOSTART: 'false', MONGODB_URI: uri, JWT_SECRET: SECRET, CORS_ORIGINS: 'http://allowed.example' },
   });
   const ready = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('server did not finish starting: ' + log.join(''))), 30000);
@@ -226,7 +226,7 @@ test('the server answers only on the loopback address, not on the network addres
 
 test('the server refuses to start without a JWT secret', async () => {
   const code = await new Promise(resolve => {
-    const p = spawn(process.execPath, ['server.js'], { cwd: backendDir, env: { ...process.env, JWT_SECRET: '', PORT: '0', MONGODB_URI: 'mongodb://127.0.0.1:1/x' } });
+    const p = spawn(process.execPath, ['server.js'], { cwd: backendDir, env: { ...process.env, JWT_SECRET: '', WHATSAPP_AUTOSTART: 'false', PORT: '0', MONGODB_URI: 'mongodb://127.0.0.1:1/x' } });
     p.on('exit', resolve);
   });
   assert.equal(code, 1);
