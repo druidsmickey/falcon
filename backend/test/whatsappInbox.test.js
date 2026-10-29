@@ -390,3 +390,18 @@ test('each message is counted once although WhatsApp announces it twice, and wha
   assert.equal(c.ignored.fromMe, 1);
   assert.deepEqual(c.results, { added: 1, notSaved: 1, notListened: 1, nothingToRead: 0, noText: 0 });
 });
+
+test('messages from other people are counted as such, and errors are counted with their text', async () => {
+  inbox.clearActivity();
+  const handlers = {};
+  inbox.attach({ on: (name, h) => { handlers[name] = h; } }, { pollEveryMs: 0 });
+  handlers.message(message('1 5k'));
+  handlers.message(message('x', { fromMe: true, from: 'me@c.us' }));
+  // a message that makes the reading fail
+  handlers.message({ id: { _serialized: 'broken-1' }, body: 'x', from: '4477001@c.us', get author() { throw new Error('cannot read the sender'); } });
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const c = inbox.getCounters();
+  assert.equal(c.fromOthers, 2);
+  assert.equal(c.errors, 1);
+  assert.match(c.lastError, /cannot read the sender/);
+});

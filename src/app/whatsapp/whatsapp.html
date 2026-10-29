@@ -59,7 +59,11 @@
         <p class="counters">
           WhatsApp has announced <strong>{{ c.events }}</strong> messages since the server started
           @if (c.lastEventAt) { (the last at {{ c.lastEventAt | date: 'HH:mm:ss' }}) }
+          &middot; from other people: <strong>{{ c.fromOthers ?? 0 }}</strong>
           &middot; ignored: {{ c.ignored.fromMe }} sent by you, {{ c.ignored.status }} statuses, {{ c.ignored.broadcast }} broadcasts
+          @if (c.errors) {
+          <br><strong>{{ c.errors }} errors</strong> while reading messages (the last: {{ c.lastError }})
+          }
           @if (c.results; as r) {
           <br>Of the messages from others: <strong>{{ r.added }}</strong> added to the inbox,
           {{ r.notListened }} from contacts not ticked, {{ r.notSaved }} from senders that are not saved contacts,

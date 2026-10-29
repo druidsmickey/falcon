@@ -85,7 +85,7 @@ function record(entry) {
 const recentIds = new Set();
 // How many times WhatsApp announced something, whatever was done with it: tells "WhatsApp sends nothing" from
 // "WhatsApp sends it and the server ignores it".
-const counters = { events: 0, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
+const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
 // WhatsApp announces a message with two events; it is counted once
 const countedIds = new Set();
 const getCounters = () => ({ ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
@@ -101,13 +101,14 @@ function noteEvent(message) {
   if (message && message.fromMe) counters.ignored.fromMe += 1;
   else if (message && message.isStatus) counters.ignored.status += 1;
   else if (message && /@broadcast$/.test(message.from || '')) counters.ignored.broadcast += 1;
+  else counters.fromOthers += 1;
 }
 const getActivity = () => activity.map(a => ({ ...a }));
 const clearActivity = () => {
   activity.length = 0;
   recentIds.clear();
   countedIds.clear();
-  Object.assign(counters, { events: 0, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
+  Object.assign(counters, { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
 };
 
 const sentAtOf = message => new Date((Number(message.timestamp) || Date.now() / 1000) * 1000);
@@ -250,7 +251,11 @@ async function pollListened(client, now = Date.now()) {
 /** Starts listening on a WhatsApp client. Errors are logged, never thrown into the client. */
 function attach(client, { pollEveryMs = POLL_EVERY_MS } = {}) {
   const guard = (name, handler) => message => {
-    handler(message).catch(error => console.error(`WhatsApp inbox (${name}):`, error.message));
+    handler(message).catch(error => {
+      counters.errors += 1;
+      counters.lastError = String(error && error.message || error).slice(0, 160);
+      console.error(`WhatsApp inbox (${name}):`, error && error.message);
+    });
   };
   // some versions of the library only announce a message with one of the two events, so both are used
   client.on('message', guard('incoming', async message => { noteEvent(message); return handleIncoming(message); }));

@@ -44,6 +44,9 @@ interface ActivityItem {
 /** How many times WhatsApp announced something to the server (the ignored ones included), and the fallback checks. */
 interface Counters {
   events: number;
+  fromOthers?: number;
+  errors?: number;
+  lastError?: string | null;
   lastEventAt: string | null;
   ignored: { fromMe: number; status: number; broadcast: number };
   results?: { added: number; notSaved: number; notListened: number; nothingToRead: number; noText: number };
