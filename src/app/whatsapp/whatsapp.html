@@ -73,6 +73,19 @@
           @if (c.lastPollAt) { (the last at {{ c.lastPollAt | date: 'HH:mm:ss' }}) }
         </p>
       }
+      @if (trace().length > 0) {
+        <details class="trace">
+          <summary>What the server did with the latest announcements ({{ trace().length }})</summary>
+          @for (t of trace(); track t.at + t.branch) {
+            <div class="trace-row">
+              <span class="time">{{ t.at | date: 'HH:mm:ss' }}</span>
+              <strong>{{ t.type }}</strong>
+              {{ t.fromMe ? 'from you' : 'from ' + (t.author || t.from || '?') }}{{ t.hasBody ? '' : ', no text' }}{{ t.hasId ? '' : ', no id' }}
+              <div class="result">{{ t.branch }}</div>
+            </div>
+          }
+        </details>
+      }
       @for (item of activity(); track item.at + item.from) {
         <div class="received">
           <div class="received-top">

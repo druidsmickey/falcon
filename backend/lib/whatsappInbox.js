@@ -114,17 +114,56 @@ function noteEvent(message) {
     if (countedIds.size > 2000) countedIds.delete(countedIds.values().next().value);
   }
   counters.events += 1;
+  traceStart(message);
   counters.lastEventAt = new Date().toISOString();
   if (message && message.fromMe) counters.ignored.fromMe += 1;
   else if (message && message.isStatus) counters.ignored.status += 1;
   else if (message && /@broadcast$/.test(message.from || '')) counters.ignored.broadcast += 1;
   else counters.fromOthers += 1;
 }
+// A trace of the latest announcements, whatever happened to them: what each one was and the last thing the server did
+// with it. It is what shows where a message that never reached the inbox was dropped.
+const trace = [];
+const TRACE_LIMIT = 20;
+const traces = new WeakMap();
+const traceOf = message => (message && typeof message === 'object' ? traces.get(message) : undefined);
+function traceStart(message) {
+  if (!message || typeof message !== 'object') return;
+  try {
+    traceEntry(message);
+  } catch {
+    // the trace is only a help; a message it cannot describe is still read
+  }
+}
+
+function traceEntry(message) {
+  const entry = {
+    at: new Date().toISOString(),
+    type: String(message.type || '?'),
+    from: message.from || null,
+    author: message.author || null,
+    fromMe: !!message.fromMe,
+    isStatus: !!message.isStatus,
+    hasBody: !!message.body,
+    hasId: !!(message.id && message.id._serialized),
+    branch: 'announced',
+  };
+  trace.unshift(entry);
+  if (trace.length > TRACE_LIMIT) trace.length = TRACE_LIMIT;
+  traces.set(message, entry);
+}
+function mark(message, branch) {
+  const entry = traceOf(message);
+  if (entry) entry.branch = branch;
+}
+const getTrace = () => trace.map(t => ({ ...t }));
+
 const getActivity = () => activity.map(a => ({ ...a }));
 const clearActivity = () => {
   activity.length = 0;
   recentIds.clear();
   countedIds.clear();
+  trace.length = 0;
   Object.assign(counters, { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
 };
 
@@ -133,35 +172,40 @@ const preview = text => String(text).replace(/\s+/g, ' ').trim().slice(0, 60);
 
 /** A message from a contact that is listened to: every bet in it goes to the inbox. Returns how many were added. */
 async function handleIncoming(message) {
-  if (!message || message.fromMe || message.isStatus) return 0;
-  if (/@broadcast$/.test(message.from || '')) return 0;
+  if (!message) return 0;
+  if (message.fromMe || message.isStatus) { mark(message, 'ignored: sent by you, or a status'); return 0; }
+  if (/@broadcast$/.test(message.from || '')) { mark(message, 'ignored: broadcast'); return 0; }
 
   const messageId = message.id && message.id._serialized;
-  if (!messageId) return 0;
+  if (!messageId) { mark(message, 'dropped: the message has no id'); return 0; }
 
   // WhatsApp can announce a message twice (both events are listened to), but it is read once
-  if (recentIds.has(messageId)) return 0;
+  if (recentIds.has(messageId)) { mark(message, 'second announcement of a message that is already being read'); return 0; }
   recentIds.add(messageId);
   if (recentIds.size > 500) recentIds.delete(recentIds.values().next().value);
   console.log('WhatsApp inbox: message received from', digitsOf(message.author || message.from) || 'unknown');
 
   if (!message.body) {
+    mark(message, 'done: no text in it');
     counters.results.noText += 1;
     record({ from: message.author || message.from || 'unknown', name: null, text: null, result: 'no text in it (photo, voice note or similar)' });
     return 0;
   }
 
+  mark(message, 'looking for the sender among the saved contacts');
   // the ids in the message first, which costs nothing; WhatsApp is only asked when they are not enough
   const known = knownIds(message);
   let contact = await findContact(known);
   let timedOut = false;
   if (!contact) {
+    mark(message, 'asking WhatsApp who the sender is');
     const more = await moreIds(message);
     timedOut = more.timedOut;
     contact = await findContact([...known, ...more.ids]);
   }
   const who = known.join(' / ') || 'unknown';
   if (!contact) {
+    mark(message, 'done: not a saved contact');
     counters.results.notSaved += 1;
     record({
       from: who,
@@ -174,11 +218,13 @@ async function handleIncoming(message) {
     return 0;
   }
   if (!contact.listen) {
+    mark(message, 'done: contact not ticked');
     counters.results.notListened += 1;
     record({ from: who, name: contact.name, text: null, result: 'contact is saved but not ticked to listen to' });
     return 0;
   }
 
+  mark(message, 'reading the message');
   const parsed = parseBetMessage(message.body, await currentContext());
   let added = 0;
   for (const [index, entry] of parsed.entries()) {
@@ -222,6 +268,7 @@ async function handleIncoming(message) {
   else if (added === 0) result = 'already in the inbox';
   else result = added === 1 ? 'added 1 bet to the inbox' : `added ${added} bets to the inbox`;
   record({ from: who, name: contact.name, text: preview(message.body), result });
+  mark(message, 'done: ' + result);
   return added;
 }
 
@@ -283,6 +330,7 @@ async function pollListened(client, now = Date.now()) {
 function attach(client, { pollEveryMs = POLL_EVERY_MS } = {}) {
   const guard = (name, handler) => message => {
     withTimeout(handler(message), 30000, 'reading a message').catch(error => {
+      mark(message, 'FAILED: ' + String(error && error.message || error).slice(0, 100));
       counters.errors += 1;
       counters.lastError = String(error && error.message || error).slice(0, 160);
       console.error(`WhatsApp inbox (${name}):`, error && error.message);
@@ -437,4 +485,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };

@@ -196,3 +196,22 @@ mat-card {
   font-size: 0.8rem;
   line-height: 1.5;
 }
+
+.trace {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+}
+
+.trace summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.trace-row {
+  padding: 6px 0;
+  border-top: 1px solid #f1f5f9;
+  word-break: break-all;
+}

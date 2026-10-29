@@ -435,3 +435,28 @@ test('the answer of WhatsApp is used when it comes in time', async () => {
   assert.equal(await inbox.handleIncoming(slow), 1);
   assert.equal((await inbox.listPending()).items[0].clientName, 'BOB JONES');
 });
+
+test('the trace says what the server did with each announcement', async () => {
+  inbox.clearActivity();
+  const handlers = {};
+  inbox.attach({ on: (name, h) => { handlers[name] = h; } }, { pollEveryMs: 0 });
+  handlers.message(message('hi', { fromMe: true, from: 'me@c.us', type: 'chat' }));
+  handlers.message(message('11 500x90', { type: 'chat' }));
+  handlers.message(message('x', { from: '9999999@c.us', type: 'chat' }));
+  handlers.message({ id: { _serialized: 'noise-1' }, type: 'e2e_notification', from: '4477001@c.us', body: '' });
+  handlers.message({ type: 'chat', from: '4477001@c.us', body: 'no id' });
+  await new Promise(resolve => setTimeout(resolve, 400));
+
+  const branches = inbox.getTrace().map(t => t.branch).reverse();
+  assert.deepEqual(branches, [
+    'ignored: sent by you, or a status',
+    'done: added 1 bet to the inbox',
+    'done: not a saved contact',
+    'done: no text in it',
+    'dropped: the message has no id',
+  ]);
+  const first = inbox.getTrace()[4];
+  assert.equal(first.fromMe, true);
+  assert.equal(inbox.getTrace()[1].type, 'e2e_notification');
+  assert.ok(inbox.getTrace().length <= 20);
+});

@@ -41,6 +41,19 @@ interface ActivityItem {
   result: string;
 }
 
+/** One thing WhatsApp announced and the last thing the server did with it. */
+interface TraceItem {
+  at: string;
+  type: string;
+  from: string | null;
+  author: string | null;
+  fromMe: boolean;
+  isStatus: boolean;
+  hasBody: boolean;
+  hasId: boolean;
+  branch: string;
+}
+
 /** How many times WhatsApp announced something to the server (the ignored ones included), and the fallback checks. */
 interface Counters {
   events: number;
@@ -80,6 +93,7 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected readonly error = signal('');
   protected readonly activity = signal<ActivityItem[]>([]);
   protected readonly counters = signal<Counters | null>(null);
+  protected readonly trace = signal<TraceItem[]>([]);
 
   protected readonly listened = computed(() => this.contacts().filter(c => c.listen).length);
   protected readonly shown = computed(() => {
@@ -210,9 +224,10 @@ export class Whatsapp implements OnInit, OnDestroy {
 
   protected async loadActivity(): Promise<void> {
     try {
-      const result = await firstValueFrom(this.http.get<{ messages: ActivityItem[]; counters?: Counters }>(`${this.api}/api/whatsapp-inbox/activity`));
+      const result = await firstValueFrom(this.http.get<{ messages: ActivityItem[]; counters?: Counters; trace?: TraceItem[] }>(`${this.api}/api/whatsapp-inbox/activity`));
       this.activity.set(result.messages.slice(0, 15));
       this.counters.set(result.counters ?? null);
+      this.trace.set((result.trace ?? []).slice(0, 12));
     } catch {
       // the next check tries again
     }
