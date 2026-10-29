@@ -266,7 +266,7 @@ test('the server says what it did with each message', async () => {
   ]);
   // the text is only kept for contacts that are listened to
   assert.equal(log.find(a => a.name === 'Cat Silent').text, null);
-  assert.equal(log.find(a => a.from === '9999999').text, null);
+  assert.equal(log.find(a => a.from.startsWith('9999999')).text, null);
   assert.equal(log[log.length - 1].text, '11 500x90');
   assert.equal(log.length <= 30, true);
 });
@@ -358,4 +358,35 @@ test('what WhatsApp announced is counted, also when it is ignored', async () => 
   assert.equal(c.ignored.fromMe, 1);
   assert.equal(c.ignored.status, 1);
   assert.ok(c.lastEventAt);
+});
+
+test('a hidden sender id is turned into the phone number by WhatsApp', async () => {
+  inbox.clearActivity();
+  const client = { getContactLidAndPhone: async ids => ids.map(lid => ({ lid, pn: '4477001@c.us' })) };
+  const m = message('41 20k @ 1000', { from: '123456789@lid', client });
+  assert.equal(await inbox.handleIncoming(m), 1);
+  const [bet] = (await inbox.listPending()).items;
+  assert.deepEqual([bet.clientName, bet.raceNum, bet.horseNum, bet.stake, bet.odds100], ['ANNIE', 4, 1, 20000, 1000]);
+});
+
+test('each message is counted once although WhatsApp announces it twice, and what happened to the others is tallied', async () => {
+  inbox.clearActivity();
+  const handlers = {};
+  inbox.attach({ on: (name, h) => { handlers[name] = h; } }, { pollEveryMs: 0 });
+  const mine = message('hello', { fromMe: true, from: 'me@c.us' });
+  handlers.message(mine);
+  handlers.message_create(mine);
+  const ann = message('41 20k @ 1000');
+  handlers.message(ann);
+  handlers.message_create(ann);
+  const cat = message('1 5k', { from: '4477003@c.us' });
+  handlers.message(cat);
+  const stranger = message('1 5k', { from: '9999999@c.us' });
+  handlers.message(stranger);
+  await new Promise(resolve => setTimeout(resolve, 400));
+
+  const c = inbox.getCounters();
+  assert.equal(c.events, 4);
+  assert.equal(c.ignored.fromMe, 1);
+  assert.deepEqual(c.results, { added: 1, notSaved: 1, notListened: 1, nothingToRead: 0, noText: 0 });
 });

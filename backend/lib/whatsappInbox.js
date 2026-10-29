@@ -32,6 +32,19 @@ async function currentContext() {
  */
 async function senderCandidates(message) {
   const ids = [message.author, message.from];
+
+  // a hidden id ("...@lid") is turned into the phone number by WhatsApp itself
+  const client = message.client;
+  if (client && typeof client.getContactLidAndPhone === 'function') {
+    const hidden = ids.filter(id => /@lid$/.test(id || ''));
+    if (hidden.length > 0) {
+      try {
+        for (const pair of (await client.getContactLidAndPhone(hidden)) || []) ids.push(pair && pair.pn);
+      } catch {
+        // the other ids are still tried
+      }
+    }
+  }
   if (typeof message.getContact === 'function') {
     try {
       const contact = await message.getContact();
@@ -72,9 +85,17 @@ function record(entry) {
 const recentIds = new Set();
 // How many times WhatsApp announced something, whatever was done with it: tells "WhatsApp sends nothing" from
 // "WhatsApp sends it and the server ignores it".
-const counters = { events: 0, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, polled: 0, lastPollAt: null };
-const getCounters = () => ({ ...counters, ignored: { ...counters.ignored } });
+const counters = { events: 0, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
+// WhatsApp announces a message with two events; it is counted once
+const countedIds = new Set();
+const getCounters = () => ({ ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
 function noteEvent(message) {
+  const id = message && message.id && message.id._serialized;
+  if (id) {
+    if (countedIds.has(id)) return;
+    countedIds.add(id);
+    if (countedIds.size > 2000) countedIds.delete(countedIds.values().next().value);
+  }
   counters.events += 1;
   counters.lastEventAt = new Date().toISOString();
   if (message && message.fromMe) counters.ignored.fromMe += 1;
@@ -85,7 +106,8 @@ const getActivity = () => activity.map(a => ({ ...a }));
 const clearActivity = () => {
   activity.length = 0;
   recentIds.clear();
-  Object.assign(counters, { events: 0, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 } });
+  countedIds.clear();
+  Object.assign(counters, { events: 0, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
 };
 
 const sentAtOf = message => new Date((Number(message.timestamp) || Date.now() / 1000) * 1000);
@@ -106,18 +128,21 @@ async function handleIncoming(message) {
   console.log('WhatsApp inbox: message received from', digitsOf(message.author || message.from) || 'unknown');
 
   if (!message.body) {
-    record({ from: digitsOf(message.author || message.from) || 'unknown', name: null, text: null, result: 'no text in it (photo, voice note or similar)' });
+    counters.results.noText += 1;
+    record({ from: message.author || message.from || 'unknown', name: null, text: null, result: 'no text in it (photo, voice note or similar)' });
     return 0;
   }
 
   const candidates = await senderCandidates(message);
   const contact = await findContact(candidates);
-  const who = digitsOf(message.author || message.from) || 'unknown';
+  const who = [message.author, message.from].filter(Boolean).join(' / ') || 'unknown';
   if (!contact) {
+    counters.results.notSaved += 1;
     record({ from: who, name: null, text: null, result: 'not a saved contact: press "Sync contacts from the phone"' });
     return 0;
   }
   if (!contact.listen) {
+    counters.results.notListened += 1;
     record({ from: who, name: contact.name, text: null, result: 'contact is saved but not ticked to listen to' });
     return 0;
   }
@@ -158,6 +183,8 @@ async function handleIncoming(message) {
     if (result.upsertedCount) added += 1;
   }
 
+  if (parsed.length === 0) counters.results.nothingToRead += 1;
+  else counters.results.added += added > 0 ? 1 : 0;
   let result;
   if (parsed.length === 0) result = 'nothing to read in it (no bet, or only numbers)';
   else if (added === 0) result = 'already in the inbox';

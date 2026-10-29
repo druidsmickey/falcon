@@ -244,3 +244,22 @@ test('a few bets with only one or two plain numbers among them are still bets', 
   const result = parseBetMessage('11 500x90\n2 5k\n3 500 120', withHorses);
   assert.equal(result.length, 3);
 });
+
+// ---------------------------------------------------------------- the formats the players really use
+
+test('"41 20k @ 1000" is race 4, horse 1, a stake of 20000 at odds 1000', () => {
+  const bet = one('41 20k @ 1000');
+  assert.deepEqual([bet.raceNum, bet.horseNum, bet.mode, bet.stake, bet.odds100], [4, 1, 'odds', 20000, 1000]);
+});
+
+test('"25k 68 @ 650" has the amount first: race 6, horse 8, a stake of 25000 at odds 650', () => {
+  const bet = one('25k 68 @ 650');
+  assert.deepEqual([bet.raceNum, bet.horseNum, bet.mode, bet.stake, bet.odds100], [6, 8, 'odds', 25000, 650]);
+});
+
+test('the amount with a k is the amount wherever it stands, and without a k nothing changes', () => {
+  assert.deepEqual([one('25k 68 650').horseNum, one('25k 68 650').stake], [8, 25000]);
+  assert.deepEqual([one('68 25k 650').horseNum, one('68 25k 650').stake], [8, 25000]);
+  const plain = one('3 500 90');
+  assert.deepEqual([plain.horseNum, plain.books, plain.f500], [3, 500, 90]);
+});

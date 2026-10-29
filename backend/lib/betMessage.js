@@ -267,6 +267,11 @@ function parseStrict(line, context) {
     entry = nameEntry(name, explicitRace, context);
     [amount, second = null] = figures;
   } else {
+    // the amount can be written first when it has a k: "25k 68 @ 650" is horse 68, 25000, at 650
+    if (figures.length >= 2 && figures.length <= 3 && figures[0].k && figures[1].whole) {
+      figures.splice(0, 2, figures[1], figures[0]);
+    }
+
     // a horse number first; with four figures the first two are the race and the horse
     if (figures.length < 2 || figures.length > 4 || !figures[0].whole) return null;
     let rest = figures.slice(1);

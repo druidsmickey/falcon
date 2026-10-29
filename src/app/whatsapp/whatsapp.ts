@@ -46,6 +46,7 @@ interface Counters {
   events: number;
   lastEventAt: string | null;
   ignored: { fromMe: number; status: number; broadcast: number };
+  results?: { added: number; notSaved: number; notListened: number; nothingToRead: number; noText: number };
   polled: number;
   lastPollAt: string | null;
 }

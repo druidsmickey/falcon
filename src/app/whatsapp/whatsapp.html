@@ -60,6 +60,11 @@
           WhatsApp has announced <strong>{{ c.events }}</strong> messages since the server started
           @if (c.lastEventAt) { (the last at {{ c.lastEventAt | date: 'HH:mm:ss' }}) }
           &middot; ignored: {{ c.ignored.fromMe }} sent by you, {{ c.ignored.status }} statuses, {{ c.ignored.broadcast }} broadcasts
+          @if (c.results; as r) {
+          <br>Of the messages from others: <strong>{{ r.added }}</strong> added to the inbox,
+          {{ r.notListened }} from contacts not ticked, {{ r.notSaved }} from senders that are not saved contacts,
+          {{ r.nothingToRead }} with nothing to read, {{ r.noText }} without text
+          <br>}
           &middot; chats of the listened contacts checked {{ c.polled }} times
           @if (c.lastPollAt) { (the last at {{ c.lastPollAt | date: 'HH:mm:ss' }}) }
         </p>
