@@ -168,7 +168,7 @@
           WhatsApp has announced <strong>{{ c.events }}</strong> messages since the server started
           @if (c.lastEventAt) { (the last at {{ c.lastEventAt | date: 'HH:mm:ss' }}) }
           &middot; from other people: <strong>{{ c.fromOthers ?? 0 }}</strong>
-          &middot; ignored: {{ c.ignored.fromMe }} sent by you, {{ c.ignored.status }} statuses, {{ c.ignored.broadcast }} broadcasts
+          &middot; ignored: {{ c.ignored.fromMe }} sent by you, {{ c.ignored.status }} statuses, {{ c.ignored.broadcast }} broadcasts, {{ c.ignored.groups ?? 0 }} from groups and communities
           @if (c.errors) {
           <br><strong>{{ c.errors }} errors</strong> while reading messages (the last: {{ c.lastError }})
           }

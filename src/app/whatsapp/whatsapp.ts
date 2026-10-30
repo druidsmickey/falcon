@@ -83,7 +83,7 @@ interface Counters {
   errors?: number;
   lastError?: string | null;
   lastEventAt: string | null;
-  ignored: { fromMe: number; status: number; broadcast: number };
+  ignored: { fromMe: number; status: number; broadcast: number; groups?: number };
   results?: { added: number; notSaved: number; notListened: number; nothingToRead: number; noText: number };
   polled: number;
   lastPollAt: string | null;

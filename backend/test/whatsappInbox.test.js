@@ -69,9 +69,8 @@ test('contacts that are not listened to, and strangers, are ignored', async () =
   assert.equal((await inbox.listPending()).items.length, 0);
 });
 
-test('a message sent from the account itself is never read as a bet, and group messages use the sender', async () => {
+test('a message sent from the account itself is never read as a bet', async () => {
   assert.equal(await inbox.handleIncoming(message('1 5k', { fromMe: true })), 0);
-  assert.equal(await inbox.handleIncoming(message('1 5k', { from: 'group@g.us', author: '4477001@c.us' })), 1);
   assert.equal(await inbox.handleIncoming(message('1 5k', { from: 'status@broadcast' })), 0);
 });
 
@@ -688,4 +687,11 @@ test('the read-every-line switch is saved, and Claude can be chosen', async () =
   assert.equal(saved.baseUrl, 'https://api.anthropic.com/v1');
   await assert.rejects(() => inbox.saveAiSettings({ readAll: 'yes' }));
   await WhatsappAi.deleteMany({});
+});
+
+test('groups, community announcements and channels are not read, even from a listened contact', async () => {
+  inbox.clearActivity();
+  assert.equal(await inbox.handleIncoming(message('11 500x90', { from: '120363000000@g.us', author: '4477001@c.us' })), 0);
+  assert.equal(await inbox.handleIncoming(message('11 500x90', { from: '120363000000@newsletter' })), 0);
+  assert.equal(await WhatsappInbox.countDocuments(), 0);
 });

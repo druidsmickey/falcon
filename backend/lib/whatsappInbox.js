@@ -311,7 +311,7 @@ const recentIds = new Set();
 // How many times WhatsApp announced something, whatever was done with it: tells "WhatsApp sends nothing" from
 // "WhatsApp sends it and the server ignores it".
 const startedAt = new Date().toISOString();
-const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
+const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0, groups: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
 // WhatsApp announces a message with two events; it is counted once
 const countedIds = new Set();
 const getCounters = () => ({ startedAt, ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
@@ -328,6 +328,7 @@ function noteEvent(message) {
   if (message && message.fromMe) counters.ignored.fromMe += 1;
   else if (message && message.isStatus) counters.ignored.status += 1;
   else if (message && /@broadcast$/.test(message.from || '')) counters.ignored.broadcast += 1;
+  else if (isGroupLike(message)) counters.ignored.groups += 1;
   else counters.fromOthers += 1;
 }
 // A trace of the latest announcements, whatever happened to them: what each one was and the last thing the server did
@@ -373,8 +374,11 @@ const clearActivity = () => {
   recentIds.clear();
   countedIds.clear();
   trace.length = 0;
-  Object.assign(counters, { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
+  Object.assign(counters, { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0, groups: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
 };
+
+// groups, communities (their announcement group too) and channels are not read: bets come from a person's own chat
+const isGroupLike = message => /@(g\.us|newsletter)$/.test((message && message.from) || '');
 
 const sentAtOf = message => new Date((Number(message.timestamp) || Date.now() / 1000) * 1000);
 const preview = text => String(text).replace(/\s+/g, ' ').trim().slice(0, 60);
@@ -384,6 +388,7 @@ async function handleIncoming(message) {
   if (!message) return 0;
   if (message.fromMe || message.isStatus) { mark(message, 'ignored: sent by you, or a status'); return 0; }
   if (/@broadcast$/.test(message.from || '')) { mark(message, 'ignored: broadcast'); return 0; }
+  if (isGroupLike(message)) { mark(message, 'ignored: a group, community announcement or channel'); return 0; }
 
   const messageId = messageIdOf(message);
   if (!messageId) { mark(message, 'dropped: the message has no id'); return 0; }
