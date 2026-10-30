@@ -32,11 +32,11 @@
       @for (bet of saved(); track bet.id) {
         <div class="saved-bet" [class.purchase]="bet.stake < 0 || bet.books < 0">
           <strong class="client">{{ bet.clientName }}</strong>
-          <strong class="horse-line">R{{ bet.raceNum }} H{{ bet.horseNum }} {{ bet.horseName }}</strong>
+          <strong class="horse-line">{{ bet.raceNum }} {{ bet.horseNum }} #</strong>
           @if (bet.f500) {
-            <strong>{{ bet.books < 0 ? -bet.books : bet.books }} x {{ bet.f500 }}</strong>
+            <strong>{{ bet.books < 0 ? -bet.books : bet.books }}x{{ bet.f500 }}</strong>
           } @else {
-            <strong>{{ bet.stake < 0 ? -bet.stake : bet.stake }} @ <span class="odds">{{ bet.odds100 }}</span></strong>
+            <strong>{{ bet.stake < 0 ? -bet.stake : bet.stake }}&#64;<span class="odds">{{ bet.odds100 }}</span></strong>
           }
           @if (bet.queued) { <span class="tag">queued, will be sent</span> }
           @if (bet.demo) { <span class="tag demo-tag">demo, nothing saved</span> }

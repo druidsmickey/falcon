@@ -116,6 +116,8 @@ Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a 
 - Contacts using the newer hidden-number WhatsApp ids may not match the saved number.
 - Free text is read **loosely**: in a line like "put 500 on the grey one" the 500 is taken as the amount (books or a stake, you choose; a second figure is read as usual), filler words (put, on, the, one...) are dropped and the rest ("grey") is tried as the horse name. The card is marked unsure. Only lines with three or four figures among words stay "unreadable", and lines with more than four figures are ignored. Understanding real sentences properly needs the AI step, which is not built yet.
 
+When you press **Save** on a card, the player who sent the bet gets an **OK** reply on WhatsApp (if the message held several bets, the OK carries the line, for example "OK 12 300x90", so the answers can be told apart). Dismissing a card sends nothing. To switch the replies off, set WHATSAPP_REPLY_OK=false in backend/.env.
+
 ## AI second opinion (optional)
 
 **Claude (paid):** choose Service = Claude, paste an API key from console.anthropic.com (the API is billed per use, separately from a Claude subscription), and the model is claude-sonnet-5-5 (backup claude-haiku-5-5). Tick "The AI reads every line with a figure" so that every line goes to the AI, not only the unclear ones; the AI says which line each bet comes from, a line it finds no bet in keeps the rules reading (unless the rules could not read it), and everything it reads is still shown as unsure for you to confirm. With Claude the limits are 30 calls a minute and 500 a day, so a runaway cannot cost much; set a monthly spending limit in the Anthropic console as well.

@@ -112,9 +112,9 @@ button.ghost:disabled {
   align-items: baseline;
   gap: 10px;
   padding: 6px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #f3c1c1;
   border-radius: 4px;
-  background: #f0f9ff;
+  background: #fde8e8;
   font-size: 0.975rem;
   white-space: nowrap;
   overflow: hidden;
@@ -125,7 +125,9 @@ button.ghost:disabled {
 }
 
 .saved-bet .client {
-  color: black;
+  color: #0a2472;
+  min-width: 5ch;
+  margin-right: 24px;
 }
 
 .saved-bet .horse-line {

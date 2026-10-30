@@ -695,3 +695,33 @@ test('groups, community announcements and channels are not read, even from a lis
   assert.equal(await inbox.handleIncoming(message('11 500x90', { from: '120363000000@newsletter' })), 0);
   assert.equal(await WhatsappInbox.countDocuments(), 0);
 });
+
+test('saving a bet answers the player with OK, once, and the OK carries the line when the message held several bets', async () => {
+  const sent = [];
+  inbox.attach({ on: () => {}, sendMessage: async (to, text) => { sent.push([to, text]); } }, { pollEveryMs: 0 });
+  const waitForReplies = async count => { for (let i = 0; i < 50 && sent.length < count; i++) await new Promise(r => setTimeout(r, 10)); };
+  try {
+    await inbox.handleOwn(ownList('r1\n1 1500\n2 500\n3 700\n5 800'));
+    assert.equal(await inbox.handleIncoming(message('11 500x90')), 1);
+    const [single] = (await inbox.listPending()).items;
+    assert.equal(await inbox.decide(single.id, 'confirmed'), true);
+    await waitForReplies(1);
+    assert.deepEqual(sent, [['4477001@c.us', 'OK']]);
+    assert.equal(await inbox.decide(single.id, 'confirmed'), false);
+
+    sent.length = 0;
+    assert.equal(await inbox.handleIncoming(message('12 300x90\n13 200x90')), 2);
+    const items = (await inbox.listPending()).items;
+    await inbox.decide(items[0].id, 'confirmed');
+    await waitForReplies(1);
+    assert.equal(sent[0][1], 'OK ' + items[0].text);
+
+    // dismissing does not answer
+    sent.length = 0;
+    await inbox.decide(items[1].id, 'dismissed');
+    await new Promise(r => setTimeout(r, 50));
+    assert.equal(sent.length, 0);
+  } finally {
+    inbox.attach({ on: () => {} }, { pollEveryMs: 0 });
+  }
+});

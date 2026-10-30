@@ -551,6 +551,7 @@ async function pollListened(client, now = Date.now()) {
 
 /** Starts listening on a WhatsApp client. Errors are logged, never thrown into the client. */
 function attach(client, { pollEveryMs = POLL_EVERY_MS } = {}) {
+  replyClient = client;
   const guard = (name, handler) => message => {
     withTimeout(handler(message), 30000, 'reading a message').catch(error => {
       mark(message, 'FAILED: ' + String(error && error.message || error).slice(0, 100));
@@ -623,6 +624,23 @@ async function countPending() {
   return WhatsappInbox.countDocuments({ status: 'pending' });
 }
 
+// the WhatsApp client of the moment, to answer the person whose bet was saved
+let replyClient = null;
+
+/**
+ * Tells the player that the bet was saved: "OK", or "OK" and the line when the message held several bets (so that
+ * the answers can be told apart). Never makes saving fail. Switched off with WHATSAPP_REPLY_OK=false.
+ */
+async function replyOk(item) {
+  try {
+    if (!replyClient || String(process.env.WHATSAPP_REPLY_OK || '').toLowerCase() === 'false') return;
+    const several = (await WhatsappInbox.countDocuments({ messageId: item.messageId })) > 1;
+    await replyClient.sendMessage(item.contactNumber, several ? `OK ${item.text}` : 'OK');
+  } catch (error) {
+    console.log('WhatsApp inbox: the OK reply was not sent:', error.message);
+  }
+}
+
 /**
  * Marks a pending item confirmed or dismissed. Returns false if it was not pending (already decided). When the bet
  * was saved with figures other than the ones read, the change is kept as an example for the AI.
@@ -630,6 +648,7 @@ async function countPending() {
 async function decide(id, status, saved) {
   if (!['confirmed', 'dismissed'].includes(status)) throw new Error('bad status');
   const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date() } }, { new: false }).lean();
+  if (before && status === 'confirmed' && !before.demo) replyOk(before);
   if (before && status === 'confirmed' && saved && !before.demo) {
     try {
       await learn(WhatsappCorrection, before, saved);
