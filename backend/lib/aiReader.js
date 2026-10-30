@@ -9,7 +9,7 @@ const { entryFromAi } = require('./betMessage');
 /** Services with a free tier (the limits and the models change over time, so the model can be edited). */
 const PRESETS = {
   gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-flash-latest', fallbackModel: 'gemini-flash-lite-latest' },
-  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', fallbackModel: '' },
+  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-20b', fallbackModel: '' },
   custom: { baseUrl: '', model: '', fallbackModel: '' },
 };
 

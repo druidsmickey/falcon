@@ -125,6 +125,22 @@ async function saveAiSettings(body) {
   return getAiSettings();
 }
 
+/** When the model name is refused, asks the service which models it has, so that one can be copied into the Model box. */
+async function availableModelsText() {
+  try {
+    const settings = await loadAiSettings();
+    if (!settings || !settings.apiKey || !settings.baseUrl) return '';
+    const response = await fetch(settings.baseUrl.replace(/\/+$/, '') + '/models', { headers: { Authorization: 'Bearer ' + settings.apiKey }, signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return '';
+    const data = await response.json();
+    const names = (data.data || data.models || []).map(m => String(m.id || m.name || '').replace(/^models\//, '')).filter(Boolean)
+      .filter(n => !/whisper|tts|guard|embed|image|audio|vision-preview|orpheus/i.test(n)).slice(0, 25);
+    return names.length ? ' | Models this key can use (copy one into the Model box): ' + names.join(', ') : '';
+  } catch {
+    return '';
+  }
+}
+
 /** Tries the AI with a sample line, to see that the key and the model work. */
 async function testAi(text) {
   const sample = String(text || '').trim().slice(0, 200) || 'put 5k on the grey at 650';
@@ -133,7 +149,9 @@ async function testAi(text) {
   const entries = await ai.read([sample], context);
   const stats = ai.getStats();
   if (entries === null) {
-    return { ok: false, error: stats.lastError && stats.failed > before.failed ? stats.lastError : 'the AI is switched off, has no key, or the limit was reached', sample };
+    let error = stats.lastError && stats.failed > before.failed ? stats.lastError : 'the AI is switched off, has no key, or the limit was reached';
+    if (/ 404/.test(error)) error += await availableModelsText();
+    return { ok: false, error, sample };
   }
   return {
     ok: true,
