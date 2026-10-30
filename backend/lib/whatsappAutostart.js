@@ -29,4 +29,19 @@ function shouldReconnect(reason) {
   return !/LOGOUT/i.test(String(reason || ''));
 }
 
-module.exports = { sessionExists, autostartEnabled, shouldReconnect, SESSION_FOLDER };
+/**
+ * Chrome leaves "Singleton" lock files in its profile when it is killed instead of closed; the next start then
+ * refuses to use the profile. They are removed before connecting again (nothing else uses the profile then).
+ */
+function removeStaleLocks(authPath) {
+  try {
+    const folder = path.join(authPath, SESSION_FOLDER);
+    for (const name of fs.readdirSync(folder)) {
+      if (/^Singleton(Lock|Cookie|Socket)$/.test(name)) fs.rmSync(path.join(folder, name), { force: true, recursive: true });
+    }
+  } catch {
+    // no session folder yet
+  }
+}
+
+module.exports = { sessionExists, autostartEnabled, shouldReconnect, removeStaleLocks, SESSION_FOLDER };

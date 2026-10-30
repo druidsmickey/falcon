@@ -31,3 +31,20 @@ test('a lost connection is taken up again, but not after the phone logged the de
   assert.equal(shouldReconnect('LOGOUT'), false);
   assert.equal(shouldReconnect('logout'), false);
 });
+
+test('stale Chrome lock files are removed from the saved session, and the session itself is kept', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { removeStaleLocks, sessionExists, SESSION_FOLDER } = require('../lib/whatsappAutostart');
+  const auth = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-'));
+  const folder = path.join(auth, SESSION_FOLDER);
+  fs.mkdirSync(folder);
+  fs.writeFileSync(path.join(folder, 'SingletonLock'), 'x');
+  fs.writeFileSync(path.join(folder, 'SingletonCookie'), 'x');
+  fs.writeFileSync(path.join(folder, 'Cookies'), 'keep');
+  removeStaleLocks(auth);
+  assert.deepEqual(fs.readdirSync(folder), ['Cookies']);
+  assert.equal(sessionExists(auth), true);
+  fs.rmSync(auth, { recursive: true, force: true });
+});

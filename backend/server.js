@@ -705,9 +705,20 @@ app.listen(PORT, HOST, () => {
   console.log(`ðŸ“ API URL: ${process.env.API_URL}`);
 });
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
+// Graceful shutdown: WhatsApp is closed first (so that its session is saved and no QR code is needed after a restart)
+let stopping = false;
+const stop = async signal => {
+  if (stopping) return;
+  stopping = true;
+  console.log(`${signal} received: closing WhatsApp and the database`);
+  try {
+    await whatsappRouter.shutdown();
+  } catch (error) {
+    console.error('WhatsApp did not close cleanly:', error.message);
+  }
   await mongoose.connection.close();
   console.log('MongoDB connection closed through app termination');
   process.exit(0);
-});
+};
+process.on('SIGINT', () => stop('SIGINT'));
+process.on('SIGTERM', () => stop('SIGTERM'));

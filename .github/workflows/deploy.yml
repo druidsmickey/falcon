@@ -84,5 +84,7 @@ jobs:
             cd ${{ matrix.app.target }}/backend
 
             npm install --omit=dev
-            pm2 restart ${{ matrix.app.pm2 }} || pm2 start server.js --name ${{ matrix.app.pm2 }}
+            # a long stop time lets WhatsApp close its browser and save the session (otherwise a QR code is asked again)
+            pm2 delete ${{ matrix.app.pm2 }} || true
+            pm2 start server.js --name ${{ matrix.app.pm2 }} --kill-timeout 20000
             pm2 save

@@ -11,7 +11,7 @@ const WhatsappGroup = require('../models/whatsappGroup');
 const WhatsappMessage = require('../models/whatsappMessage');
 const whatsappInbox = require('../lib/whatsappInbox');
 const { usableContacts, syncContacts } = require('../lib/contactSync');
-const { sessionExists, autostartEnabled, shouldReconnect } = require('../lib/whatsappAutostart');
+const { sessionExists, autostartEnabled, shouldReconnect, removeStaleLocks } = require('../lib/whatsappAutostart');
 
 // Configure multer for memory storage with 50MB limit
 const upload = multer({ 
@@ -147,6 +147,10 @@ function initializeClient() {
   
   const puppeteerConfig = {
     headless: true,
+    // the server closes the browser itself when it stops (see shutdown): a browser that is killed does not save the session
+    handleSIGINT: false,
+    handleSIGTERM: false,
+    handleSIGHUP: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -167,6 +171,7 @@ function initializeClient() {
     puppeteerConfig.executablePath = chromePath;
   }
 
+  removeStaleLocks(authPath);
   client = new Client({
     authStrategy: new LocalAuth({
       clientId: 'itb-whatsapp-client',
@@ -1485,5 +1490,21 @@ if (autostartEnabled() && sessionExists(authPath)) {
   console.log('A saved WhatsApp session was found: connecting in 10 seconds');
   scheduleReconnect(10);
 }
+
+/**
+ * Closes WhatsApp the proper way when the server stops (every deploy restarts it): the browser then saves the
+ * logged-in session, so that no QR code has to be scanned again.
+ */
+router.shutdown = async function shutdown(timeoutMs = 15000) {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  stopUnreadSync();
+  const current = client;
+  client = null;
+  if (!current) return;
+  await Promise.race([
+    current.destroy().catch(() => {}),
+    new Promise(resolve => setTimeout(resolve, timeoutMs)),
+  ]);
+};
 
 module.exports = router;
