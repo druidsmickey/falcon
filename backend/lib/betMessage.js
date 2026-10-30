@@ -322,6 +322,11 @@ function parseStrict(line, context) {
 // words that carry no horse name: "put 500 on the grey one"
 const FILLER = new Set(['put', 'bet', 'on', 'the', 'a', 'an', 'one', 'of', 'at', 'for', 'to', 'me', 'my', 'please', 'pls', 'plz', 'with', 'in', 'is', 'and', 'x', 'win', 'book', 'books', 'stake', 'pounds', 'pound', 'gbp']);
 
+// words of a conversation ("Last bet 22*", "total 300", "thanks 2"): with no horse of the meeting behind them the line is
+// chat that happens to hold a figure, not a bet
+const CHAT = new Set(['last', 'total', 'totals', 'balance', 'thanks', 'thank', 'thx', 'ok', 'okay', 'done', 'paid', 'pay', 'owe', 'owed', 'result', 'results', 'won', 'lost', 'today', 'tomorrow', 'yesterday', 'week', 'good', 'morning', 'evening', 'night', 'hello', 'hi', 'sorry', 'sent']);
+const IGNORE = Symbol('not a bet');
+
 /**
  * A line with words and one or two figures that does not fit the usual shapes, such as "put 500 on the grey
  * one": the first figure is the amount (books or a stake, the person chooses), a second figure is read as usual,
@@ -354,7 +359,9 @@ function parseLoose(line, context) {
 
 /** The usual shapes first, then a loose reading of lines with words. */
 function parseLine(line, context) {
-  return parseStrict(line, context) ?? parseLoose(line, context);
+  const bet = parseStrict(line, context) ?? parseLoose(line, context);
+  if (bet && bet.horseNum === null && !bet.unreadable && (line.toLowerCase().match(/[a-z']+/g) || []).some(w => CHAT.has(w))) return IGNORE;
+  return bet;
 }
 
 /** A line that is only a number: "200", "5k". It cannot say which horse, so it is never a bet. */
@@ -384,6 +391,7 @@ function parseBetMessage(text, context = emptyContext()) {
   for (const line of lines) {
     if (isBareNumber(line)) continue;
     const bet = parseLine(line, context);
+    if (bet === IGNORE) continue;
     if (bet) results.push({ ...bet, text: line });
     else if (/\d/.test(line) && (line.match(/\d+(?:\.\d+)?/g) || []).length <= 4) results.push({ unreadable: true, text: line, issues: ['could not read this line'] });
   }

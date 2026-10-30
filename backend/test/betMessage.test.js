@@ -321,3 +321,13 @@ test('with one race in the meeting and no odds list, that race is the current on
   const bet = one('3 5k', { raceNum: null, runners: null, horses: single });
   assert.deepEqual([bet.raceNum, bet.horseNum, bet.unsure], [2, 3, false]);
 });
+
+test('chat with a figure in it is not a bet: "Last bet 22*", "total 300", "thanks 2"', () => {
+  for (const text of ['* Last bet 22*', 'Last bet 22*', 'total 300', 'thanks 2', 'Balance 1500 today']) {
+    assert.deepEqual(parseBetMessage(text, withHorses), [], text);
+  }
+  // a horse that really is called that is still found
+  const horses = [{ raceNum: 1, horseNum: 3, horseName: 'Last Dance' }];
+  const bet = parseBetMessage('last dance 500', { raceNum: 1, runners: 5, horses })[0];
+  assert.equal(bet.horseNum, 3);
+});
