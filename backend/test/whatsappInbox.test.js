@@ -656,3 +656,36 @@ test('a bet saved with other figures than the ones read is kept as an example, a
   assert.equal((await inbox.getAiSettings()).corrections, 1);
   assert.equal(await inbox.forgetCorrections(), 1);
 });
+
+test('with "read every line" the AI reads clear lines too, line by line, and a line it skips keeps the rules reading', async () => {
+  await seedMeeting();
+  await WhatsappAi.deleteMany({});
+  await WhatsappAi.create({ key: 'main', enabled: true, readAll: true, preset: 'custom', baseUrl: 'https://ai.example/v1', model: 'm', apiKey: 'K' });
+  const calls = [];
+  inbox.setAiReader(fakeAi([{ line: 2, race: 1, horse: 3, horseName: null, amount: 700, second: 90, kind: 'books' }], calls));
+  try {
+    assert.equal(await inbox.handleIncoming(message('11 500x90\n13 600x90\nLast bet 22*')), 2);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].messages[1].content, /1\) 11 500x90/);
+    const { items } = await inbox.listPending();
+    const bySource = Object.fromEntries(items.map(i => [i.text, i]));
+    // line 1: the AI found nothing, the rules were sure: kept as read
+    assert.equal(bySource['11 500x90'].ai, false);
+    // line 2: the AI's reading replaced the rules'
+    assert.equal(bySource['13 600x90'].ai, true);
+    assert.deepEqual([bySource['13 600x90'].horseNum, bySource['13 600x90'].books], [3, 700]);
+  } finally {
+    await WhatsappAi.deleteMany({});
+    inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+  }
+});
+
+test('the read-every-line switch is saved, and Claude can be chosen', async () => {
+  await WhatsappAi.deleteMany({});
+  const saved = await inbox.saveAiSettings({ preset: 'claude', readAll: true });
+  assert.equal(saved.readAll, true);
+  assert.equal(saved.model, 'claude-sonnet-5-5');
+  assert.equal(saved.baseUrl, 'https://api.anthropic.com/v1');
+  await assert.rejects(() => inbox.saveAiSettings({ readAll: 'yes' }));
+  await WhatsappAi.deleteMany({});
+});

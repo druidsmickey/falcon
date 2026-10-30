@@ -118,6 +118,8 @@ Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a 
 
 ## AI second opinion (optional)
 
+**Claude (paid):** choose Service = Claude, paste an API key from console.anthropic.com (the API is billed per use, separately from a Claude subscription), and the model is claude-sonnet-5-5 (backup claude-haiku-5-5). Tick "The AI reads every line with a figure" so that every line goes to the AI, not only the unclear ones; the AI says which line each bet comes from, a line it finds no bet in keeps the rules reading (unless the rules could not read it), and everything it reads is still shown as unsure for you to confirm. With Claude the limits are 30 calls a minute and 500 a day, so a runaway cannot cost much; set a monthly spending limit in the Anthropic console as well.
+
 The AI does not learn by itself, but the app keeps your corrections: when you change the race, horse or figures of a card before saving it, the line and your figures are kept (without any name or number), and the few that look most like the line being read are shown to the AI as examples. The card shows how many are kept, with a "Forget them" button. They are removed after 6 months.
 
 If the free service answers "503 ... high demand" (or 429/500), that is the provider being busy for a moment, not a problem with your key: the program waits a second and asks again (twice), then tries the **Backup model** of the card (Gemini: gemini-flash-lite-latest, Groq: llama-3.1-8b-instant). A wrong key (401/403) is not retried. If everything stays busy, the message is read by the rules alone, as before.

@@ -44,7 +44,8 @@ interface ActivityItem {
 /** The settings of the AI that gives a second opinion on messages the rules cannot read (the key stays on the server). */
 interface AiSettings {
   enabled: boolean;
-  preset: 'gemini' | 'groq' | 'custom';
+  readAll?: boolean;
+  preset: 'gemini' | 'groq' | 'claude' | 'custom';
   baseUrl: string;
   model: string;
   fallbackModel?: string;
@@ -289,6 +290,10 @@ export class Whatsapp implements OnInit, OnDestroy {
 
   protected async setAiEnabled(enabled: boolean): Promise<void> {
     await this.saveAi({ enabled });
+  }
+
+  protected async setAiReadAll(readAll: boolean): Promise<void> {
+    await this.saveAi({ readAll });
   }
 
   protected async setAiPreset(event: Event): Promise<void> {

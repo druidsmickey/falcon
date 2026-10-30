@@ -69,11 +69,17 @@
           <span>{{ a.enabled ? 'On' : 'Off' }}{{ a.hasKey ? '' : ' (add a key first)' }}</span>
         </label>
 
+        <label class="check ai-switch">
+          <input type="checkbox" [checked]="a.readAll" [disabled]="aiBusy()" (change)="setAiReadAll($any($event.target).checked)">
+          <span>The AI reads every line with a figure (otherwise only the lines the rules are unsure about)</span>
+        </label>
+
         <div class="ai-row">
           <label>Service
             <select [value]="a.preset" (change)="setAiPreset($event)" [disabled]="aiBusy()">
               <option value="gemini">Google Gemini (free plan)</option>
               <option value="groq">Groq (free plan)</option>
+              <option value="claude">Claude (paid API key from console.anthropic.com)</option>
               <option value="custom">Other (any OpenAI-style service)</option>
             </select>
           </label>

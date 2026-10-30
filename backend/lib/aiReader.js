@@ -11,25 +11,30 @@ const { pickExamples, exampleText } = require('./corrections');
 const PRESETS = {
   gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-flash-latest', fallbackModel: 'gemini-flash-lite-latest' },
   groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-20b', fallbackModel: '' },
+  // Anthropic's own API (paid, billed per use; a Claude subscription does not include it)
+  claude: { baseUrl: 'https://api.anthropic.com/v1', model: 'claude-sonnet-5-5', fallbackModel: 'claude-haiku-5-5' },
   custom: { baseUrl: '', model: '', fallbackModel: '' },
 };
 
 // Far below the free allowances, so that the free tier is never used up and nothing is ever charged for.
 const MAX_PER_MINUTE = 10;
 const MAX_PER_DAY = 300;
+// a paid service has no free allowance to protect: the limits only guard against a runaway bill
+const PAID_PER_MINUTE = 30;
+const PAID_PER_DAY = 500;
 // One try may take this long; all the tries for a message together at most DEADLINE_MS (a message is never held
 // up for long: the inbox reads it without the AI when the AI does not answer in time).
-const TIMEOUT_MS = 8000;
-const DEADLINE_MS = 22000;
+const TIMEOUT_MS = 12000;
+const DEADLINE_MS = 24000;
 const PAUSES_MS = [800, 1600];
 const MAX_LINES = 8;
 const MAX_HORSE_TEXT = 6000;
 
 const SYSTEM_PROMPT = `You read short WhatsApp messages in which players place horse-racing bets, and you pick out what each bet says. Reply with JSON only, no other text, in exactly this form:
-{"bets":[{"race":number or null,"horse":number or null,"horseName":text or null,"amount":number or null,"second":number or null,"kind":"books" or "stake" or null}]}
+{"bets":[{"line":number,"race":number or null,"horse":number or null,"horseName":text or null,"amount":number or null,"second":number or null,"kind":"books" or "stake" or null}]}
 
 How the messages are written:
-- One bet per line, and a line can hold several words and figures in different orders.
+- The lines are numbered. "line" is the number of the line a bet comes from. One bet per line, and a line can hold several words and figures in different orders.
 - The horse is a number, or a race and a horse number joined: "41" means race 4 horse 1, "68" means race 6 horse 8, "13" means race 1 horse 3 when there are only 8 races. Only the races and horses in the list below exist: use the list to decide, and use null when nothing fits.
 - The horse can also be named, in full, shortened or misspelt ("cap mag" for Captain Magpie): put the name as written in "horseName" and, if you are sure which horse of the list it is, its number in "horse".
 - The amount is a figure, often with k meaning thousand: "20k" is 20000, "2.5k" is 2500. It can stand before or after the horse.
@@ -84,6 +89,7 @@ const amountOrNull = value => (typeof value === 'number' && Number.isFinite(valu
 function normalizeBets(json) {
   const list = json && Array.isArray(json.bets) ? json.bets : [];
   return list.slice(0, MAX_LINES).filter(b => b && typeof b === 'object').map(b => ({
+    line: wholeOrNull(b.line),
     raceNum: wholeOrNull(b.race),
     horseNum: wholeOrNull(b.horse),
     horseName: typeof b.horseName === 'string' && b.horseName.trim() ? b.horseName.trim().slice(0, 60) : null,
@@ -93,15 +99,32 @@ function normalizeBets(json) {
   }));
 }
 
+/** Anthropic's own API has its own format (the others speak the common "chat completions" one). */
+const isAnthropic = baseUrl => {
+  try {
+    return new URL(baseUrl).hostname.endsWith('anthropic.com');
+  } catch {
+    return false;
+  }
+};
+
 async function chat({ baseUrl, apiKey, model, system, user, fetchImpl = fetch, timeoutMs = TIMEOUT_MS }) {
-  const url = baseUrl.replace(/\/+$/, '') + '/chat/completions';
-  const response = await fetchImpl(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, temperature: 0, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const body = await response.text();
+  const claude = isAnthropic(baseUrl);
+  const url = baseUrl.replace(/\/+$/, '') + (claude ? '/messages' : '/chat/completions');
+  const send = async withTemperature => {
+    const headers = claude
+      ? { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+      : { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
+    const payload = claude
+      ? { model, max_tokens: 1500, system, messages: [{ role: 'user', content: user }] }
+      : { model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };
+    if (withTemperature) payload.temperature = 0;
+    const res = await fetchImpl(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(timeoutMs) });
+    return { res, text: await res.text() };
+  };
+  let { res: response, text: body } = await send(true);
+  // a model that does not take a temperature is asked again without one
+  if (response.status === 400 && /temperature/i.test(body)) ({ res: response, text: body } = await send(false));
   if (!response.ok) {
     // the key is never part of the text kept for the person to read
     const failure = new Error(`the AI service answered ${response.status}: ${body.replace(/\s+/g, ' ').slice(0, 160)}`);
@@ -114,7 +137,9 @@ async function chat({ baseUrl, apiKey, model, system, user, fetchImpl = fetch, t
   } catch {
     throw new Error('the AI service did not answer in the expected form');
   }
-  const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  const content = claude
+    ? data && Array.isArray(data.content) && data.content.filter(part => part && part.type === 'text').map(part => part.text).join('')
+    : data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (typeof content !== 'string') throw new Error('the AI service sent no text');
   return content;
 }
@@ -152,11 +177,11 @@ class AiReader {
   }
 
   /** True while a call is allowed by the limits (and records it). */
-  allow() {
+  allow(paid = false) {
     const t = this.now();
     this.calls = this.calls.filter(c => t - c < 24 * 3600 * 1000);
     const lastMinute = this.calls.filter(c => t - c < 60 * 1000).length;
-    if (lastMinute >= MAX_PER_MINUTE || this.calls.length >= MAX_PER_DAY) return false;
+    if (lastMinute >= (paid ? PAID_PER_MINUTE : MAX_PER_MINUTE) || this.calls.length >= (paid ? PAID_PER_DAY : MAX_PER_DAY)) return false;
     this.calls.push(t);
     return true;
   }
@@ -207,7 +232,7 @@ class AiReader {
       this.stats.skipped += 1;
       return null;
     }
-    if (!this.allow()) {
+    if (!this.allow(isAnthropic(settings.baseUrl))) {
       this.stats.limited += 1;
       return null;
     }
@@ -228,7 +253,7 @@ class AiReader {
       const bets = normalizeBets(json);
       this.stats.ok += 1;
       this.stats.lastError = null;
-      return bets.map(b => entryFromAi(b, context));
+      return bets.map(b => ({ ...entryFromAi(b, context), aiLine: b.line }));
     } catch (error) {
       this.stats.failed += 1;
       this.stats.lastError = String((error && error.message) || error).replace(settings.apiKey, '***').slice(0, 200);
@@ -237,4 +262,4 @@ class AiReader {
   }
 }
 
-module.exports = { isTemporary, AiReader, PRESETS, buildPrompt, extractJson, normalizeBets, horseListText, chat, MAX_PER_MINUTE, MAX_PER_DAY, SYSTEM_PROMPT };
+module.exports = { isTemporary, AiReader, PRESETS, buildPrompt, extractJson, normalizeBets, horseListText, chat, isAnthropic, MAX_LINES, MAX_PER_MINUTE, MAX_PER_DAY, SYSTEM_PROMPT };

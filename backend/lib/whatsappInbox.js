@@ -9,7 +9,7 @@ const Init = require('../models/init');
 const Params = require('../models/params');
 const { parseBetMessage, parseOddsList, emptyContext, isDoubtful } = require('./betMessage');
 const WhatsappAi = require('../models/whatsappAi');
-const { AiReader, PRESETS } = require('./aiReader');
+const { AiReader, PRESETS, MAX_LINES } = require('./aiReader');
 const WhatsappCorrection = require('../models/whatsappCorrection');
 const { learn } = require('./corrections');
 
@@ -51,6 +51,7 @@ async function loadAiSettings() {
   const base = PRESETS[preset] || PRESETS.custom;
   return {
     enabled: doc ? !!doc.enabled : String(env.AI_ENABLED || '').toLowerCase() === 'true',
+    readAll: doc ? !!doc.readAll : String(env.AI_READ_ALL || '').toLowerCase() === 'true',
     baseUrl: (doc && doc.baseUrl) || env.AI_BASE_URL || base.baseUrl,
     model: (doc && doc.model) || env.AI_MODEL || base.model,
     fallbackModel: doc ? doc.fallbackModel || '' : env.AI_FALLBACK_MODEL || base.fallbackModel || '',
@@ -71,6 +72,7 @@ async function getAiSettings() {
   const settings = await loadAiSettings();
   return {
     enabled: settings.enabled,
+    readAll: settings.readAll,
     preset: (doc && doc.preset) || 'gemini',
     baseUrl: settings.baseUrl,
     model: settings.model,
@@ -100,8 +102,12 @@ async function saveAiSettings(body) {
     if (typeof input.enabled !== 'boolean') throw new Error('enabled must be true or false');
     changes.enabled = input.enabled;
   }
+  if (input.readAll !== undefined) {
+    if (typeof input.readAll !== 'boolean') throw new Error('readAll must be true or false');
+    changes.readAll = input.readAll;
+  }
   if (input.preset !== undefined) {
-    if (!['gemini', 'groq', 'custom'].includes(input.preset)) throw new Error('unknown preset');
+    if (!['gemini', 'groq', 'claude', 'custom'].includes(input.preset)) throw new Error('unknown preset');
     changes.preset = input.preset;
     // choosing a ready-made service also sets its address and model, unless the person gives their own
     if (input.preset !== 'custom') {
@@ -167,15 +173,22 @@ async function testAi(text) {
 }
 
 /**
- * The lines the rules were not sure about go to the AI. What it finds replaces them (always marked unsure and read
- * by AI); when it finds no bet in a line the rules could not read at all, that line is dropped as chat. When the AI
- * cannot be used, nothing changes.
+ * The lines the rules were not sure about go to the AI (every line with a figure, when the AI is set to read all).
+ * What it finds for a line replaces what the rules read for it (always marked unsure and read by AI); when it finds
+ * no bet in a line the rules could not read at all, that line is dropped as chat. When the AI cannot be used,
+ * nothing changes.
  */
 async function withAiSecondOpinion(parsed, context) {
-  const doubtful = parsed.filter(isDoubtful);
-  if (doubtful.length === 0) return parsed;
+  let readAll = false;
+  try {
+    readAll = !!(await loadAiSettings()).readAll;
+  } catch {
+    readAll = false;
+  }
+  const targets = parsed.map((entry, i) => i).filter(i => readAll || isDoubtful(parsed[i])).slice(0, MAX_LINES);
+  if (targets.length === 0) return parsed;
 
-  const lines = doubtful.map(e => e.text);
+  const lines = targets.map(i => parsed[i].text);
   let found = null;
   try {
     found = await ai.read(lines, context);
@@ -185,16 +198,33 @@ async function withAiSecondOpinion(parsed, context) {
   if (found === null) return parsed;
   if (found.length === 0) return parsed.filter(e => !e.unreadable);
 
-  const text = lines.join(' | ');
+  const targetSet = new Set(targets);
+  const withLine = e => Number.isInteger(e.aiLine) && e.aiLine >= 1 && e.aiLine <= lines.length;
+  const clean = ({ aiLine, ...entry }) => entry;
   const result = [];
+
+  if (found.every(withLine)) {
+    // the AI says which line each bet comes from: a line it found nothing in keeps what the rules read, unless that was unreadable
+    const byLine = new Map();
+    for (const e of found) byLine.set(e.aiLine - 1, [...(byLine.get(e.aiLine - 1) || []), clean(e)]);
+    parsed.forEach((entry, i) => {
+      if (!targetSet.has(i)) return result.push(entry);
+      const k = targets.indexOf(i);
+      if (byLine.has(k)) result.push(...byLine.get(k).map(e => ({ ...e, text: lines[k] })));
+      else if (!entry.unreadable) result.push(entry);
+    });
+    return result;
+  }
+
+  const text = lines.join(' | ');
   let inserted = false;
-  for (const entry of parsed) {
-    if (!isDoubtful(entry)) result.push(entry);
+  parsed.forEach((entry, i) => {
+    if (!targetSet.has(i)) result.push(entry);
     else if (!inserted) {
-      result.push(...found.map(e => ({ ...e, text })));
+      result.push(...found.map(e => ({ ...clean(e), text })));
       inserted = true;
     }
-  }
+  });
   return result;
 }
 

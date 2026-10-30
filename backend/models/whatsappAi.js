@@ -5,7 +5,9 @@ const mongoose = require('mongoose');
 const whatsappAiSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, default: 'main' },
   enabled: { type: Boolean, default: false },
-  preset: { type: String, enum: ['gemini', 'groq', 'custom'], default: 'gemini' },
+  // every line with a figure goes to the AI, not only the lines the rules were unsure about
+  readAll: { type: Boolean, default: false },
+  preset: { type: String, enum: ['gemini', 'groq', 'claude', 'custom'], default: 'gemini' },
   baseUrl: { type: String, default: '', trim: true, maxlength: 300 },
   model: { type: String, default: '', trim: true, maxlength: 100 },
   // tried when the first model is busy or gone

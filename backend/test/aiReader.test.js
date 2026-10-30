@@ -45,8 +45,8 @@ test('the bets of an answer are cleaned: anything implausible becomes null', () 
     'text',
   ] });
   assert.equal(bets.length, 3);
-  assert.deepEqual(bets[0], { raceNum: 4, horseNum: 1, horseName: 'Lux', amount: 20000, second: 1000, kind: 'stake' });
-  assert.deepEqual(bets[1], { raceNum: null, horseNum: null, horseName: null, amount: null, second: null, kind: null });
+  assert.deepEqual(bets[0], { line: null, raceNum: 4, horseNum: 1, horseName: 'Lux', amount: 20000, second: 1000, kind: 'stake' });
+  assert.deepEqual(bets[1], { line: null, raceNum: null, horseNum: null, horseName: null, amount: null, second: null, kind: null });
   assert.deepEqual([bets[2].raceNum, bets[2].amount], [null, null]);
   assert.deepEqual(normalizeBets({}), []);
   assert.deepEqual(normalizeBets({ bets: 'x' }), []);
@@ -233,4 +233,36 @@ test('corrections that look like the lines are shown to the AI as examples', () 
   assert.equal(differs(read, { ...read, kind: 'books', amount: 500, second: null }), false);
   assert.equal(differs(read, { ...read, amount: 600 }), true);
   assert.equal(savedReading({ raceNum: 1, horseNum: 2, kind: 'books', amount: 500 }), null);
+});
+
+test('Claude is asked through the Messages API of Anthropic, with its own key header and answer format', async () => {
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push({ url, headers: init.headers, body: JSON.parse(init.body) });
+    return { ok: true, status: 200, text: async () => JSON.stringify({ content: [{ type: 'text', text: '{"bets":[{"line":1,"race":1,"horse":3,"amount":500,"second":90,"kind":"books"}]}' }] }) };
+  };
+  const reader = new AiReader({ loadSettings: async () => ({ enabled: true, baseUrl: PRESETS.claude.baseUrl, model: 'claude-sonnet-5-5', apiKey: 'SK' }), fetchImpl });
+  const entries = await reader.read(['cap mag 500x90'], context);
+  assert.equal(seen[0].url, 'https://api.anthropic.com/v1/messages');
+  assert.equal(seen[0].headers['x-api-key'], 'SK');
+  assert.equal(seen[0].headers['anthropic-version'], '2023-06-01');
+  assert.equal(seen[0].headers.Authorization, undefined);
+  assert.equal(seen[0].body.model, 'claude-sonnet-5-5');
+  assert.ok(seen[0].body.system && seen[0].body.max_tokens > 0);
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].aiLine, 1);
+  assert.equal(entries[0].horseNum, 3);
+});
+
+test('a model that refuses a temperature is asked again without one', async () => {
+  const bodies = [];
+  const fetchImpl = async (url, init) => {
+    const body = JSON.parse(init.body);
+    bodies.push(body);
+    if ('temperature' in body) return { ok: false, status: 400, text: async () => '{"error":{"message":"temperature is not supported for this model"}}' };
+    return { ok: true, status: 200, text: async () => JSON.stringify({ content: [{ type: 'text', text: '{"bets":[]}' }] }) };
+  };
+  const reader = new AiReader({ loadSettings: async () => ({ enabled: true, baseUrl: PRESETS.claude.baseUrl, model: 'm', apiKey: 'SK' }), fetchImpl });
+  assert.deepEqual(await reader.read(['x'], context), []);
+  assert.equal(bodies.length, 2);
 });
