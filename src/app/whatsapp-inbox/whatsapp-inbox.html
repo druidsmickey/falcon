@@ -141,7 +141,7 @@
           <button type="button" class="ghost dismiss" [disabled]="isBusy(draft)" (click)="dismiss(draft)">Dismiss</button>
         </div>
         @if (missing(draft).length > 0) {
-          <p class="needs">Needs: {{ missing(draft).join(', ') }}</p>
+          <p class="needs">{{ checkText(draft) }}</p>
         }
       </div>
     </mat-card>

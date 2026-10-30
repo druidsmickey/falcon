@@ -447,7 +447,6 @@ function entryFromAi(raw, context) {
   const entry = newEntry(race);
   entry.ai = true;
   entry.unsure = true;
-  entry.issues.push('Check what is missing or what you did not understand');
 
   if (hasList && race !== null && !races.has(race)) {
     entry.issues.push(`the AI said race ${race}, which is not in this meeting`);

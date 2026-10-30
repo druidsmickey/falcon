@@ -170,6 +170,22 @@ export function savedFigures(draft: Draft): { raceNum: number | null; horseNum: 
   };
 }
 
+/**
+ * What the person has to look at, in capitals and short: "Check RACE", "Check RACE, HORSE and ODDS". Built from the
+ * problems of a draft ("race", "horse is not in this race", "odds must be 115 to 5000"...). Empty when all is well.
+ */
+export function checkText(list: string[]): string {
+  const names = new Set<string>();
+  for (const problem of list) {
+    if (/^F500 or odds/i.test(problem)) names.add('BOOKS or STAKE');
+    else if (/^client/i.test(problem)) names.add('NAME');
+    else names.add((problem.match(/^[A-Za-z0-9]+/)?.[0] ?? problem).toUpperCase());
+  }
+  const all = [...names];
+  if (all.length === 0) return '';
+  return 'Check ' + (all.length === 1 ? all[0] : all.slice(0, -1).join(', ') + ' and ' + all[all.length - 1]);
+}
+
 export function toBetRequest(draft: Draft, meetingName: string, horseName: string, around: Surroundings = {}): BetRequest | null {
   if (problems(draft, around).length > 0 || !draft.kind) return null;
 

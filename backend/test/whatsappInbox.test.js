@@ -534,7 +534,7 @@ test('a line the rules cannot read is given to the AI, and what it finds is adde
     assert.match(calls[0].messages[1].content, /put 20k on the lux star at 650/);
     // the AI's line is marked and unsure, and went through the rules for the figures
     assert.deepEqual([items[1].ai, items[1].unsure, items[1].raceNum, items[1].horseNum, items[1].mode, items[1].stake, items[1].odds100], [true, true, 4, 1, 'odds', 20000, 650]);
-    assert.ok(items[1].issues.includes('Check what is missing or what you did not understand'));
+    assert.ok(items[1].unsure);
     assert.match(inbox.getActivity()[0].result, /added 2 bets to the inbox \(read with AI\)/);
   } finally {
     inbox.setAiReader(new AiReader({ loadSettings: async () => null }));

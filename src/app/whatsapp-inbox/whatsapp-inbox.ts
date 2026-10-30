@@ -11,7 +11,7 @@ import { environment } from '../../environments/environment';
 import { HorseParam, SelectedRace } from '../models';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { InboxCountService } from './inbox-count.service';
-import { Draft, InboxItem, Surroundings, chooseKind, draftFrom, hasProblem, problems, savedFigures, toBetRequest } from './inbox-bet';
+import { Draft, InboxItem, Surroundings, chooseKind, checkText, draftFrom, hasProblem, problems, savedFigures, toBetRequest } from './inbox-bet';
 
 interface OddsList {
   raceNum: number;
@@ -241,6 +241,10 @@ export class WhatsappInbox implements OnInit, OnDestroy {
       horseExists: params.length === 0 ? null : !!horse,
       blocked: !!horse && horse.disabled,
     };
+  }
+
+  protected checkText(draft: Draft): string {
+    return checkText(this.missing(draft));
   }
 
   protected missing(draft: Draft): string[] {

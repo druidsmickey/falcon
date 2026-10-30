@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Draft, InboxItem, chooseKind, draftFrom, hasProblem, problems, toBetRequest } from './inbox-bet';
+import { Draft, InboxItem, checkText, chooseKind, draftFrom, hasProblem, problems, toBetRequest } from './inbox-bet';
 
 const item = (over: Partial<InboxItem> = {}): InboxItem => ({
   id: 'a1', text: '11 500x90', contactName: 'Ann Smith', clientName: 'ANNIE', sentAt: '2026-10-24T10:15:00.000Z',
@@ -129,5 +129,15 @@ describe('a second figure that could be an F500 or odds', () => {
     expect([draft.stake, draft.odds100, draft.rate]).toEqual([500, 300, null]);
     expect(problems(draft)).toEqual([]);
     expect(toBetRequest(draft, 'ASCOT', 'X')).toMatchObject({ stake: 500, odds100: 300 });
+  });
+});
+
+describe('what to check on a card', () => {
+  it('names what is missing in capitals', () => {
+    expect(checkText([])).toBe('');
+    expect(checkText(['race'])).toBe('Check RACE');
+    expect(checkText(['race', 'horse'])).toBe('Check RACE and HORSE');
+    expect(checkText(['race', 'F500 or odds', 'odds must be 115 to 5000'])).toBe('Check RACE, BOOKS or STAKE and ODDS');
+    expect(checkText(['horse is not in this race', 'horse'])).toBe('Check HORSE');
   });
 });
