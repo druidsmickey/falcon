@@ -177,6 +177,10 @@
           {{ r.notListened }} from contacts not ticked, {{ r.notSaved }} from senders that are not saved contacts,
           {{ r.nothingToRead }} with nothing to read, {{ r.noText }} without text
           <br>}
+          @if (c.replies; as p) {
+          <br>OK replies to players: <strong>{{ p.sent }}</strong> sent, {{ p.failed }} failed
+          @if (p.lastError) { (the last problem: {{ p.lastError }}) }
+          <br>}
           &middot; chats of the listened contacts checked {{ c.polled }} times
           @if (c.lastPollAt) { (the last at {{ c.lastPollAt | date: 'HH:mm:ss' }}) }
         </p>

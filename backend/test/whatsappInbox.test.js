@@ -698,7 +698,7 @@ test('groups, community announcements and channels are not read, even from a lis
 
 test('saving a bet answers the player with OK, once, and the OK carries the line when the message held several bets', async () => {
   const sent = [];
-  inbox.attach({ on: () => {}, sendMessage: async (to, text) => { sent.push([to, text]); } }, { pollEveryMs: 0 });
+  inbox.attach({ on: () => {}, sendMessage: async (to, text, options) => { assert.equal(options.sendSeen, false); sent.push([to, text]); } }, { pollEveryMs: 0 });
   const waitForReplies = async count => { for (let i = 0; i < 50 && sent.length < count; i++) await new Promise(r => setTimeout(r, 10)); };
   try {
     await inbox.handleOwn(ownList('r1\n1 1500\n2 500\n3 700\n5 800'));
@@ -707,6 +707,7 @@ test('saving a bet answers the player with OK, once, and the OK carries the line
     assert.equal(await inbox.decide(single.id, 'confirmed'), true);
     await waitForReplies(1);
     assert.deepEqual(sent, [['4477001@c.us', 'OK']]);
+    assert.equal(inbox.getCounters().replies.sent, 1);
     assert.equal(await inbox.decide(single.id, 'confirmed'), false);
 
     sent.length = 0;
@@ -721,6 +722,22 @@ test('saving a bet answers the player with OK, once, and the OK carries the line
     await inbox.decide(items[1].id, 'dismissed');
     await new Promise(r => setTimeout(r, 50));
     assert.equal(sent.length, 0);
+  } finally {
+    inbox.attach({ on: () => {} }, { pollEveryMs: 0 });
+  }
+});
+
+test('an OK that could not be sent is counted with its reason, and saving still works', async () => {
+  inbox.clearActivity();
+  inbox.attach({ on: () => {}, sendMessage: async () => { throw new Error('markedUnread'); } }, { pollEveryMs: 0 });
+  try {
+    await inbox.handleOwn(ownList('r1\n1 1500\n2 500\n3 700\n5 800'));
+    assert.equal(await inbox.handleIncoming(message('11 500x90')), 1);
+    const [item] = (await inbox.listPending()).items;
+    assert.equal(await inbox.decide(item.id, 'confirmed'), true);
+    for (let i = 0; i < 50 && inbox.getCounters().replies.failed < 1; i++) await new Promise(r => setTimeout(r, 10));
+    assert.equal(inbox.getCounters().replies.failed, 1);
+    assert.match(inbox.getCounters().replies.lastError, /markedUnread/);
   } finally {
     inbox.attach({ on: () => {} }, { pollEveryMs: 0 });
   }

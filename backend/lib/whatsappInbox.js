@@ -311,7 +311,7 @@ const recentIds = new Set();
 // How many times WhatsApp announced something, whatever was done with it: tells "WhatsApp sends nothing" from
 // "WhatsApp sends it and the server ignores it".
 const startedAt = new Date().toISOString();
-const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0, groups: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null };
+const counters = { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0, groups: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 }, polled: 0, lastPollAt: null, replies: { sent: 0, failed: 0, lastError: null } };
 // WhatsApp announces a message with two events; it is counted once
 const countedIds = new Set();
 const getCounters = () => ({ startedAt, ...counters, ignored: { ...counters.ignored }, results: { ...counters.results } });
@@ -374,7 +374,7 @@ const clearActivity = () => {
   recentIds.clear();
   countedIds.clear();
   trace.length = 0;
-  Object.assign(counters, { events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0, groups: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
+  Object.assign(counters, { replies: { sent: 0, failed: 0, lastError: null }, events: 0, fromOthers: 0, errors: 0, lastError: null, lastEventAt: null, polled: 0, lastPollAt: null, ignored: { fromMe: 0, status: 0, broadcast: 0, groups: 0 }, results: { added: 0, notSaved: 0, notListened: 0, nothingToRead: 0, noText: 0 } });
 };
 
 // groups, communities (their announcement group too) and channels are not read: bets come from a person's own chat
@@ -633,11 +633,17 @@ let replyClient = null;
  */
 async function replyOk(item) {
   try {
-    if (!replyClient || String(process.env.WHATSAPP_REPLY_OK || '').toLowerCase() === 'false') return;
+    if (String(process.env.WHATSAPP_REPLY_OK || '').toLowerCase() === 'false') return;
+    if (!replyClient) throw new Error('WhatsApp is not connected');
     const several = (await WhatsappInbox.countDocuments({ messageId: item.messageId })) > 1;
-    await replyClient.sendMessage(item.contactNumber, several ? `OK ${item.text}` : 'OK');
+    const text = several ? `OK ${item.text}` : 'OK';
+    // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
+    await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
+    counters.replies.sent += 1;
   } catch (error) {
-    console.log('WhatsApp inbox: the OK reply was not sent:', error.message);
+    counters.replies.failed += 1;
+    counters.replies.lastError = String((error && error.message) || error).slice(0, 160);
+    console.log('WhatsApp inbox: the OK reply was not sent:', counters.replies.lastError);
   }
 }
 

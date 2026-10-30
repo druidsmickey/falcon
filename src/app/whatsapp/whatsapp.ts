@@ -87,6 +87,7 @@ interface Counters {
   results?: { added: number; notSaved: number; notListened: number; nothingToRead: number; noText: number };
   polled: number;
   lastPollAt: string | null;
+  replies?: { sent: number; failed: number; lastError: string | null };
 }
 
 /**
