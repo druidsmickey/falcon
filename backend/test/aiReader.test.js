@@ -214,3 +214,23 @@ test('when everything stays busy the answer is null and the error is kept', asyn
   assert.equal(await reader.read(['x'], context), null);
   assert.match(reader.getStats().lastError, /503/);
 });
+
+test('corrections that look like the lines are shown to the AI as examples', () => {
+  const { pickExamples, exampleText, differs, readingOf, savedReading } = require('../lib/corrections');
+  const corrections = [
+    { line: 'put 5k on the grey', saved: { race: 2, horse: 3, amount: 5000, second: 650, kind: 'stake' } },
+    { line: 'cap mag 500x90', saved: { race: 1, horse: 2, amount: 500, second: 90, kind: 'books' } },
+    { line: 'hello', saved: { race: 1, horse: 1, amount: 1, second: 1, kind: 'books' } },
+  ];
+  const picked = pickExamples(['25k grey 650'], corrections);
+  assert.equal(picked[0].line, 'put 5k on the grey');
+  assert.match(exampleText(corrections[0]), /^"put 5k on the grey" -> \{"race":2,"horse":3,"amount":5000,"second":650,"kind":"stake"\}$/);
+  const prompt = buildPrompt(['25k grey 650'], context, picked);
+  assert.match(prompt.user, /Corrections a person made earlier/);
+  assert.doesNotMatch(buildPrompt(['x'], context).user, /Corrections a person made/);
+  // an unknown kind chosen by the person is not a correction, a changed figure is
+  const read = readingOf({ raceNum: 1, horseNum: 2, amountKind: '?', amount: 500 });
+  assert.equal(differs(read, { ...read, kind: 'books', amount: 500, second: null }), false);
+  assert.equal(differs(read, { ...read, amount: 600 }), true);
+  assert.equal(savedReading({ raceNum: 1, horseNum: 2, kind: 'books', amount: 500 }), null);
+});

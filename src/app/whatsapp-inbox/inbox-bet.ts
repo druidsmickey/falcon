@@ -158,6 +158,18 @@ export const hasProblem = (list: string[], field: string): boolean => list.some(
  * The bet to send, worked out the same way as on the Entry page, or null while anything is missing.
  * The time of the bet is the time the message was sent.
  */
+/** The figures a person saved, sent with the confirmation so that the server can see what was changed from the reading. */
+export function savedFigures(draft: Draft): { raceNum: number | null; horseNum: number | null; kind: string | null; amount: number | null; second: number | null } {
+  const books = draft.kind === 'books';
+  return {
+    raceNum: draft.raceNum,
+    horseNum: draft.horseNum,
+    kind: draft.kind,
+    amount: books ? draft.books : draft.stake,
+    second: books ? draft.f500 : draft.odds100,
+  };
+}
+
 export function toBetRequest(draft: Draft, meetingName: string, horseName: string, around: Surroundings = {}): BetRequest | null {
   if (problems(draft, around).length > 0 || !draft.kind) return null;
 

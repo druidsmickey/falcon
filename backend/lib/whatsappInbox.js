@@ -10,6 +10,8 @@ const Params = require('../models/params');
 const { parseBetMessage, parseOddsList, emptyContext, isDoubtful } = require('./betMessage');
 const WhatsappAi = require('../models/whatsappAi');
 const { AiReader, PRESETS } = require('./aiReader');
+const WhatsappCorrection = require('../models/whatsappCorrection');
+const { learn } = require('./corrections');
 
 /**
  * A name for a message that is the same every time the message is announced. WhatsApp's own id is used when the
@@ -56,7 +58,10 @@ async function loadAiSettings() {
   };
 }
 
-let ai = new AiReader({ loadSettings: loadAiSettings });
+/** The corrections people made, newest first: the AI is shown the ones that look like the line it reads. */
+const loadCorrections = () => WhatsappCorrection.find().sort({ createdAt: -1 }).limit(60).lean();
+
+let ai = new AiReader({ loadSettings: loadAiSettings, loadExamples: loadCorrections });
 /** For tests: the reader that is used. */
 const setAiReader = reader => { ai = reader; };
 
@@ -72,6 +77,7 @@ async function getAiSettings() {
     fallbackModel: settings.fallbackModel,
     hasKey: !!settings.apiKey,
     stats: ai.getStats(),
+    corrections: await WhatsappCorrection.countDocuments(),
     presets: PRESETS,
   };
 }
@@ -582,11 +588,27 @@ async function countPending() {
   return WhatsappInbox.countDocuments({ status: 'pending' });
 }
 
-/** Marks a pending item confirmed or dismissed. Returns false if it was not pending (already decided). */
-async function decide(id, status) {
+/**
+ * Marks a pending item confirmed or dismissed. Returns false if it was not pending (already decided). When the bet
+ * was saved with figures other than the ones read, the change is kept as an example for the AI.
+ */
+async function decide(id, status, saved) {
   if (!['confirmed', 'dismissed'].includes(status)) throw new Error('bad status');
-  const result = await WhatsappInbox.updateOne({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date() } });
-  return result.modifiedCount === 1;
+  const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date() } }, { new: false }).lean();
+  if (before && status === 'confirmed' && saved && !before.demo) {
+    try {
+      await learn(WhatsappCorrection, before, saved);
+    } catch {
+      // learning is a bonus: the bet is decided either way
+    }
+  }
+  return !!before;
+}
+
+/** Forgets all the corrections. */
+async function forgetCorrections() {
+  const result = await WhatsappCorrection.deleteMany({});
+  return result.deletedCount;
 }
 
 /** Sets who to listen to and the nickname bets from a contact are entered under. */
@@ -668,4 +690,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { getAiSettings, saveAiSettings, testAi, setAiReader, messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { getAiSettings, saveAiSettings, testAi, setAiReader, messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, forgetCorrections, updateContact, currentContext, requestIdFor };

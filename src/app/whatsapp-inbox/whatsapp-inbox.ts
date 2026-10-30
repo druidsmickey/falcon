@@ -11,7 +11,7 @@ import { environment } from '../../environments/environment';
 import { HorseParam, SelectedRace } from '../models';
 import { MeetingDataService } from '../services/meeting-data.service';
 import { InboxCountService } from './inbox-count.service';
-import { Draft, InboxItem, Surroundings, chooseKind, draftFrom, hasProblem, problems, toBetRequest } from './inbox-bet';
+import { Draft, InboxItem, Surroundings, chooseKind, draftFrom, hasProblem, problems, savedFigures, toBetRequest } from './inbox-bet';
 
 interface OddsList {
   raceNum: number;
@@ -68,7 +68,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
   private api = `${environment.apiUrl}/api/whatsapp-inbox`;
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Bets already saved here whose confirmation the server has not heard yet; they are not shown again meanwhile. */
-  private unconfirmed = new Set<string>();
+  private unconfirmed = new Map<string, { saved: object }>();
 
   protected readonly drafts = signal<Draft[]>([]);
   protected readonly saved = signal<SavedBet[]>([]);
@@ -119,9 +119,9 @@ export class WhatsappInbox implements OnInit, OnDestroy {
 
   /** Tells the server about bets that were saved while it could not be reached. */
   private async confirmPending(): Promise<void> {
-    for (const id of [...this.unconfirmed]) {
+    for (const [id, body] of [...this.unconfirmed]) {
       try {
-        await firstValueFrom(this.http.post(`${this.api}/${id}/confirm`, {}));
+        await firstValueFrom(this.http.post(`${this.api}/${id}/confirm`, body));
         this.unconfirmed.delete(id);
       } catch {
         return;
@@ -316,7 +316,7 @@ export class WhatsappInbox implements OnInit, OnDestroy {
 
       // tell the server it is no longer waiting; if that fails it is tried again later, and the bet cannot be entered
       // twice anyway (same request id)
-      this.unconfirmed.add(draft.id);
+      this.unconfirmed.set(draft.id, { saved: savedFigures(draft) });
       await this.confirmPending();
     } finally {
       this.setBusy(draft.id, false);

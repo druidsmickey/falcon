@@ -49,6 +49,7 @@ interface AiSettings {
   model: string;
   fallbackModel?: string;
   hasKey: boolean;
+  corrections?: number;
   stats: { calls: number; ok: number; failed: number; skipped: number; limited: number; retries?: number; usedBackup?: number; lastError: string | null; lastAt: string | null };
   presets: Record<string, { baseUrl: string; model: string }>;
 }
@@ -303,6 +304,19 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected async clearAiKey(): Promise<void> {
     if (!confirm('Remove the saved key of the AI service?')) return;
     await this.saveAi({ clearKey: true, enabled: false });
+  }
+
+  protected async forgetCorrections(): Promise<void> {
+    if (!confirm('Forget what the AI was shown from your corrections?')) return;
+    this.aiBusy.set(true);
+    try {
+      await firstValueFrom(this.http.delete(`${this.api}/api/whatsapp-inbox/ai/examples`));
+      await this.loadAi();
+    } catch {
+      this.aiMessage.set('The corrections could not be forgotten.');
+    } finally {
+      this.aiBusy.set(false);
+    }
   }
 
   protected async testAi(sample: string): Promise<void> {

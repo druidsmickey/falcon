@@ -637,3 +637,22 @@ test('the AI can be tried with a sample line', async () => {
     inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
   }
 });
+
+test('a bet saved with other figures than the ones read is kept as an example, and can be forgotten', async () => {
+  const WhatsappCorrection = require('../models/whatsappCorrection');
+  await WhatsappCorrection.deleteMany({});
+  await inbox.handleOwn(ownList('r1\n1 1500\n2 500\n3 700\n5 800'));
+  assert.equal(await inbox.handleIncoming(message('11 500x90')), 1);
+  const { items } = await inbox.listPending();
+  const item = items[0];
+  // saved as read: nothing to learn
+  assert.equal(await inbox.decide(item.id, 'confirmed', { raceNum: item.raceNum, horseNum: item.horseNum, kind: 'books', amount: 500, second: 90 }), true);
+  assert.equal(await WhatsappCorrection.countDocuments(), 0);
+
+  assert.equal(await inbox.handleIncoming(message('12 500x90', { id: { _serialized: 'learn-2' } })), 1);
+  const second = (await inbox.listPending()).items[0];
+  assert.equal(await inbox.decide(second.id, 'confirmed', { raceNum: second.raceNum, horseNum: 3, kind: 'books', amount: 700, second: 90 }), true);
+  assert.equal(await WhatsappCorrection.countDocuments(), 1);
+  assert.equal((await inbox.getAiSettings()).corrections, 1);
+  assert.equal(await inbox.forgetCorrections(), 1);
+});

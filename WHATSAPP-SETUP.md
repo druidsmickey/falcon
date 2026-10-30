@@ -118,6 +118,8 @@ Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a 
 
 ## AI second opinion (optional)
 
+The AI does not learn by itself, but the app keeps your corrections: when you change the race, horse or figures of a card before saving it, the line and your figures are kept (without any name or number), and the few that look most like the line being read are shown to the AI as examples. The card shows how many are kept, with a "Forget them" button. They are removed after 6 months.
+
 If the free service answers "503 ... high demand" (or 429/500), that is the provider being busy for a moment, not a problem with your key: the program waits a second and asks again (twice), then tries the **Backup model** of the card (Gemini: gemini-flash-lite-latest, Groq: llama-3.1-8b-instant). A wrong key (401/403) is not retried. If everything stays busy, the message is read by the rules alone, as before.
 
 Messages the rules cannot read with confidence ("put 500 on the grey one", a misspelt horse, a line in an odd order) can be given to an AI for a second opinion. It is off until you add a key.

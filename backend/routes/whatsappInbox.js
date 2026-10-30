@@ -65,6 +65,15 @@ router.post('/ai/test', async (req, res) => {
   }
 });
 
+// DELETE: forget the corrections the AI is shown as examples
+router.delete('/ai/examples', async (req, res) => {
+  try {
+    res.json({ success: true, deleted: await inbox.forgetCorrections() });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET: what the server did with the latest messages (to find out why one did not arrive)
 router.get('/activity', (req, res) => {
   res.json({ messages: inbox.getActivity(), counters: inbox.getCounters(), trace: inbox.getTrace() });
@@ -101,7 +110,7 @@ for (const [action, status] of [['confirm', 'confirmed'], ['dismiss', 'dismissed
   router.post(`/:id/${action}`, async (req, res) => {
     if (!validId(req.params.id)) return res.status(400).json({ error: 'invalid id' });
     try {
-      res.json({ success: true, changed: await inbox.decide(req.params.id, status) });
+      res.json({ success: true, changed: await inbox.decide(req.params.id, status, action === 'confirm' ? req.body && req.body.saved : undefined) });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

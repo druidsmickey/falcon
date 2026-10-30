@@ -5,6 +5,7 @@
 // shown as unsure, so that a person confirms it. Works with any service that speaks the common "chat completions"
 // format (Google Gemini, Groq, OpenRouter, Mistral, a local Ollama...): only an address, a model and a key are set.
 const { entryFromAi } = require('./betMessage');
+const { pickExamples, exampleText } = require('./corrections');
 
 /** Services with a free tier (the limits and the models change over time, so the model can be edited). */
 const PRESETS = {
@@ -51,11 +52,14 @@ function horseListText(horses) {
   return text.length > MAX_HORSE_TEXT ? text.slice(0, MAX_HORSE_TEXT) + '\n...' : text;
 }
 
-function buildPrompt(lines, context) {
+function buildPrompt(lines, context, examples = []) {
   const parts = [];
   parts.push(context.raceNum !== null && context.raceNum !== undefined ? `The race running now is race ${context.raceNum}.` : 'The race running now is not known.');
   const list = horseListText(context.horses);
   parts.push(list ? `The races and horses of this meeting:\n${list}` : 'The horses of this meeting are not known: do not check the numbers against any list.');
+  if (examples.length) {
+    parts.push('Corrections a person made earlier to lines like these. They show the habits of this group: follow them when a line is similar, but the list above still decides what exists:\n' + examples.map(exampleText).join('\n'));
+  }
   parts.push('Message lines to read:\n' + lines.slice(0, MAX_LINES).map((l, i) => `${i + 1}) ${l}`).join('\n'));
   return { system: SYSTEM_PROMPT, user: parts.join('\n\n') };
 }
@@ -133,8 +137,9 @@ class AiReader {
    * @param {{ loadSettings: () => Promise<{enabled: boolean, baseUrl: string, model: string, apiKey: string}|null>,
    *           fetchImpl?: typeof fetch, now?: () => number }} options
    */
-  constructor({ loadSettings, fetchImpl = fetch, now = Date.now, sleep = wait }) {
+  constructor({ loadSettings, loadExamples = null, fetchImpl = fetch, now = Date.now, sleep = wait }) {
     this.loadSettings = loadSettings;
+    this.loadExamples = loadExamples;
     this.fetchImpl = fetchImpl;
     this.now = now;
     this.sleep = sleep;
@@ -210,7 +215,13 @@ class AiReader {
     this.stats.calls += 1;
     this.stats.lastAt = new Date(this.now()).toISOString();
     try {
-      const prompt = buildPrompt(lines, context);
+      let corrections = [];
+      try {
+        corrections = this.loadExamples ? await this.loadExamples() : [];
+      } catch {
+        corrections = [];
+      }
+      const prompt = buildPrompt(lines, context, pickExamples(lines, corrections));
       const answer = await this.ask(settings, prompt);
       const json = extractJson(answer);
       if (!json) throw new Error('the AI answer holds no JSON');

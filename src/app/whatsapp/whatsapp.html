@@ -134,6 +134,13 @@
           @if (a.stats.lastError) { <br>Last error: {{ a.stats.lastError }} }
         </p>
         <p class="hint">
+          Corrections kept as examples: <strong>{{ a.corrections ?? 0 }}</strong>. When you change a bet read from a line before saving it, the
+          line and your figures are kept, and the AI is shown the ones that look like the line it reads. It learns nothing by itself.
+          @if ((a.corrections ?? 0) > 0) {
+            <button mat-button (click)="forgetCorrections()" [disabled]="aiBusy()">Forget them</button>
+          }
+        </p>
+        <p class="hint">
           Free keys: Google Gemini at aistudio.google.com/apikey, Groq at console.groq.com/keys. The app makes at most
           10 calls a minute and 300 a day, only for unclear lines, so a free plan is enough.
         </p>
