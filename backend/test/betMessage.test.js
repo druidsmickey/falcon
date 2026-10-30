@@ -331,3 +331,13 @@ test('chat with a figure in it is not a bet: "Last bet 22*", "total 300", "thank
   const bet = parseBetMessage('last dance 500', { raceNum: 1, runners: 5, horses })[0];
   assert.equal(bet.horseNum, 3);
 });
+
+test('a bet written over two lines (the horse, then its figures) is read as one bet', () => {
+  const read = text => parseBetMessage(text, withHorses).map(b => [b.horseNum, b.books ?? b.stake ?? b.amount, b.text]);
+  assert.deepEqual(read('Captain Magpie\n500x90'), [[2, 500, 'Captain Magpie 500x90']]);
+  assert.deepEqual(read('11\n500x90'), [[1, 500, '11 500x90']]);
+  assert.deepEqual(read('13\n5k @ 650'), [[3, 5000, '13 5k @ 650']]);
+  assert.deepEqual(read('Hello\n500'), []);
+  // lines that are complete bets are not joined
+  assert.equal(read('11 500x90\n12 300x90').length, 2);
+});

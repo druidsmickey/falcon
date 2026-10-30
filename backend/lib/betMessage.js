@@ -377,18 +377,36 @@ function looksLikeNumbers(lines, text) {
   return lines.length >= 3 && lines.filter(isBareNumber).length * 2 >= lines.length;
 }
 
+// a bet written over two lines: the horse alone ("Captain Magpie", "11") and the figures under it ("500x90", "5k")
+const isHorseOnly = line => /^\d{1,3}$/.test(line) || (/^[a-z][a-z' .-]*$/i.test(line) && line.replace(/[^a-z]/gi, '').length >= 3);
+const isFiguresOnly = line => /^\d+(?:[.,]\d+)?k?(?:\s*[x@#cz*]\s*\d+(?:[.,]\d+)?k?)?$/i.test(line);
+
+/** Joins the horse line and the figures line under it into one line: "Captain Magpie" + "500x90" -> "Captain Magpie 500x90". */
+function joinTwoLineBets(lines) {
+  const joined = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (i + 1 < lines.length && isHorseOnly(lines[i]) && isFiguresOnly(lines[i + 1])) {
+      joined.push(lines[i] + ' ' + lines[i + 1]);
+      i += 1;
+    } else {
+      joined.push(lines[i]);
+    }
+  }
+  return joined;
+}
+
 /**
- * Reads a message: one bet per line. Returns the bets found; lines with words that are not bets are kept
+ * Reads a message: one bet per line (a horse on one line and its figures on the next are read as one bet). Returns the bets found; lines with words that are not bets are kept
  * as `{ unreadable: true, text }` so that nothing a contact wrote is silently dropped. Ignored altogether:
  * a message with no digit (a greeting), a message that is mostly numbers (see looksLikeNumbers), a line that
  * is only a number, and a line with more than four figures.
  */
 function parseBetMessage(text, context = emptyContext()) {
-  const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if (looksLikeNumbers(lines, text)) return [];
+  const rawLines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (looksLikeNumbers(rawLines, text)) return [];
 
   const results = [];
-  for (const line of lines) {
+  for (const line of joinTwoLineBets(rawLines)) {
     if (isBareNumber(line)) continue;
     const bet = parseLine(line, context);
     if (bet === IGNORE) continue;
