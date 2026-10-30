@@ -378,15 +378,21 @@ function looksLikeNumbers(lines, text) {
 }
 
 // a bet written over two lines: the horse alone ("Captain Magpie", "11") and the figures under it ("500x90", "5k")
-const isHorseOnly = line => /^\d{1,3}$/.test(line) || (/^[a-z][a-z' .-]*$/i.test(line) && line.replace(/[^a-z]/gi, '').length >= 3);
+// "5.2" is race 5 horse 2
+const RACE_DOT_HORSE = /^(\d{1,2})[.,](\d{1,2})$/;
+const isHorseOnly = line => /^\d{1,3}$/.test(line) || RACE_DOT_HORSE.test(line) || (/^[a-z][a-z' .-]*$/i.test(line) && line.replace(/[^a-z]/gi, '').length >= 3);
 const isFiguresOnly = line => /^\d+(?:[.,]\d+)?k?(?:\s*[x@#cz*]\s*\d+(?:[.,]\d+)?k?)?$/i.test(line);
 
 /** Joins the horse line and the figures line under it into one line: "Captain Magpie" + "500x90" -> "Captain Magpie 500x90". */
 function joinTwoLineBets(lines) {
   const joined = [];
   for (let i = 0; i < lines.length; i++) {
-    if (i + 1 < lines.length && isHorseOnly(lines[i]) && isFiguresOnly(lines[i + 1])) {
-      joined.push(lines[i] + ' ' + lines[i + 1]);
+    // "5.2 200x300" on one line: race 5, horse 2
+    const dotted = lines[i].match(/^(\d{1,2})[.,](\d{1,2})\s+(\d.*)$/);
+    if (dotted && isFiguresOnly(dotted[3])) {
+      joined.push(`${dotted[1]} ${dotted[2]} ${dotted[3]}`);
+    } else if (i + 1 < lines.length && isHorseOnly(lines[i]) && isFiguresOnly(lines[i + 1])) {
+      joined.push(lines[i].replace(RACE_DOT_HORSE, '$1 $2') + ' ' + lines[i + 1]);
       i += 1;
     } else {
       joined.push(lines[i]);

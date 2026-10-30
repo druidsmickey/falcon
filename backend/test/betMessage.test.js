@@ -341,3 +341,14 @@ test('a bet written over two lines (the horse, then its figures) is read as one 
   // lines that are complete bets are not joined
   assert.equal(read('11 500x90\n12 300x90').length, 2);
 });
+
+test('"5.2" over "200x300" is race 5 horse 2, and a second figure between 121 and 419 is asked', () => {
+  const horses = [];
+  for (let race = 1; race <= 8; race++) for (let horse = 1; horse <= 12; horse++) horses.push({ raceNum: race, horseNum: horse, horseName: `R${race}H${horse}` });
+  for (const text of ['5.2\n200x300', '5.2 200x300']) {
+    const [bet] = parseBetMessage(text, { raceNum: 1, runners: 12, horses });
+    assert.deepEqual([bet.raceNum, bet.horseNum, bet.amount, bet.rate, bet.amountKind], [5, 2, 200, 300, '?'], text);
+  }
+  const [clear] = parseBetMessage('5.2\n200x90', { raceNum: 1, runners: 12, horses });
+  assert.deepEqual([clear.raceNum, clear.horseNum, clear.books, clear.f500], [5, 2, 200, 90]);
+});
