@@ -8,6 +8,8 @@ const whatsappAiSchema = new mongoose.Schema({
   preset: { type: String, enum: ['gemini', 'groq', 'custom'], default: 'gemini' },
   baseUrl: { type: String, default: '', trim: true, maxlength: 300 },
   model: { type: String, default: '', trim: true, maxlength: 100 },
+  // tried when the first model is busy or gone
+  fallbackModel: { type: String, default: '', trim: true, maxlength: 100 },
   apiKey: { type: String, default: '', maxlength: 500 },
 }, { timestamps: true });
 

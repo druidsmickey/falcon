@@ -174,3 +174,43 @@ test('the ready-made services have an address and a model', () => {
   assert.match(PRESETS.groq.baseUrl, /^https:\/\//);
   assert.equal(PRESETS.custom.baseUrl, '');
 });
+
+const busy = { ok: false, status: 503, text: async () => '{"error":{"code":503,"message":"This model is currently experiencing high demand."}}' };
+
+test('a busy service (503) is asked again after a short wait, and the answer is then used', async () => {
+  const replies = [busy, busy, answer('{"bets":[]}')];
+  const pauses = [];
+  const reader = new AiReader({ loadSettings: async () => settings, fetchImpl: async () => replies.shift(), now: () => 1000000, sleep: async ms => { pauses.push(ms); } });
+  assert.deepEqual(await reader.read(['x'], context), []);
+  assert.equal(pauses.length, 2);
+  assert.equal(reader.getStats().retries, 2);
+  assert.equal(reader.getStats().failed, 0);
+  assert.equal(reader.getStats().calls, 1);
+});
+
+test('when the first model stays busy the backup model is tried', async () => {
+  const models = [];
+  const fetchImpl = async (url, init) => {
+    const model = JSON.parse(init.body).model;
+    models.push(model);
+    return model === 'backup' ? answer('{"bets":[]}') : busy;
+  };
+  const reader = new AiReader({ loadSettings: async () => ({ ...settings, fallbackModel: 'backup' }), fetchImpl, now: () => 1000000, sleep: async () => {} });
+  assert.deepEqual(await reader.read(['x'], context), []);
+  assert.deepEqual(models, ['m', 'm', 'm', 'backup']);
+  assert.equal(reader.getStats().usedBackup, 1);
+});
+
+test('a wrong key or a bad request is not tried again', async () => {
+  let n = 0;
+  const reader = new AiReader({ loadSettings: async () => ({ ...settings, fallbackModel: 'backup' }), fetchImpl: async () => { n++; return { ok: false, status: 401, text: async () => 'bad key' }; }, sleep: async () => {} });
+  assert.equal(await reader.read(['x'], context), null);
+  assert.equal(n, 1);
+  assert.match(reader.getStats().lastError, /401/);
+});
+
+test('when everything stays busy the answer is null and the error is kept', async () => {
+  const reader = new AiReader({ loadSettings: async () => ({ ...settings, fallbackModel: 'backup' }), fetchImpl: async () => busy, now: () => 1000000, sleep: async () => {} });
+  assert.equal(await reader.read(['x'], context), null);
+  assert.match(reader.getStats().lastError, /503/);
+});

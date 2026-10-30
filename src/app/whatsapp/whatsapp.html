@@ -89,12 +89,17 @@
           </label>
         </div>
         <div class="ai-row">
+          <label>Backup model (used when the first one is busy)
+            <input #aiBackup type="text" [value]="a.fallbackModel ?? ''" placeholder="optional">
+          </label>
+        </div>
+        <div class="ai-row">
           <label>Key {{ a.hasKey ? '(saved: type a new one to replace it)' : '' }}
             <input #aiKey type="password" autocomplete="off" placeholder="paste the key here">
           </label>
         </div>
         <div class="ai-actions">
-          <button mat-raised-button color="primary" (click)="saveAiFields(a.preset === 'custom' ? aiAddress : null, aiModel, aiKey)" [disabled]="aiBusy()">Save</button>
+          <button mat-raised-button color="primary" (click)="saveAiFields(a.preset === 'custom' ? aiAddress : null, aiModel, aiBackup, aiKey)" [disabled]="aiBusy()">Save</button>
           @if (a.hasKey) {
             <button mat-stroked-button (click)="clearAiKey()" [disabled]="aiBusy()">Remove key</button>
           }
@@ -125,7 +130,7 @@
 
         <p class="counters">
           Calls: <strong>{{ a.stats.calls }}</strong> (worked {{ a.stats.ok }}, failed {{ a.stats.failed }}) &middot;
-          switched off or no key: {{ a.stats.skipped }} &middot; over the limit: {{ a.stats.limited }}
+          switched off or no key: {{ a.stats.skipped }} &middot; over the limit: {{ a.stats.limited }} &middot; tried again: {{ a.stats.retries ?? 0 }} &middot; backup model used: {{ a.stats.usedBackup ?? 0 }}
           @if (a.stats.lastError) { <br>Last error: {{ a.stats.lastError }} }
         </p>
         <p class="hint">

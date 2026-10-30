@@ -8,15 +8,19 @@ const { entryFromAi } = require('./betMessage');
 
 /** Services with a free tier (the limits and the models change over time, so the model can be edited). */
 const PRESETS = {
-  gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-flash-latest' },
-  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
-  custom: { baseUrl: '', model: '' },
+  gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-flash-latest', fallbackModel: 'gemini-flash-lite-latest' },
+  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', fallbackModel: 'llama-3.1-8b-instant' },
+  custom: { baseUrl: '', model: '', fallbackModel: '' },
 };
 
 // Far below the free allowances, so that the free tier is never used up and nothing is ever charged for.
 const MAX_PER_MINUTE = 10;
 const MAX_PER_DAY = 300;
-const TIMEOUT_MS = 12000;
+// One try may take this long; all the tries for a message together at most DEADLINE_MS (a message is never held
+// up for long: the inbox reads it without the AI when the AI does not answer in time).
+const TIMEOUT_MS = 8000;
+const DEADLINE_MS = 22000;
+const PAUSES_MS = [800, 1600];
 const MAX_LINES = 8;
 const MAX_HORSE_TEXT = 6000;
 
@@ -96,7 +100,9 @@ async function chat({ baseUrl, apiKey, model, system, user, fetchImpl = fetch, t
   const body = await response.text();
   if (!response.ok) {
     // the key is never part of the text kept for the person to read
-    throw new Error(`the AI service answered ${response.status}: ${body.replace(/\s+/g, ' ').slice(0, 160)}`);
+    const failure = new Error(`the AI service answered ${response.status}: ${body.replace(/\s+/g, ' ').slice(0, 160)}`);
+    failure.status = response.status;
+    throw failure;
   }
   let data;
   try {
@@ -109,17 +115,31 @@ async function chat({ baseUrl, apiKey, model, system, user, fetchImpl = fetch, t
   return content;
 }
 
+/** A failure that is likely to pass by itself: the service is busy or slow, or the network hiccuped. */
+function isTemporary(error) {
+  const status = error && error.status;
+  if (status === 429 || status >= 500) return true;
+  if (status) return false;
+  return /took more than|timed out|timeout|aborted|fetch failed|network|ECONN|ETIMEDOUT|ENOTFOUND/i.test(String((error && (error.message || error.name)) || ''));
+}
+
+/** The first model is tried, with a short wait and another go when the service is busy, then the backup model. */
+const modelsOf = settings => [settings.model, settings.fallbackModel].filter((model, i, all) => model && all.indexOf(model) === i);
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 class AiReader {
   /**
    * @param {{ loadSettings: () => Promise<{enabled: boolean, baseUrl: string, model: string, apiKey: string}|null>,
    *           fetchImpl?: typeof fetch, now?: () => number }} options
    */
-  constructor({ loadSettings, fetchImpl = fetch, now = Date.now }) {
+  constructor({ loadSettings, fetchImpl = fetch, now = Date.now, sleep = wait }) {
     this.loadSettings = loadSettings;
     this.fetchImpl = fetchImpl;
     this.now = now;
+    this.sleep = sleep;
     this.calls = [];
-    this.stats = { calls: 0, ok: 0, failed: 0, skipped: 0, limited: 0, lastError: null, lastAt: null };
+    this.stats = { calls: 0, ok: 0, failed: 0, skipped: 0, limited: 0, retries: 0, usedBackup: 0, lastError: null, lastAt: null };
   }
 
   getStats() {
@@ -134,6 +154,34 @@ class AiReader {
     if (lastMinute >= MAX_PER_MINUTE || this.calls.length >= MAX_PER_DAY) return false;
     this.calls.push(t);
     return true;
+  }
+
+  /** Asks the service, again after a short wait when it is busy, and then the backup model. */
+  async ask(settings, prompt) {
+    const started = this.now();
+    let lastError = null;
+    const models = modelsOf(settings);
+    for (let m = 0; m < models.length; m++) {
+      for (let attempt = 0; attempt <= PAUSES_MS.length; attempt++) {
+        if (attempt > 0 || m > 0) {
+          if (this.now() - started + TIMEOUT_MS > DEADLINE_MS * (m > 0 ? 1.5 : 1)) break;
+          this.stats.retries += 1;
+        }
+        try {
+          const answer = await chat({ ...settings, model: models[m], system: prompt.system, user: prompt.user, fetchImpl: this.fetchImpl });
+          if (m > 0) this.stats.usedBackup += 1;
+          return answer;
+        } catch (error) {
+          lastError = error;
+          // a wrong key or a bad request will not be better on the next try, nor with another model
+          const status = error && error.status;
+          if (status === 401 || status === 403) throw error;
+          if (!isTemporary(error)) break;
+          if (attempt < PAUSES_MS.length) await this.sleep(PAUSES_MS[attempt]);
+        }
+      }
+    }
+    throw lastError || new Error('the AI service did not answer');
   }
 
   /**
@@ -160,7 +208,7 @@ class AiReader {
     this.stats.lastAt = new Date(this.now()).toISOString();
     try {
       const prompt = buildPrompt(lines, context);
-      const answer = await chat({ ...settings, system: prompt.system, user: prompt.user, fetchImpl: this.fetchImpl });
+      const answer = await this.ask(settings, prompt);
       const json = extractJson(answer);
       if (!json) throw new Error('the AI answer holds no JSON');
       const bets = normalizeBets(json);
@@ -175,4 +223,4 @@ class AiReader {
   }
 }
 
-module.exports = { AiReader, PRESETS, buildPrompt, extractJson, normalizeBets, horseListText, chat, MAX_PER_MINUTE, MAX_PER_DAY, SYSTEM_PROMPT };
+module.exports = { isTemporary, AiReader, PRESETS, buildPrompt, extractJson, normalizeBets, horseListText, chat, MAX_PER_MINUTE, MAX_PER_DAY, SYSTEM_PROMPT };

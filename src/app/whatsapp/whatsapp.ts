@@ -47,8 +47,9 @@ interface AiSettings {
   preset: 'gemini' | 'groq' | 'custom';
   baseUrl: string;
   model: string;
+  fallbackModel?: string;
   hasKey: boolean;
-  stats: { calls: number; ok: number; failed: number; skipped: number; limited: number; lastError: string | null; lastAt: string | null };
+  stats: { calls: number; ok: number; failed: number; skipped: number; limited: number; retries?: number; usedBackup?: number; lastError: string | null; lastAt: string | null };
   presets: Record<string, { baseUrl: string; model: string }>;
 }
 
@@ -293,8 +294,8 @@ export class Whatsapp implements OnInit, OnDestroy {
     await this.saveAi({ preset: (event.target as HTMLSelectElement).value });
   }
 
-  protected async saveAiFields(address: HTMLInputElement | null, model: HTMLInputElement, keyBox: HTMLInputElement): Promise<void> {
-    const change: Record<string, unknown> = { model: model.value.trim() };
+  protected async saveAiFields(address: HTMLInputElement | null, model: HTMLInputElement, backup: HTMLInputElement, keyBox: HTMLInputElement): Promise<void> {
+    const change: Record<string, unknown> = { model: model.value.trim(), fallbackModel: backup.value.trim() };
     if (address) change['baseUrl'] = address.value.trim();
     await this.saveAi(change, keyBox);
   }

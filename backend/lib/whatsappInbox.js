@@ -51,6 +51,7 @@ async function loadAiSettings() {
     enabled: doc ? !!doc.enabled : String(env.AI_ENABLED || '').toLowerCase() === 'true',
     baseUrl: (doc && doc.baseUrl) || env.AI_BASE_URL || base.baseUrl,
     model: (doc && doc.model) || env.AI_MODEL || base.model,
+    fallbackModel: doc ? doc.fallbackModel || '' : env.AI_FALLBACK_MODEL || base.fallbackModel || '',
     apiKey: (doc && doc.apiKey) || env.AI_API_KEY || '',
   };
 }
@@ -68,6 +69,7 @@ async function getAiSettings() {
     preset: (doc && doc.preset) || 'gemini',
     baseUrl: settings.baseUrl,
     model: settings.model,
+    fallbackModel: settings.fallbackModel,
     hasKey: !!settings.apiKey,
     stats: ai.getStats(),
     presets: PRESETS,
@@ -99,6 +101,7 @@ async function saveAiSettings(body) {
     if (input.preset !== 'custom') {
       if (input.baseUrl === undefined) changes.baseUrl = PRESETS[input.preset].baseUrl;
       if (input.model === undefined) changes.model = PRESETS[input.preset].model;
+      if (input.fallbackModel === undefined) changes.fallbackModel = PRESETS[input.preset].fallbackModel;
     }
   }
   if (input.baseUrl !== undefined) {
@@ -110,6 +113,11 @@ async function saveAiSettings(body) {
     const model = String(input.model).trim();
     if (model.length > 100) throw new Error('the model name is too long');
     changes.model = model;
+  }
+  if (input.fallbackModel !== undefined) {
+    const backup = String(input.fallbackModel).trim();
+    if (backup.length > 100) throw new Error('the backup model name is too long');
+    changes.fallbackModel = backup;
   }
   if (typeof input.apiKey === 'string' && input.apiKey.trim()) changes.apiKey = input.apiKey.trim().slice(0, 500);
   if (input.clearKey === true) changes.apiKey = '';
