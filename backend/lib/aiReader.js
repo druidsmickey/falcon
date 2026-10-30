@@ -9,7 +9,7 @@ const { entryFromAi } = require('./betMessage');
 /** Services with a free tier (the limits and the models change over time, so the model can be edited). */
 const PRESETS = {
   gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-flash-latest', fallbackModel: 'gemini-flash-lite-latest' },
-  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', fallbackModel: 'llama-3.1-8b-instant' },
+  groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', fallbackModel: '' },
   custom: { baseUrl: '', model: '', fallbackModel: '' },
 };
 
@@ -160,6 +160,7 @@ class AiReader {
   async ask(settings, prompt) {
     const started = this.now();
     let lastError = null;
+    let firstError = null;
     const models = modelsOf(settings);
     for (let m = 0; m < models.length; m++) {
       for (let attempt = 0; attempt <= PAUSES_MS.length; attempt++) {
@@ -173,6 +174,7 @@ class AiReader {
           return answer;
         } catch (error) {
           lastError = error;
+          if (!firstError) firstError = error;
           // a wrong key or a bad request will not be better on the next try, nor with another model
           const status = error && error.status;
           if (status === 401 || status === 403) throw error;
@@ -181,7 +183,8 @@ class AiReader {
         }
       }
     }
-    throw lastError || new Error('the AI service did not answer');
+    // the error of the main model is the one worth showing, not that of a backup that may not exist
+    throw firstError || lastError || new Error('the AI service did not answer');
   }
 
   /**
