@@ -36,6 +36,7 @@ const SYSTEM_PROMPT = `You read short WhatsApp messages in which players place h
 How the messages are written:
 - The lines are numbered. "line" is the number of the line a bet comes from. One bet per line, and a line can hold several words and figures in different orders.
 - The horse is a number, or a race and a horse number joined: "41" means race 4 horse 1, "68" means race 6 horse 8, "13" means race 1 horse 3 when there are only 8 races. Only the races and horses in the list below exist: use the list to decide, and use null when nothing fits.
+- A race and a horse can also be written apart or with a dot: "5 2 200x300" and "5.2 200x300" both mean race 5, horse 2, amount 200, second 300. A bet written over two lines (the horse, then the figures) arrives already joined on one line.
 - The horse can also be named, in full, shortened or misspelt ("cap mag" for Captain Magpie): put the name as written in "horseName" and, if you are sure which horse of the list it is, its number in "horse".
 - The amount is a figure, often with k meaning thousand: "20k" is 20000, "2.5k" is 2500. It can stand before or after the horse.
 - "second" is the figure that comes after the amount, joined by a sign or a word (x, @, #, c, z, "on", "at", or just a space): "20k @ 1000" has amount 20000 and second 1000. Return it as written, without deciding what it means. Use null when there is no such figure.
