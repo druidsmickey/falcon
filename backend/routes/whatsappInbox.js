@@ -39,6 +39,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET / PUT: the AI that gives a second opinion on messages the rules could not read (the key is never sent back)
+router.get('/ai', async (req, res) => {
+  try {
+    res.json(await inbox.getAiSettings());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/ai', async (req, res) => {
+  try {
+    res.json(await inbox.saveAiSettings(req.body));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// POST: try the AI with a sample line
+router.post('/ai/test', async (req, res) => {
+  try {
+    res.json(await inbox.testAi(req.body && req.body.text));
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // GET: what the server did with the latest messages (to find out why one did not arrive)
 router.get('/activity', (req, res) => {
   res.json({ messages: inbox.getActivity(), counters: inbox.getCounters(), trace: inbox.getTrace() });

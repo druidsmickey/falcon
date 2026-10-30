@@ -443,3 +443,9 @@ input.missing {
     line-height: 30px !important;
   }
 }
+
+.ai-tag {
+  background: #fef3c7;
+  color: #92400e;
+  margin-left: 6px;
+}

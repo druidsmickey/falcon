@@ -118,6 +118,9 @@
           @if (draft.demo) {
             <span class="demo">DEMO: saving this saves nothing</span>
           }
+          @if (draft.ai) {
+            <span class="demo ai-tag">READ BY AI: check the race, horse and figures</span>
+          }
           @if (draft.issues.length > 0) {
             <ul class="issues">
               @for (issue of draft.issues; track issue) {

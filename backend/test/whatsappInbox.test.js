@@ -506,3 +506,134 @@ test('without Params nothing is checked: the numbers are read as written, and fl
   assert.deepEqual([items[1].horseNum, items[1].unsure], [41, true]);
   assert.ok(items[1].issues.some(i => /race 4 horse 1/.test(i)));
 });
+
+// ---------------------------------------------------------------- the AI second opinion
+
+const { AiReader } = require('../lib/aiReader');
+const WhatsappAi = require('../models/whatsappAi');
+
+const fakeAi = (bets, calls = []) => new AiReader({
+  loadSettings: async () => ({ enabled: true, baseUrl: 'https://ai.example/v1', model: 'm', apiKey: 'K' }),
+  fetchImpl: async (url, options) => {
+    calls.push(JSON.parse(options.body));
+    return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: JSON.stringify({ bets }) } }] }) };
+  },
+});
+
+test('a line the rules cannot read is given to the AI, and what it finds is added as unsure and marked', async () => {
+  inbox.clearActivity();
+  await seedMeeting();
+  const calls = [];
+  inbox.setAiReader(fakeAi([{ race: 4, horse: 1, horseName: null, amount: 20000, second: 650, kind: null }], calls));
+  try {
+    assert.equal(await inbox.handleIncoming(message('11 500x90\nput 20k on the lux star at 650')), 2);
+    const { items } = await inbox.listPending();
+    assert.equal(items.length, 2);
+    // the clear line was read by the rules and was not sent to the AI
+    assert.deepEqual([items[0].text, items[0].ai], ['11 500x90', false]);
+    assert.doesNotMatch(calls[0].messages[1].content, /500x90/);
+    assert.match(calls[0].messages[1].content, /put 20k on the lux star at 650/);
+    // the AI's line is marked and unsure, and went through the rules for the figures
+    assert.deepEqual([items[1].ai, items[1].unsure, items[1].raceNum, items[1].horseNum, items[1].mode, items[1].stake, items[1].odds100], [true, true, 4, 1, 'odds', 20000, 650]);
+    assert.ok(items[1].issues.includes('read by AI: please check'));
+    assert.match(inbox.getActivity()[0].result, /added 2 bets to the inbox \(read with AI\)/);
+  } finally {
+    inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+  }
+});
+
+test('with no help from the AI the rules keep what they read, and a message the rules are sure about never calls it', async () => {
+  inbox.clearActivity();
+  await seedMeeting();
+  const calls = [];
+  inbox.setAiReader(new AiReader({ loadSettings: async () => null, fetchImpl: async () => { calls.push(1); throw new Error('must not be called'); } }));
+  assert.equal(await inbox.handleIncoming(message('put 500 on the grey one')), 1); // the loose reading stays
+  assert.equal((await inbox.listPending()).items[0].ai, false);
+
+  inbox.setAiReader(fakeAi([], calls));
+  assert.equal(await inbox.handleIncoming(message('41 20k @ 1000')), 1);
+  assert.equal(calls.length, 0);
+  inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+});
+
+test('when the AI finds no bet in lines the rules could not read, they are dropped as chat', async () => {
+  inbox.clearActivity();
+  await seedMeeting();
+  inbox.setAiReader(fakeAi([]));
+  try {
+    assert.equal(await inbox.handleIncoming(message('call me on 0771 55 4321')), 0);
+    assert.equal((await inbox.listPending()).items.length, 0);
+    // a loose line the AI did not take stays, for a person to look at
+    assert.equal(await inbox.handleIncoming(message('put 500 on the grey one')), 1);
+  } finally {
+    inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+  }
+});
+
+test('a message already in the inbox is not read, or sent to the AI, again', async () => {
+  inbox.clearActivity();
+  await seedMeeting();
+  const calls = [];
+  inbox.setAiReader(fakeAi([{ race: 1, horse: 3, horseName: null, amount: 500, second: null, kind: null }], calls));
+  try {
+    const m = message('put 500 on the grey one');
+    assert.equal(await inbox.handleIncoming(m), 1);
+    inbox.clearActivity(); // as after a restart: the id is no longer remembered
+    assert.equal(await inbox.handleIncoming({ ...m }), 0);
+    assert.equal(calls.length, 1);
+    assert.equal(await WhatsappInbox.countDocuments(), 1);
+  } finally {
+    inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+  }
+});
+
+test('the settings of the AI are saved, checked, and the key is never given back', async () => {
+  await WhatsappAi.deleteMany({});
+  let view = await inbox.getAiSettings();
+  assert.deepEqual([view.enabled, view.hasKey, view.preset], [false, false, 'gemini']);
+
+  view = await inbox.saveAiSettings({ enabled: true, preset: 'groq', apiKey: '  gsk_secret  ' });
+  assert.deepEqual([view.enabled, view.hasKey, view.preset], [true, true, 'groq']);
+  assert.match(view.baseUrl, /groq/);
+  assert.ok(view.model);
+  assert.doesNotMatch(JSON.stringify(view), /gsk_secret/);
+
+  // another change keeps the key; clearKey removes it
+  view = await inbox.saveAiSettings({ model: 'my-model' });
+  assert.deepEqual([view.model, view.hasKey], ['my-model', true]);
+  view = await inbox.saveAiSettings({ clearKey: true });
+  assert.equal(view.hasKey, false);
+
+  await assert.rejects(() => inbox.saveAiSettings({ enabled: 'yes' }));
+  await assert.rejects(() => inbox.saveAiSettings({ preset: 'nonsense' }));
+  await assert.rejects(() => inbox.saveAiSettings({ baseUrl: 'http://example.com/v1' }));
+  await assert.rejects(() => inbox.saveAiSettings({ baseUrl: 'ftp://example.com' }));
+  await inbox.saveAiSettings({ preset: 'custom', baseUrl: 'http://localhost:11434/v1', model: 'llama' });
+  assert.equal((await inbox.getAiSettings()).baseUrl, 'http://localhost:11434/v1');
+  await WhatsappAi.deleteMany({});
+});
+
+test('the AI can be tried with a sample line', async () => {
+  await seedMeeting();
+  inbox.setAiReader(fakeAi([{ race: 1, horse: 3, horseName: null, amount: 5000, second: 650, kind: null }]));
+  try {
+    const good = await inbox.testAi('put 5k on the grey at 650');
+    assert.equal(good.ok, true);
+    assert.deepEqual([good.bets[0].race, good.bets[0].horse, good.bets[0].amount, good.bets[0].second], [1, 3, 5000, 650]);
+
+    inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+    const off = await inbox.testAi('x');
+    assert.equal(off.ok, false);
+    assert.match(off.error, /switched off, has no key/);
+
+    inbox.setAiReader(new AiReader({
+      loadSettings: async () => ({ enabled: true, baseUrl: 'https://ai.example/v1', model: 'm', apiKey: 'K' }),
+      fetchImpl: async () => ({ ok: false, status: 401, text: async () => 'bad key' }),
+    }));
+    const bad = await inbox.testAi('x');
+    assert.equal(bad.ok, false);
+    assert.match(bad.error, /401/);
+  } finally {
+    inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
+  }
+});

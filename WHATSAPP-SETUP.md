@@ -116,6 +116,30 @@ Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a 
 - Contacts using the newer hidden-number WhatsApp ids may not match the saved number.
 - Free text is read **loosely**: in a line like "put 500 on the grey one" the 500 is taken as the amount (books or a stake, you choose; a second figure is read as usual), filler words (put, on, the, one...) are dropped and the rest ("grey") is tried as the horse name. The card is marked unsure. Only lines with three or four figures among words stay "unreadable", and lines with more than four figures are ignored. Understanding real sentences properly needs the AI step, which is not built yet.
 
+## AI second opinion (optional)
+
+Messages the rules cannot read with confidence ("put 500 on the grey one", a misspelt horse, a line in an odd order) can be given to an AI for a second opinion. It is off until you add a key.
+
+**How it works**
+- The rules read every message first. Only the lines they were not sure about (unreadable, read loosely, horse not found, a guess at a name) go to the AI, together with the races and horses of the selected meeting and the race that is running. The player's name and number are not sent.
+- The AI only says **what the player wrote**: race, horse (or horse name), amount and the figure after it. The program then applies its own rules to the figures (up to 120 an F500, from 420 odds, in between you choose), and a race or horse that is not in the meeting is thrown away.
+- Every bet read this way is marked **AI**, shown as unsure and left for you to confirm. Nothing is ever saved without you.
+- If the AI finds no bet in a line the rules could not read at all, the line is dropped as chat. If the AI is off, has no key, is over its limit or fails, the rules' reading stays as it was.
+- A message already in the inbox is never sent to the AI twice (for example after a restart).
+
+**Set up (WhatsApp tab, "AI reader")**
+1. Get a free key: **Google Gemini** at aistudio.google.com/apikey, or **Groq** at console.groq.com/keys.
+2. Choose the service, check the model name (the free models change over time, so change it if the service says it no longer exists), paste the key and press **Save**.
+3. Press **Test the AI** with a line such as `put 5k on the grey at 650` to see what it read, then switch it **On**.
+
+Another service that speaks the common "chat completions" format (OpenRouter, Mistral, a local Ollama...) can be used with **Other**, giving its address (https://..., or http://localhost for your own server) and model.
+
+**Limits and privacy**
+- At most **10 calls a minute and 300 a day**, and only for unclear lines, so a free plan is enough and nothing can be charged.
+- **The text of the unclear messages is sent to the AI service.** Free plans may use what is sent to improve their models. Do not use it if client messages must not leave your server.
+- The key is kept in the app's database on the server and is never sent back to the browser. It can also be set on the server with `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` and `AI_ENABLED=true` in `backend/.env`.
+- An AI can be wrong: that is why the bet is always marked and waits for you.
+
 ## Security notes
 
 - Only logged-in users can reach the WhatsApp routes, and they can send as you to anyone in the contact list. Keep the login safe.

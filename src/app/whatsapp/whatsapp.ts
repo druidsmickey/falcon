@@ -41,6 +41,24 @@ interface ActivityItem {
   result: string;
 }
 
+/** The settings of the AI that gives a second opinion on messages the rules cannot read (the key stays on the server). */
+interface AiSettings {
+  enabled: boolean;
+  preset: 'gemini' | 'groq' | 'custom';
+  baseUrl: string;
+  model: string;
+  hasKey: boolean;
+  stats: { calls: number; ok: number; failed: number; skipped: number; limited: number; lastError: string | null; lastAt: string | null };
+  presets: Record<string, { baseUrl: string; model: string }>;
+}
+
+interface AiTestResult {
+  ok: boolean;
+  error?: string;
+  sample?: string;
+  bets?: { race: number | null; horse: number | null; kind: string; amount: number | null; second: number | null; notes: string[] }[];
+}
+
 /** One thing WhatsApp announced and the last thing the server did with it. */
 interface TraceItem {
   at: string;
@@ -95,6 +113,10 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected readonly activity = signal<ActivityItem[]>([]);
   protected readonly counters = signal<Counters | null>(null);
   protected readonly trace = signal<TraceItem[]>([]);
+  protected readonly ai = signal<AiSettings | null>(null);
+  protected readonly aiMessage = signal('');
+  protected readonly aiBusy = signal(false);
+  protected readonly aiTest = signal<AiTestResult | null>(null);
 
   protected readonly listened = computed(() => this.contacts().filter(c => c.listen).length);
   protected readonly shown = computed(() => {
@@ -112,6 +134,7 @@ export class Whatsapp implements OnInit, OnDestroy {
     void this.checkStatus();
     void this.loadContacts();
     void this.loadActivity();
+    void this.loadAi();
     // while not connected the status (and the QR code) is checked every 3 seconds
     this.timer = setInterval(() => {
       if (this.status().status !== 'ready') void this.checkStatus();
@@ -231,6 +254,67 @@ export class Whatsapp implements OnInit, OnDestroy {
       this.trace.set((result.trace ?? []).slice(0, 12));
     } catch {
       // the next check tries again
+    }
+  }
+
+  // ---------------------------------------------------------------- the AI
+
+  protected async loadAi(): Promise<void> {
+    try {
+      this.ai.set(await firstValueFrom(this.http.get<AiSettings>(`${this.api}/api/whatsapp-inbox/ai`)));
+    } catch {
+      // shown by the card being empty
+    }
+  }
+
+  /** Saves what was typed. The key is only sent when something was typed in its box. */
+  protected async saveAi(change: Record<string, unknown>, keyBox?: HTMLInputElement): Promise<void> {
+    this.aiBusy.set(true);
+    this.aiMessage.set('');
+    try {
+      const body = { ...change };
+      if (keyBox && keyBox.value.trim()) body['apiKey'] = keyBox.value.trim();
+      this.ai.set(await firstValueFrom(this.http.put<AiSettings>(`${this.api}/api/whatsapp-inbox/ai`, body)));
+      if (keyBox) keyBox.value = '';
+      this.aiMessage.set('Saved.');
+    } catch (error) {
+      const failure = error as { error?: { error?: string }; message?: string };
+      this.aiMessage.set('Not saved: ' + (failure.error?.error || failure.message));
+    } finally {
+      this.aiBusy.set(false);
+    }
+  }
+
+  protected async setAiEnabled(enabled: boolean): Promise<void> {
+    await this.saveAi({ enabled });
+  }
+
+  protected async setAiPreset(event: Event): Promise<void> {
+    await this.saveAi({ preset: (event.target as HTMLSelectElement).value });
+  }
+
+  protected async saveAiFields(address: HTMLInputElement | null, model: HTMLInputElement, keyBox: HTMLInputElement): Promise<void> {
+    const change: Record<string, unknown> = { model: model.value.trim() };
+    if (address) change['baseUrl'] = address.value.trim();
+    await this.saveAi(change, keyBox);
+  }
+
+  protected async clearAiKey(): Promise<void> {
+    if (!confirm('Remove the saved key of the AI service?')) return;
+    await this.saveAi({ clearKey: true, enabled: false });
+  }
+
+  protected async testAi(sample: string): Promise<void> {
+    this.aiBusy.set(true);
+    this.aiTest.set(null);
+    try {
+      this.aiTest.set(await firstValueFrom(this.http.post<AiTestResult>(`${this.api}/api/whatsapp-inbox/ai/test`, { text: sample })));
+      await this.loadAi();
+    } catch (error) {
+      const failure = error as { error?: { error?: string }; message?: string };
+      this.aiTest.set({ ok: false, error: failure.error?.error || failure.message });
+    } finally {
+      this.aiBusy.set(false);
     }
   }
 

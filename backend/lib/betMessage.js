@@ -390,4 +390,78 @@ function parseBetMessage(text, context = emptyContext()) {
   return results;
 }
 
-module.exports = { parseOddsList, parseBetMessage, emptyContext };
+// ---------------------------------------------------------------- what an AI picked out of a line
+
+/** True for a line the rules were not sure about: worth a second opinion from the AI. */
+function isDoubtful(entry) {
+  if (!entry) return false;
+  if (entry.unreadable || entry.horseNum === null || entry.horseNum === undefined) return true;
+  return (entry.issues || []).some(issue => /read loosely|not found|best guess|could not read|not a horse of this meeting/.test(issue));
+}
+
+/**
+ * A bet as the AI described it (`race`, `horse`, `horseName`, `amount`, `second`, `kind`, see aiReader.js) turned into
+ * an entry like the ones the rules make. The figures go through the same rules as any other (up to 120 an F500, from
+ * 420 odds, in between the person chooses), and a race or horse that is not in the meeting is dropped. It is always
+ * marked unsure and "read by AI", so that a person checks it.
+ */
+function entryFromAi(raw, context) {
+  const horsesOfMeeting = context.horses || [];
+  const hasList = horsesOfMeeting.length > 0;
+  const exists = (race, horse) => horsesOfMeeting.some(h => h.raceNum === race && h.horseNum === horse);
+  const races = new Set(horsesOfMeeting.map(h => h.raceNum));
+
+  let race = raw.raceNum !== null && raw.raceNum !== undefined ? raw.raceNum : context.raceNum;
+  const entry = newEntry(race);
+  entry.ai = true;
+  entry.unsure = true;
+  entry.issues.push('read by AI: please check');
+
+  if (hasList && race !== null && !races.has(race)) {
+    entry.issues.push(`the AI said race ${race}, which is not in this meeting`);
+    race = context.raceNum;
+    entry.raceNum = race;
+  }
+
+  let horse = raw.horseNum !== null && raw.horseNum !== undefined ? raw.horseNum : null;
+  if (horse === null && raw.horseName) {
+    const found = matchHorse(raw.horseName, horsesOfMeeting.filter(h => raw.raceNum === null || raw.raceNum === undefined || h.raceNum === raw.raceNum), race);
+    if (found.found.length > 0) {
+      horse = found.found[0].horseNum;
+      entry.raceNum = found.found[0].raceNum;
+      race = entry.raceNum;
+      if (found.found.length > 1) entry.issues.push(`"${raw.horseName}" could be ${found.found.map(h => `race ${h.raceNum} horse ${h.horseNum} ${h.horseName}`).join(' or ')}`);
+    } else {
+      entry.issues.push(`horse "${raw.horseName}" not found`);
+    }
+  }
+  if (horse !== null && hasList && (race === null || !exists(race, horse))) {
+    entry.issues.push(`the AI said horse ${horse}${race !== null ? ' of race ' + race : ''}, which is not in this meeting`);
+    horse = null;
+  }
+  entry.horseNum = horse;
+
+  // the figures go through the usual rules; only an explicit "books" or "stake" in the words can overrule them
+  const amount = raw.amount;
+  const second = raw.second;
+  if (amount === null || amount === undefined) {
+    entry.issues.push('amount not found');
+  } else if (second !== null && second !== undefined && raw.kind === 'books') {
+    Object.assign(entry, { mode: 'f500', books: amount, f500: second, amountKind: 'books' });
+  } else if (second !== null && second !== undefined && raw.kind === 'stake') {
+    Object.assign(entry, { mode: 'odds', stake: amount, odds100: second, amountKind: 'stake' });
+  } else if ((second === null || second === undefined) && raw.kind === 'stake') {
+    Object.assign(entry, { mode: 'odds', stake: amount, amountKind: 'stake' });
+    entry.issues.push('odds missing');
+  } else if ((second === null || second === undefined) && raw.kind === 'books') {
+    Object.assign(entry, { mode: 'f500', books: amount, amountKind: 'books' });
+    entry.issues.push('F500 missing');
+  } else {
+    applyAmount(entry, { value: amount, k: false }, second !== null && second !== undefined ? { value: second } : null);
+  }
+  entry.unsure = true;
+  if (entry.raceNum === null) entry.issues.push('race not known');
+  return entry;
+}
+
+module.exports = { parseOddsList, parseBetMessage, emptyContext, isDoubtful, entryFromAi };

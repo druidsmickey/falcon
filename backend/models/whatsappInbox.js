@@ -15,6 +15,8 @@ const whatsappInboxSchema = new mongoose.Schema({
 
   // a sample bet from the demo button: confirming it saves nothing
   demo: { type: Boolean, default: false },
+  // read with the help of the AI (see lib/aiReader.js): always shown as unsure
+  ai: { type: Boolean, default: false },
   unreadable: { type: Boolean, default: false },
   raceNum: { type: Number, default: null },
   horseNum: { type: Number, default: null },

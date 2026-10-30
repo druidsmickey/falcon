@@ -7,7 +7,9 @@ const WhatsappInbox = require('../models/whatsappInbox');
 const WhatsappOdds = require('../models/whatsappOdds');
 const Init = require('../models/init');
 const Params = require('../models/params');
-const { parseBetMessage, parseOddsList, emptyContext } = require('./betMessage');
+const { parseBetMessage, parseOddsList, emptyContext, isDoubtful } = require('./betMessage');
+const WhatsappAi = require('../models/whatsappAi');
+const { AiReader, PRESETS } = require('./aiReader');
 
 /**
  * A name for a message that is the same every time the message is announced. WhatsApp's own id is used when the
@@ -35,6 +37,133 @@ async function selectedHorses() {
   if (!race) return [];
   const rows = await Params.find({ meetingName: race.meetingName }).select('raceNum horseNum horseName').lean();
   return rows.map(r => ({ raceNum: r.raceNum, horseNum: r.horseNum, horseName: r.horseName || '' }));
+}
+
+// ---------------------------------------------------------------- the AI that gives a second opinion
+
+/** The settings of the AI: what was saved in the app, else the server's environment (AI_API_KEY, AI_BASE_URL, AI_MODEL, AI_ENABLED). */
+async function loadAiSettings() {
+  const doc = await WhatsappAi.findOne({ key: 'main' }).lean();
+  const env = process.env;
+  const preset = (doc && doc.preset) || 'gemini';
+  const base = PRESETS[preset] || PRESETS.custom;
+  return {
+    enabled: doc ? !!doc.enabled : String(env.AI_ENABLED || '').toLowerCase() === 'true',
+    baseUrl: (doc && doc.baseUrl) || env.AI_BASE_URL || base.baseUrl,
+    model: (doc && doc.model) || env.AI_MODEL || base.model,
+    apiKey: (doc && doc.apiKey) || env.AI_API_KEY || '',
+  };
+}
+
+let ai = new AiReader({ loadSettings: loadAiSettings });
+/** For tests: the reader that is used. */
+const setAiReader = reader => { ai = reader; };
+
+/** What the app may see of the AI settings: never the key itself. */
+async function getAiSettings() {
+  const doc = await WhatsappAi.findOne({ key: 'main' }).lean();
+  const settings = await loadAiSettings();
+  return {
+    enabled: settings.enabled,
+    preset: (doc && doc.preset) || 'gemini',
+    baseUrl: settings.baseUrl,
+    model: settings.model,
+    hasKey: !!settings.apiKey,
+    stats: ai.getStats(),
+    presets: PRESETS,
+  };
+}
+
+const safeAddress = value => {
+  try {
+    const url = new URL(value);
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    return url.protocol === 'https:' || (url.protocol === 'http:' && local);
+  } catch {
+    return false;
+  }
+};
+
+/** Saves the settings. A key is only changed when one is given; clearKey removes it. */
+async function saveAiSettings(body) {
+  const input = body && typeof body === 'object' ? body : {};
+  const changes = {};
+  if (input.enabled !== undefined) {
+    if (typeof input.enabled !== 'boolean') throw new Error('enabled must be true or false');
+    changes.enabled = input.enabled;
+  }
+  if (input.preset !== undefined) {
+    if (!['gemini', 'groq', 'custom'].includes(input.preset)) throw new Error('unknown preset');
+    changes.preset = input.preset;
+    // choosing a ready-made service also sets its address and model, unless the person gives their own
+    if (input.preset !== 'custom') {
+      if (input.baseUrl === undefined) changes.baseUrl = PRESETS[input.preset].baseUrl;
+      if (input.model === undefined) changes.model = PRESETS[input.preset].model;
+    }
+  }
+  if (input.baseUrl !== undefined) {
+    const address = String(input.baseUrl).trim();
+    if (address && !safeAddress(address)) throw new Error('the address must start with https:// (http:// only for localhost)');
+    changes.baseUrl = address;
+  }
+  if (input.model !== undefined) {
+    const model = String(input.model).trim();
+    if (model.length > 100) throw new Error('the model name is too long');
+    changes.model = model;
+  }
+  if (typeof input.apiKey === 'string' && input.apiKey.trim()) changes.apiKey = input.apiKey.trim().slice(0, 500);
+  if (input.clearKey === true) changes.apiKey = '';
+  await WhatsappAi.updateOne({ key: 'main' }, { $set: changes, $setOnInsert: { key: 'main' } }, { upsert: true });
+  return getAiSettings();
+}
+
+/** Tries the AI with a sample line, to see that the key and the model work. */
+async function testAi(text) {
+  const sample = String(text || '').trim().slice(0, 200) || 'put 5k on the grey at 650';
+  const context = await currentContext();
+  const before = ai.getStats();
+  const entries = await ai.read([sample], context);
+  const stats = ai.getStats();
+  if (entries === null) {
+    return { ok: false, error: stats.lastError && stats.failed > before.failed ? stats.lastError : 'the AI is switched off, has no key, or the limit was reached', sample };
+  }
+  return {
+    ok: true,
+    sample,
+    bets: entries.map(e => ({ race: e.raceNum, horse: e.horseNum, kind: e.amountKind, amount: e.amount ?? e.books ?? e.stake, second: e.f500 ?? e.odds100 ?? e.rate ?? null, notes: e.issues })),
+  };
+}
+
+/**
+ * The lines the rules were not sure about go to the AI. What it finds replaces them (always marked unsure and read
+ * by AI); when it finds no bet in a line the rules could not read at all, that line is dropped as chat. When the AI
+ * cannot be used, nothing changes.
+ */
+async function withAiSecondOpinion(parsed, context) {
+  const doubtful = parsed.filter(isDoubtful);
+  if (doubtful.length === 0) return parsed;
+
+  const lines = doubtful.map(e => e.text);
+  let found = null;
+  try {
+    found = await ai.read(lines, context);
+  } catch {
+    found = null;
+  }
+  if (found === null) return parsed;
+  if (found.length === 0) return parsed.filter(e => !e.unreadable);
+
+  const text = lines.join(' | ');
+  const result = [];
+  let inserted = false;
+  for (const entry of parsed) {
+    if (!isDoubtful(entry)) result.push(entry);
+    else if (!inserted) {
+      result.push(...found.map(e => ({ ...e, text })));
+      inserted = true;
+    }
+  }
+  return result;
 }
 
 /** The race that is running (from the latest odds list) and the horses of the meeting. */
@@ -242,8 +371,16 @@ async function handleIncoming(message) {
     return 0;
   }
 
+  // a message that is already in the inbox (the fallback finds it again after a restart) is not read, or paid for, twice
+  if (await WhatsappInbox.exists({ messageId })) {
+    mark(message, 'done: already in the inbox');
+    return 0;
+  }
+
   mark(message, 'reading the message');
-  const parsed = parseBetMessage(message.body, await currentContext());
+  const context = await currentContext();
+  const read = parseBetMessage(message.body, context);
+  const parsed = await withAiSecondOpinion(read, context);
   let added = 0;
   for (const [index, entry] of parsed.entries()) {
     const key = `${messageId}:${index}`;
@@ -259,6 +396,7 @@ async function handleIncoming(message) {
       unreadable: !!entry.unreadable,
       issues: entry.issues || [],
       unsure: !!entry.unreadable || !!entry.unsure,
+      ai: !!entry.ai,
     };
     if (!entry.unreadable) {
       Object.assign(doc, {
@@ -284,7 +422,7 @@ async function handleIncoming(message) {
   let result;
   if (parsed.length === 0) result = 'nothing to read in it (no bet, or only numbers)';
   else if (added === 0) result = 'already in the inbox';
-  else result = added === 1 ? 'added 1 bet to the inbox' : `added ${added} bets to the inbox`;
+  else result = (added === 1 ? 'added 1 bet to the inbox' : `added ${added} bets to the inbox`) + (parsed.some(e => e.ai) ? ' (read with AI)' : '');
   record({ from: who, name: contact.name, text: preview(message.body), result });
   mark(message, 'done: ' + result);
   return added;
@@ -386,6 +524,7 @@ const toItem = doc => ({
   sentAt: doc.sentAt,
   unreadable: doc.unreadable,
   demo: !!doc.demo,
+  ai: !!doc.ai,
   raceNum: doc.raceNum,
   horseNum: doc.horseNum,
   mode: doc.mode,
@@ -503,4 +642,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };
+module.exports = { getAiSettings, saveAiSettings, testAi, setAiReader, messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, updateContact, currentContext, requestIdFor };

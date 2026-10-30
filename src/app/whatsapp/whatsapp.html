@@ -49,6 +49,95 @@
     }
   </mat-card>
 
+  <!-- the AI that gives a second opinion on messages the rules could not read -->
+  <mat-card class="ai">
+    <mat-card-header>
+      <mat-card-title>AI reader (optional)</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="hint">
+        The rules read the clear messages. When a line is unclear ("put 500 on the grey one"), an AI can give a second
+        opinion. It only says what the player wrote; the figures go through the same rules, a race or horse that is not
+        in the meeting is never accepted, and every bet it reads is marked <strong>AI</strong> and left for you to confirm.
+        <strong>The text of those messages is sent to the AI service.</strong> Free plans may use what is sent to improve
+        their models, so do not use it if that is a problem.
+      </p>
+
+      @if (ai(); as a) {
+        <label class="check ai-switch">
+          <input type="checkbox" [checked]="a.enabled" [disabled]="aiBusy() || !a.hasKey" (change)="setAiEnabled($any($event.target).checked)">
+          <span>{{ a.enabled ? 'On' : 'Off' }}{{ a.hasKey ? '' : ' (add a key first)' }}</span>
+        </label>
+
+        <div class="ai-row">
+          <label>Service
+            <select [value]="a.preset" (change)="setAiPreset($event)" [disabled]="aiBusy()">
+              <option value="gemini">Google Gemini (free plan)</option>
+              <option value="groq">Groq (free plan)</option>
+              <option value="custom">Other (any OpenAI-style service)</option>
+            </select>
+          </label>
+        </div>
+        <div class="ai-row" [hidden]="a.preset !== 'custom'">
+          <label>Address
+            <input #aiAddress type="text" [value]="a.baseUrl" placeholder="https://.../v1">
+          </label>
+        </div>
+        <div class="ai-row">
+          <label>Model
+            <input #aiModel type="text" [value]="a.model" placeholder="model name">
+          </label>
+        </div>
+        <div class="ai-row">
+          <label>Key {{ a.hasKey ? '(saved: type a new one to replace it)' : '' }}
+            <input #aiKey type="password" autocomplete="off" placeholder="paste the key here">
+          </label>
+        </div>
+        <div class="ai-actions">
+          <button mat-raised-button color="primary" (click)="saveAiFields(a.preset === 'custom' ? aiAddress : null, aiModel, aiKey)" [disabled]="aiBusy()">Save</button>
+          @if (a.hasKey) {
+            <button mat-stroked-button (click)="clearAiKey()" [disabled]="aiBusy()">Remove key</button>
+          }
+        </div>
+        @if (aiMessage()) {
+          <p class="hint">{{ aiMessage() }}</p>
+        }
+
+        <div class="ai-row">
+          <label>Try it with a message
+            <input #aiSample type="text" placeholder="put 5k on the grey at 650">
+          </label>
+        </div>
+        <button mat-stroked-button (click)="testAi(aiSample.value)" [disabled]="aiBusy() || !a.hasKey">Test the AI</button>
+        @if (aiTest(); as t) {
+          <div class="ai-result" [class.bad]="!t.ok">
+            @if (t.ok) {
+              @for (bet of t.bets; track $index) {
+                <div>Race {{ bet.race ?? '?' }}, horse {{ bet.horse ?? '?' }}, {{ bet.amount ?? '?' }}{{ bet.second ? ' / ' + bet.second : '' }} ({{ bet.kind === '?' ? 'books or stake?' : bet.kind }})</div>
+              } @empty {
+                <div>The AI found no bet in that message.</div>
+              }
+            } @else {
+              {{ t.error }}
+            }
+          </div>
+        }
+
+        <p class="counters">
+          Calls: <strong>{{ a.stats.calls }}</strong> (worked {{ a.stats.ok }}, failed {{ a.stats.failed }}) &middot;
+          switched off or no key: {{ a.stats.skipped }} &middot; over the limit: {{ a.stats.limited }}
+          @if (a.stats.lastError) { <br>Last error: {{ a.stats.lastError }} }
+        </p>
+        <p class="hint">
+          Free keys: Google Gemini at aistudio.google.com/apikey, Groq at console.groq.com/keys. The app makes at most
+          10 calls a minute and 300 a day, only for unclear lines, so a free plan is enough.
+        </p>
+      } @else {
+        <p class="hint">Loading...</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
   <!-- what the server did with the latest messages: explains a bet that did not reach the Inbox -->
   <mat-card class="activity">
     <mat-card-header>

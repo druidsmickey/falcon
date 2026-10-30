@@ -10,6 +10,8 @@ export interface InboxItem {
   unreadable: boolean;
   /** A sample from the demo button: confirming it saves nothing. */
   demo?: boolean;
+  /** Read with the help of the AI: always unsure. */
+  ai?: boolean;
   raceNum: number | null;
   horseNum: number | null;
   mode: 'f500' | 'odds' | null;
@@ -36,6 +38,7 @@ export interface Draft {
   clientName: string;
   unreadable: boolean;
   demo: boolean;
+  ai: boolean;
   unsure: boolean;
   issues: string[];
   raceNum: number | null;
@@ -83,6 +86,7 @@ export function draftFrom(item: InboxItem): Draft {
     clientName: item.clientName,
     unreadable: item.unreadable,
     demo: !!item.demo,
+    ai: !!item.ai,
     unsure: item.unsure,
     issues: item.issues,
     raceNum: item.raceNum,

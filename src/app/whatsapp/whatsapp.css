@@ -215,3 +215,52 @@ mat-card {
   border-top: 1px solid #f1f5f9;
   word-break: break-all;
 }
+
+/* ---------------------------------------------------------------- the AI reader */
+
+.ai-switch {
+  margin: 8px 0;
+}
+
+.ai-row {
+  margin: 8px 0;
+}
+
+.ai-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.ai-row input,
+.ai-row select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.ai-actions {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.ai-result {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.9rem;
+}
+
+.ai-result.bad {
+  background: #fef2f2;
+  color: #991b1b;
+}
