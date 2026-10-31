@@ -611,7 +611,7 @@ const toItem = doc => ({
 
 async function listPending() {
   const [items, context] = await Promise.all([
-    WhatsappInbox.find({ status: 'pending' }).sort({ sentAt: 1 }).limit(500),
+    WhatsappInbox.find({ status: 'pending', unreadable: { $ne: true } }).sort({ sentAt: 1 }).limit(500),
     WhatsappOdds.findOne().sort({ sentAt: -1 }).lean(),
   ]);
   return {
@@ -622,7 +622,7 @@ async function listPending() {
 
 /** How many bets wait for a person to approve them. */
 async function countPending() {
-  return WhatsappInbox.countDocuments({ status: 'pending' });
+  return WhatsappInbox.countDocuments({ status: 'pending', unreadable: { $ne: true } });
 }
 
 // the WhatsApp client of the moment, to answer the person whose bet was saved

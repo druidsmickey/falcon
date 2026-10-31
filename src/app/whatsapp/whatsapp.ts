@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -32,15 +31,6 @@ interface ListenContact {
   listen: boolean;
 }
 
-/** What the server did with a message it received (to explain why a bet did not reach the inbox). */
-interface ActivityItem {
-  at: string;
-  from: string;
-  name: string | null;
-  text: string | null;
-  result: string;
-}
-
 /** The settings of the AI that gives a second opinion on messages the rules cannot read (the key stays on the server). */
 interface AiSettings {
   enabled: boolean;
@@ -62,41 +52,13 @@ interface AiTestResult {
   bets?: { race: number | null; horse: number | null; kind: string; amount: number | null; second: number | null; notes: string[] }[];
 }
 
-/** One thing WhatsApp announced and the last thing the server did with it. */
-interface TraceItem {
-  at: string;
-  type: string;
-  from: string | null;
-  author: string | null;
-  fromMe: boolean;
-  isStatus: boolean;
-  hasBody: boolean;
-  hasId: boolean;
-  branch: string;
-}
-
-/** How many times WhatsApp announced something to the server (the ignored ones included), and the fallback checks. */
-interface Counters {
-  startedAt?: string;
-  events: number;
-  fromOthers?: number;
-  errors?: number;
-  lastError?: string | null;
-  lastEventAt: string | null;
-  ignored: { fromMe: number; status: number; broadcast: number; groups?: number };
-  results?: { added: number; notSaved: number; notListened: number; nothingToRead: number; noText: number };
-  polled: number;
-  lastPollAt: string | null;
-  replies?: { sent: number; failed: number; lastError: string | null };
-}
-
 /**
  * The WhatsApp tab: the connection to WhatsApp, one button that copies the contacts of the phone, and for each
  * contact the nickname bets are entered under and whether its messages are read (they then arrive in the Inbox).
  */
 @Component({
   selector: 'app-whatsapp',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatCardModule, MatProgressSpinnerModule],
   templateUrl: './whatsapp.html',
   styleUrl: './whatsapp.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,9 +76,6 @@ export class Whatsapp implements OnInit, OnDestroy {
   protected readonly search = signal('');
   protected readonly onlyListened = signal(false);
   protected readonly error = signal('');
-  protected readonly activity = signal<ActivityItem[]>([]);
-  protected readonly counters = signal<Counters | null>(null);
-  protected readonly trace = signal<TraceItem[]>([]);
   protected readonly ai = signal<AiSettings | null>(null);
   protected readonly aiMessage = signal('');
   protected readonly aiBusy = signal(false);
@@ -137,12 +96,10 @@ export class Whatsapp implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.checkStatus();
     void this.loadContacts();
-    void this.loadActivity();
     void this.loadAi();
     // while not connected the status (and the QR code) is checked every 3 seconds
     this.timer = setInterval(() => {
       if (this.status().status !== 'ready') void this.checkStatus();
-      void this.loadActivity();
     }, 3000);
   }
 
@@ -246,19 +203,6 @@ export class Whatsapp implements OnInit, OnDestroy {
         if (this.lastQrText === qrText) this.qrImage.set(image);
       })
       .catch(error => console.error('Error drawing the QR code:', error));
-  }
-
-  // ---------------------------------------------------------------- what was received
-
-  protected async loadActivity(): Promise<void> {
-    try {
-      const result = await firstValueFrom(this.http.get<{ messages: ActivityItem[]; counters?: Counters; trace?: TraceItem[] }>(`${this.api}/api/whatsapp-inbox/activity`));
-      this.activity.set(result.messages.slice(0, 15));
-      this.counters.set(result.counters ?? null);
-      this.trace.set((result.trace ?? []).slice(0, 12));
-    } catch {
-      // the next check tries again
-    }
   }
 
   // ---------------------------------------------------------------- the AI
