@@ -742,3 +742,18 @@ test('an OK that could not be sent is counted with its reason, and saving still 
     inbox.attach({ on: () => {} }, { pollEveryMs: 0 });
   }
 });
+
+test('a line with too much unknown is not a bet: a number that is no horse of the meeting, nor race and horse', async () => {
+  await seedMeeting();
+  const { looksLikeBet, parseBetMessage } = require('../lib/betMessage');
+  const context = await inbox.currentContext();
+  // 99 is neither a horse of the meeting nor a race and horse
+  const read = parseBetMessage('99 500x90', context);
+  assert.equal(read.some(looksLikeBet), false);
+  assert.equal(await inbox.handleIncoming(message('99 500x90')), 0);
+  assert.equal(await WhatsappInbox.countDocuments(), 0);
+  // a misspelt horse name is still a bet to check
+  assert.equal(parseBetMessage('xyzzy 500x90', context).some(looksLikeBet), true);
+  // a clear bet is a bet
+  assert.equal(parseBetMessage('11 500x90', context).every(looksLikeBet), true);
+});

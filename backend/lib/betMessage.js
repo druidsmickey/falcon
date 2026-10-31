@@ -424,6 +424,22 @@ function parseBetMessage(text, context = emptyContext()) {
 
 // ---------------------------------------------------------------- what an AI picked out of a line
 
+/**
+ * Whether a reading is worth a card. When the horse cannot be told (no horse number of the meeting, and no horse name
+ * either) and something else is unknown as well (the race, whether it is books or a stake, the amount), it is chat that
+ * happens to hold a figure, not a bet. A number that is neither a horse of the meeting nor a race and horse is never a bet.
+ */
+function looksLikeBet(entry) {
+  if (!entry || entry.unreadable) return false;
+  const issues = entry.issues || [];
+  if (issues.some(i => /is not a horse of this meeting, nor a race and horse/.test(i))) return false;
+  const named = issues.some(i => /^horse ".*" not found|^no horse list to find|^".*" could be/.test(i));
+  if (entry.horseNum !== null && entry.horseNum !== undefined) return true;
+  if (named) return true;
+  const amountUnknown = [entry.books, entry.stake, entry.amount].every(v => v === null || v === undefined);
+  return !(entry.raceNum === null || entry.raceNum === undefined || entry.amountKind === '?' || amountUnknown);
+}
+
 /** True for a line the rules were not sure about: worth a second opinion from the AI. */
 function isDoubtful(entry) {
   if (!entry) return false;
@@ -495,4 +511,4 @@ function entryFromAi(raw, context) {
   return entry;
 }
 
-module.exports = { parseOddsList, parseBetMessage, emptyContext, isDoubtful, entryFromAi };
+module.exports = { parseOddsList, parseBetMessage, emptyContext, isDoubtful, looksLikeBet, entryFromAi };

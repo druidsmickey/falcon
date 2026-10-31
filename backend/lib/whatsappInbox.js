@@ -7,7 +7,7 @@ const WhatsappInbox = require('../models/whatsappInbox');
 const WhatsappOdds = require('../models/whatsappOdds');
 const Init = require('../models/init');
 const Params = require('../models/params');
-const { parseBetMessage, parseOddsList, emptyContext, isDoubtful } = require('./betMessage');
+const { parseBetMessage, parseOddsList, emptyContext, isDoubtful, looksLikeBet } = require('./betMessage');
 const WhatsappAi = require('../models/whatsappAi');
 const { AiReader, PRESETS, MAX_LINES } = require('./aiReader');
 const WhatsappCorrection = require('../models/whatsappCorrection');
@@ -447,7 +447,8 @@ async function handleIncoming(message) {
   mark(message, 'reading the message');
   const context = await currentContext();
   const read = parseBetMessage(message.body, context);
-  const parsed = await withAiSecondOpinion(read, context);
+  // what is still not a bet after the AI had its look (too much unknown: no horse, no race, no amount...) is left out
+  const parsed = (await withAiSecondOpinion(read, context)).filter(looksLikeBet);
   let added = 0;
   for (const [index, entry] of parsed.entries()) {
     const key = `${messageId}:${index}`;
