@@ -755,3 +755,17 @@ test('a line with too much unknown is not a bet: a number that is no horse of th
   // a clear bet is a bet
   assert.equal(parseBetMessage('11 500x90', context).every(looksLikeBet), true);
 });
+
+test('with message reading switched off nothing is read, and switching it on reads again', async () => {
+  await seedMeeting();
+  await WhatsappAi.deleteMany({});
+  assert.equal((await inbox.getAiSettings()).reading, true);
+  await inbox.saveAiSettings({ reading: false });
+  assert.equal((await inbox.getAiSettings()).reading, false);
+  assert.equal(await inbox.handleIncoming(message('1 3 500x90')), 0);
+  assert.equal(await WhatsappInbox.countDocuments(), 0);
+  await assert.rejects(() => inbox.saveAiSettings({ reading: 'no' }));
+  await inbox.saveAiSettings({ reading: true });
+  assert.equal(await inbox.handleIncoming(message('1 3 500x90')), 1);
+  await WhatsappAi.deleteMany({});
+});

@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const whatsappAiSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, default: 'main' },
   enabled: { type: Boolean, default: false },
+  // off after a racing day: no message is read and none reaches the inbox
+  reading: { type: Boolean, default: true },
   // every line with a figure goes to the AI, not only the lines the rules were unsure about
   readAll: { type: Boolean, default: false },
   preset: { type: String, enum: ['gemini', 'groq', 'claude', 'custom'], default: 'gemini' },

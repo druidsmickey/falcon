@@ -49,6 +49,27 @@
     }
   </mat-card>
 
+  <!-- the switch that stops all reading, e.g. after a racing day -->
+  <mat-card class="reading">
+    <mat-card-header>
+      <mat-card-title>Read messages</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (ai(); as a) {
+        <label class="check ai-switch">
+          <input type="checkbox" [checked]="a.reading !== false" [disabled]="aiBusy()" (change)="setReading($any($event.target).checked)">
+          <span>{{ a.reading !== false ? 'On: bets sent by the contacts ticked below arrive in the Inbox' : 'Off: no message is read' }}</span>
+        </label>
+        <p class="hint">Untick it after the racing day. Messages that arrive while it is off are not read later.</p>
+        @if (aiMessage()) {
+          <p class="hint">{{ aiMessage() }}</p>
+        }
+      } @else {
+        <p class="hint">Loading...</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
   <!-- the AI that gives a second opinion on messages the rules could not read -->
   <mat-card class="ai">
     <mat-card-header>

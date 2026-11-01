@@ -66,11 +66,18 @@ let ai = new AiReader({ loadSettings: loadAiSettings, loadExamples: loadCorrecti
 /** For tests: the reader that is used. */
 const setAiReader = reader => { ai = reader; };
 
+/** Whether messages are read at all: the person switches it off after a racing day. */
+async function isReading() {
+  const doc = await WhatsappAi.findOne({ key: 'main' }).select('reading').lean();
+  return !doc || doc.reading !== false;
+}
+
 /** What the app may see of the AI settings: never the key itself. */
 async function getAiSettings() {
   const doc = await WhatsappAi.findOne({ key: 'main' }).lean();
   const settings = await loadAiSettings();
   return {
+    reading: !doc || doc.reading !== false,
     enabled: settings.enabled,
     readAll: settings.readAll,
     preset: (doc && doc.preset) || 'gemini',
@@ -101,6 +108,10 @@ async function saveAiSettings(body) {
   if (input.enabled !== undefined) {
     if (typeof input.enabled !== 'boolean') throw new Error('enabled must be true or false');
     changes.enabled = input.enabled;
+  }
+  if (input.reading !== undefined) {
+    if (typeof input.reading !== 'boolean') throw new Error('reading must be true or false');
+    changes.reading = input.reading;
   }
   if (input.readAll !== undefined) {
     if (typeof input.readAll !== 'boolean') throw new Error('readAll must be true or false');
@@ -389,6 +400,7 @@ async function handleIncoming(message) {
   if (message.fromMe || message.isStatus) { mark(message, 'ignored: sent by you, or a status'); return 0; }
   if (/@broadcast$/.test(message.from || '')) { mark(message, 'ignored: broadcast'); return 0; }
   if (isGroupLike(message)) { mark(message, 'ignored: a group, community announcement or channel'); return 0; }
+  if (!(await isReading())) { mark(message, 'ignored: message reading is switched off'); return 0; }
 
   const messageId = messageIdOf(message);
   if (!messageId) { mark(message, 'dropped: the message has no id'); return 0; }
@@ -499,6 +511,7 @@ async function handleIncoming(message) {
 /** A message sent from the account itself: an odds list sets the race that is running. */
 async function handleOwn(message) {
   if (!message || !message.fromMe || !message.body) return false;
+  if (!(await isReading())) return false;
   // it is sent from this phone, so it is the odds list even when it is short: "5" and "1 200"
   const list = parseOddsList(message.body, { own: true });
   const messageId = messageIdOf(message);
