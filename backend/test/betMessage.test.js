@@ -383,3 +383,8 @@ test('a short list sent from this phone ("5" and "1 200") is an odds list, from 
   const own = parseOddsList('5\n1 200', { own: true });
   assert.deepEqual([own.raceNum, own.style, own.odds], [5, 'pairs', [{ horseNum: 1, odds: 200 }]]);
 });
+
+test('an odds list is not a bet whoever sends it, even a short one', () => {
+  assert.deepEqual(parseBetMessage('5\n1 200', withHorses), []);
+  assert.deepEqual(parseBetMessage('r5\n1 200\n2 1000', withHorses), []);
+});

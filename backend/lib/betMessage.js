@@ -52,7 +52,7 @@ function parseOddsList(text, { own = false } = {}) {
 
   // horse and odds on each line: "1 200"
   if (rest.every(l => /^\d+\s+\d+(?:\.\d+)?$/.test(l))) {
-    // a message from someone else may be a bet written over two lines ("5" and "1 200"); one sent from this phone is a list
+    // the short list "5" and "1 200" is a list only when the caller says so (own): it can also be a bet written over two lines
     if (!hasR && !own && rest.length < 2) return null;
     const odds = rest.map(l => {
       const [horse, price] = l.split(/\s+/);
@@ -377,7 +377,8 @@ const isBareNumber = line => /^\d+(?:\.\d+)?k?$/i.test(line.replace(/,/g, '').tr
  *   - three or more lines of which at least half are only a number
  */
 function looksLikeNumbers(lines, text) {
-  if (parseOddsList(text)) return true;
+  // an odds list is not a bet whoever sends it, even a short one ("5" and "1 200")
+  if (parseOddsList(text, { own: true })) return true;
   return lines.length >= 3 && lines.filter(isBareNumber).length * 2 >= lines.length;
 }
 
