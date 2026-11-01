@@ -42,24 +42,27 @@ function parseOddsList(text) {
   const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return null;
 
-  const withR = /^r\s*(\d+)$/i.exec(lines[0]);
-  if (withR) {
-    const odds = [];
-    for (const line of lines.slice(1)) {
-      const pair = /^(\d+)\s+(\d+(?:\.\d+)?)$/.exec(line.replace(/,/g, ''));
-      if (!pair) return null;
-      odds.push({ horseNum: Number(pair[1]), odds: Number(pair[2]) });
-    }
-    const raceNum = Number(withR[1]);
-    if (raceNum < 1 || raceNum > MAX_RACE || odds.some(o => o.horseNum < 1 || o.horseNum > MAX_HORSE)) return null;
+  // the race number alone on the first line, with or without an r: "r5" or "5"
+  const header = /^(r\s*)?(\d+)$/i.exec(lines[0]);
+  if (!header) return null;
+  const hasR = !!header[1];
+  const raceNum = Number(header[2]);
+  if (raceNum < 1 || raceNum > MAX_RACE) return null;
+  const rest = lines.slice(1).map(l => l.replace(/,/g, ''));
+
+  // horse and odds on each line: "1 200"
+  if (rest.every(l => /^\d+\s+\d+(?:\.\d+)?$/.test(l))) {
+    if (!hasR && rest.length < 2) return null; // "5" and "1 200" may be a bet written over two lines
+    const odds = rest.map(l => {
+      const [horse, price] = l.split(/\s+/);
+      return { horseNum: Number(horse), odds: Number(price) };
+    });
+    if (odds.some(o => o.horseNum < 1 || o.horseNum > MAX_HORSE)) return null;
     return { raceNum, runners: Math.max(...odds.map(o => o.horseNum)), odds, style: 'pairs' };
   }
 
-  // a race number, then the odds of horse 1, 2, 3 ...
-  if (/^\d+$/.test(lines[0]) && lines.length >= 3) {
-    const raceNum = Number(lines[0]);
-    const rest = lines.slice(1).map(l => l.replace(/,/g, ''));
-    if (raceNum < 1 || raceNum > MAX_RACE || !rest.every(l => /^\d+(?:\.\d+)?$/.test(l)) || rest.length > MAX_HORSE) return null;
+  // only the odds, of horse 1, 2, 3 ...
+  if (rest.length >= 2 && rest.length <= MAX_HORSE && rest.every(l => /^\d+(?:\.\d+)?$/.test(l))) {
     return { raceNum, runners: rest.length, odds: rest.map((o, i) => ({ horseNum: i + 1, odds: Number(o) })), style: 'column' };
   }
   return null;
@@ -425,19 +428,18 @@ function parseBetMessage(text, context = emptyContext()) {
 // ---------------------------------------------------------------- what an AI picked out of a line
 
 /**
- * Whether a reading is worth a card. When the horse cannot be told (no horse number of the meeting, and no horse name
- * either) and something else is unknown as well (the race, whether it is books or a stake, the amount), it is chat that
- * happens to hold a figure, not a bet. A number that is neither a horse of the meeting nor a race and horse is never a bet.
+ * Whether a reading is worth a card. A bet has a horse (a horse number of the meeting, with the race from the line or from
+ * the latest odds list, or a horse name) and an amount. Without both it is chat that happens to hold a figure. A number
+ * that is neither a horse of the meeting nor a race and horse is never a bet.
  */
 function looksLikeBet(entry) {
   if (!entry || entry.unreadable) return false;
   const issues = entry.issues || [];
   if (issues.some(i => /is not a horse of this meeting, nor a race and horse/.test(i))) return false;
   const named = issues.some(i => /^horse ".*" not found|^no horse list to find|^".*" could be/.test(i));
-  if (entry.horseNum !== null && entry.horseNum !== undefined) return true;
-  if (named) return true;
-  const amountUnknown = [entry.books, entry.stake, entry.amount].every(v => v === null || v === undefined);
-  return !(entry.raceNum === null || entry.raceNum === undefined || entry.amountKind === '?' || amountUnknown);
+  const hasHorse = (entry.horseNum !== null && entry.horseNum !== undefined) || named;
+  const hasAmount = [entry.books, entry.stake, entry.amount].some(v => v !== null && v !== undefined);
+  return hasHorse && hasAmount;
 }
 
 /** True for a line the rules were not sure about: worth a second opinion from the AI. */

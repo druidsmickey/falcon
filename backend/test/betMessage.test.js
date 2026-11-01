@@ -352,3 +352,28 @@ test('"5.2" over "200x300" is race 5 horse 2, and a second figure between 121 an
   const [clear] = parseBetMessage('5.2\n200x90', { raceNum: 1, runners: 12, horses });
   assert.deepEqual([clear.raceNum, clear.horseNum, clear.books, clear.f500], [5, 2, 200, 90]);
 });
+
+test('the odds list is read in all four styles, and "5" with "1 200" stays a possible bet', () => {
+  const same = [
+    ['5\n200\n1000\n300\n4000\n500', 'column'],
+    ['r5\n200\n1000\n300\n4000\n500', 'column'],
+    ['r5\n1 200\n2 1000\n3 300\n4 4000\n5 500', 'pairs'],
+    ['5\n1 200\n2 1000\n3 300\n4 4000\n5 500', 'pairs'],
+  ];
+  for (const [text, style] of same) {
+    const list = parseOddsList(text);
+    assert.deepEqual([list.raceNum, list.runners, list.style], [5, 5, style], text);
+    assert.deepEqual(list.odds.map(o => o.odds), [200, 1000, 300, 4000, 500]);
+  }
+  assert.equal(parseOddsList('5\n1 200'), null);
+});
+
+test('a bet has a horse (a number of the meeting or a name) and an amount, whatever else is missing', () => {
+  const { looksLikeBet } = require('../lib/betMessage');
+  const context = { raceNum: 5, runners: 5, horses: [1, 2, 3, 4, 5].map(h => ({ raceNum: 5, horseNum: h, horseName: 'H' + h })) };
+  const reads = text => parseBetMessage(text, context).some(looksLikeBet);
+  assert.equal(reads('3 500'), true); // horse number and amount: the race is the one of the odds list
+  assert.equal(reads('5 3 500x90'), true); // race, horse and amount
+  assert.equal(reads('capt 500'), true); // a horse name and an amount, even if the name is not found
+  assert.equal(reads('9 500'), false); // 9 is no horse of the meeting
+});
