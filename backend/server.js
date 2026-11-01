@@ -68,6 +68,7 @@ const { pickParamUpdate } = require('./lib/params');
 const { buildParamSave, buildRaceSave } = require('./lib/save');
 const { ensureUniqueRows } = require('./lib/db');
 const { validateBet } = require('./lib/bets');
+const { clearInbox } = require('./lib/inboxClear');
 
 async function logSyncEvent(req, event) {
   try {
@@ -642,6 +643,9 @@ app.delete('/api/meetings/:meetingName', async (req, res) => {
       Bets.deleteMany({ meetingName })
     ]);
     
+    // the bets read from WhatsApp belong to the meeting too
+    await clearInbox();
+
     // Invalidate all caches when a meeting is deleted
     cache.clear();
     res.json({ 

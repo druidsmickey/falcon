@@ -6,6 +6,7 @@ const Params = require("../models/params");
 const Bets = require("../models/bets");
 const Report = require("../model/report");
 const { createLoginLimiters } = require("../lib/ratelimit");
+const { clearInbox, clearOldInbox } = require("../lib/inboxClear");
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ async function purgeExpiredMeetings() {
   try {
     const cutoff = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
 
+    // the WhatsApp inbox keeps nothing longer than 6 days either
+    await clearOldInbox();
+
     // Find the earliest createdAt per meetingName. Every meeting is removed 6 days after it was
     // first input, whether it is the selected one or not.
     const meetings = await Init.aggregate([
@@ -58,6 +62,7 @@ async function purgeExpiredMeetings() {
 
     const expiredNames = meetings.map(m => m._id);
     console.log(`Purging expired meetings (>6 days old): ${expiredNames.join(", ")}`);
+    await clearInbox();
 
     await Promise.all([
       Init.deleteMany({ meetingName: { $in: expiredNames } }),

@@ -769,3 +769,19 @@ test('with message reading switched off nothing is read, and switching it on rea
   assert.equal(await inbox.handleIncoming(message('1 3 500x90')), 1);
   await WhatsappAi.deleteMany({});
 });
+
+test('the inbox and the odds lists are cleared with a meeting, and anything older than 6 days goes', async () => {
+  const { clearInbox, clearOldInbox } = require('../lib/inboxClear');
+  await seedMeeting();
+  await inbox.handleOwn(ownList('r1\n1 1500\n2 500'));
+  assert.equal(await inbox.handleIncoming(message('1 3 500x90')), 1);
+  const old = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  await WhatsappInbox.updateOne({}, { $set: { createdAt: old } });
+  assert.equal((await clearOldInbox()).inbox, 1); // only the old one
+  assert.equal(await WhatsappOdds.countDocuments(), 1);
+  assert.equal(await inbox.handleIncoming(message('1 4 500x90')), 1);
+  const cleared = await clearInbox(); // a meeting was deleted
+  assert.deepEqual([cleared.inbox, cleared.odds], [1, 1]);
+  assert.equal(await WhatsappInbox.countDocuments(), 0);
+  assert.equal(await WhatsappOdds.countDocuments(), 0);
+});
