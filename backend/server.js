@@ -48,6 +48,12 @@ mongoose.connect(process.env.MONGODB_URI, {
   } catch (err) {
     console.error('Could not make the rows unique:', err.message);
   }
+  // the AI corrections used to expire after 180 days; they are kept now, so the old expiry index goes
+  try {
+    await WhatsappCorrection.collection.dropIndex('createdAt_1');
+  } catch {
+    // already gone, or the collection does not exist yet
+  }
 })
 .catch((err) => {
   console.error('âŒ MongoDB connection error:', err);
@@ -69,6 +75,7 @@ const { buildParamSave, buildRaceSave } = require('./lib/save');
 const { ensureUniqueRows } = require('./lib/db');
 const { validateBet } = require('./lib/bets');
 const { clearInbox } = require('./lib/inboxClear');
+const WhatsappCorrection = require('./models/whatsappCorrection');
 
 async function logSyncEvent(req, event) {
   try {

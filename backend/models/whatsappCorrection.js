@@ -20,7 +20,7 @@ const whatsappCorrectionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-// old corrections stop counting after a while
-whatsappCorrectionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 180 * 24 * 60 * 60 });
+// corrections are kept: they do not expire, and are not cleared with a meeting (only "Forget them" removes them)
+whatsappCorrectionSchema.index({ createdAt: 1 });
 
 module.exports = mongoose.model('WhatsappCorrection', whatsappCorrectionSchema);

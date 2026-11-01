@@ -1,7 +1,7 @@
 // What a person changed on a card before saving the bet, kept as examples for the AI. The AI itself learns nothing:
 // the few corrections that look like the line being read are put in its question, so that it follows the same habits.
 
-const MAX_KEPT = 300;
+const MAX_KEPT = 5000;
 const MAX_SHOWN = 6;
 
 const positive = value => (typeof value === 'number' && Number.isFinite(value) && value !== 0 ? Math.abs(value) : null);
