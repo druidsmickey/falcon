@@ -147,13 +147,12 @@ test('a bet that names its horse is matched against the horses of the selected m
   ]);
   await inbox.handleOwn(ownList('r1\n1 1500\n2 500\n3 700'));
 
-  assert.equal(await inbox.handleIncoming(message('cap mag 500x90\nlux 5k\nmagic 500x90')), 3);
+  assert.equal(await inbox.handleIncoming(message('cap mag 500x90\nlux 5k\nmagic 500x90')), 2); // magic is no horse of this meeting
   const { items } = await inbox.listPending();
   assert.deepEqual([items[0].raceNum, items[0].horseNum, items[0].books, items[0].unsure], [1, 2, 500, false]);
   assert.deepEqual([items[1].horseNum, items[1].stake], [3, 5000]);
-  // a horse of an earlier meeting is not in the list
-  assert.equal(items[2].horseNum, null);
-  assert.equal(items[2].unsure, true);
+  // a horse of an earlier meeting is not in the list: it is ignored
+  assert.equal(items.length, 2);
 });
 
 test('the demo adds sample bets that the real parser read, and they can be removed', async () => {
@@ -546,8 +545,7 @@ test('with no help from the AI the rules keep what they read, and a message the 
   await seedMeeting();
   const calls = [];
   inbox.setAiReader(new AiReader({ loadSettings: async () => null, fetchImpl: async () => { calls.push(1); throw new Error('must not be called'); } }));
-  assert.equal(await inbox.handleIncoming(message('put 500 on the grey one')), 1); // the loose reading stays
-  assert.equal((await inbox.listPending()).items[0].ai, false);
+  assert.equal(await inbox.handleIncoming(message('put 500 on the grey one')), 0); // no horse of the meeting: ignored
 
   inbox.setAiReader(fakeAi([], calls));
   assert.equal(await inbox.handleIncoming(message('41 20k @ 1000')), 1);
@@ -562,8 +560,8 @@ test('when the AI finds no bet in lines the rules could not read, they are dropp
   try {
     assert.equal(await inbox.handleIncoming(message('call me on 0771 55 4321')), 0);
     assert.equal((await inbox.listPending()).items.length, 0);
-    // a loose line the AI did not take stays, for a person to look at
-    assert.equal(await inbox.handleIncoming(message('put 500 on the grey one')), 1);
+    // a name that is no horse of the meeting is ignored as well
+    assert.equal(await inbox.handleIncoming(message('put 500 on the grey one')), 0);
   } finally {
     inbox.setAiReader(new AiReader({ loadSettings: async () => null }));
   }
@@ -752,8 +750,8 @@ test('a line with too much unknown is not a bet: a number that is no horse of th
   assert.equal(read.some(looksLikeBet), false);
   assert.equal(await inbox.handleIncoming(message('99 500x90')), 0);
   assert.equal(await WhatsappInbox.countDocuments(), 0);
-  // a misspelt horse name is still a bet to check
-  assert.equal(parseBetMessage('xyzzy 500x90', context).some(looksLikeBet), true);
+  // a horse name that is not found is ignored
+  assert.equal(parseBetMessage('xyzzy 500x90', context).some(looksLikeBet), false);
   // a clear bet is a bet
   assert.equal(parseBetMessage('11 500x90', context).every(looksLikeBet), true);
 });

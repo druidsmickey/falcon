@@ -374,7 +374,7 @@ test('a bet has a horse (a number of the meeting or a name) and an amount, whate
   const reads = text => parseBetMessage(text, context).some(looksLikeBet);
   assert.equal(reads('3 500'), true); // horse number and amount: the race is the one of the odds list
   assert.equal(reads('5 3 500x90'), true); // race, horse and amount
-  assert.equal(reads('capt 500'), true); // a horse name and an amount, even if the name is not found
+  assert.equal(reads('capt 500'), false); // a horse name that is not found is ignored
   assert.equal(reads('9 500'), false); // 9 is no horse of the meeting
 });
 

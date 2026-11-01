@@ -432,13 +432,14 @@ function parseBetMessage(text, context = emptyContext()) {
 /**
  * Whether a reading is worth a card. A bet has a horse (a horse number of the meeting, with the race from the line or from
  * the latest odds list, or a horse name) and an amount. Without both it is chat that happens to hold a figure. A number
- * that is neither a horse of the meeting nor a race and horse is never a bet.
+ * that is neither a horse of the meeting nor a race and horse is never a bet, nor is a horse name that is not found.
  */
 function looksLikeBet(entry) {
   if (!entry || entry.unreadable) return false;
   const issues = entry.issues || [];
   if (issues.some(i => /is not a horse of this meeting, nor a race and horse/.test(i))) return false;
-  const named = issues.some(i => /^horse ".*" not found|^no horse list to find|^".*" could be/.test(i));
+  if (issues.some(i => /^horse ".*" not found/.test(i))) return false; // a name that is no horse of the meeting
+  const named = issues.some(i => /^no horse list to find|^".*" could be/.test(i));
   const hasHorse = (entry.horseNum !== null && entry.horseNum !== undefined) || named;
   const hasAmount = [entry.books, entry.stake, entry.amount].some(v => v !== null && v !== undefined);
   return hasHorse && hasAmount;
