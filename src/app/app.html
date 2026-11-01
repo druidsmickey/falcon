@@ -9,17 +9,23 @@
 <mat-tab-group [disablePagination]="true" [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)">
   <mat-tab label="Entry">
     <ng-template matTabContent>
-      <app-dataentry></app-dataentry>
+      @defer (on immediate) {
+        <app-dataentry></app-dataentry>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Single">
     <ng-template matTabContent>
-      <app-single></app-single>
+      @defer (on immediate) {
+        <app-single></app-single>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Chart">
     <ng-template matTabContent>
-      <app-chart></app-chart>
+      @defer (on immediate) {
+        <app-chart></app-chart>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab>
@@ -30,53 +36,75 @@
       }
     </ng-template>
     <ng-template matTabContent>
-      <app-whatsapp-inbox></app-whatsapp-inbox>
+      @defer (on immediate) {
+        <app-whatsapp-inbox></app-whatsapp-inbox>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="WhatsApp">
     <ng-template matTabContent>
-      <app-whatsapp></app-whatsapp>
+      @defer (on immediate) {
+        <app-whatsapp></app-whatsapp>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="List">
     <ng-template matTabContent>
-      <app-listdata></app-listdata>
+      @defer (on immediate) {
+        <app-listdata></app-listdata>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Winners">
     <ng-template matTabContent>
-      <app-winners></app-winners>
+      @defer (on immediate) {
+        <app-winners></app-winners>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Reports">
     <ng-template matTabContent>
-      <app-reports></app-reports>
+      @defer (on immediate) {
+        <app-reports></app-reports>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Merge">
     <ng-template matTabContent>
-      <app-merge></app-merge>
+      @defer (on immediate) {
+        <app-merge></app-merge>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Params">
     <ng-template matTabContent>
-      <app-params></app-params>
+      @defer (on immediate) {
+        <app-params></app-params>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Init">
     <ng-template matTabContent>
-      <app-init></app-init>
+      @defer (on immediate) {
+        <app-init></app-init>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Password">
     <ng-template matTabContent>
-      <app-change-password></app-change-password>
-      <app-device-security></app-device-security>
+      @defer (on immediate) {
+        <app-change-password></app-change-password>
+      }
+      @defer (on immediate) {
+        <app-device-security></app-device-security>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="Pinball">
     <ng-template matTabContent>
-      <app-arcade></app-arcade>
+      @defer (on immediate) {
+        <app-arcade></app-arcade>
+      }
     </ng-template>
   </mat-tab>
   <mat-tab label="">
