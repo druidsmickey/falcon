@@ -38,7 +38,7 @@ const number = text => Number(String(text).replace(/,/g, ''));
  *   6 800                          3000
  * Returns null if the text is not an odds list.
  */
-function parseOddsList(text) {
+function parseOddsList(text, { own = false } = {}) {
   const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return null;
 
@@ -52,7 +52,8 @@ function parseOddsList(text) {
 
   // horse and odds on each line: "1 200"
   if (rest.every(l => /^\d+\s+\d+(?:\.\d+)?$/.test(l))) {
-    if (!hasR && rest.length < 2) return null; // "5" and "1 200" may be a bet written over two lines
+    // a message from someone else may be a bet written over two lines ("5" and "1 200"); one sent from this phone is a list
+    if (!hasR && !own && rest.length < 2) return null;
     const odds = rest.map(l => {
       const [horse, price] = l.split(/\s+/);
       return { horseNum: Number(horse), odds: Number(price) };

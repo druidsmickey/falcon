@@ -499,7 +499,8 @@ async function handleIncoming(message) {
 /** A message sent from the account itself: an odds list sets the race that is running. */
 async function handleOwn(message) {
   if (!message || !message.fromMe || !message.body) return false;
-  const list = parseOddsList(message.body);
+  // it is sent from this phone, so it is the odds list even when it is short: "5" and "1 200"
+  const list = parseOddsList(message.body, { own: true });
   const messageId = messageIdOf(message);
   if (!list || !messageId) return false;
 

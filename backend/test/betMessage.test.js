@@ -377,3 +377,9 @@ test('a bet has a horse (a number of the meeting or a name) and an amount, whate
   assert.equal(reads('capt 500'), true); // a horse name and an amount, even if the name is not found
   assert.equal(reads('9 500'), false); // 9 is no horse of the meeting
 });
+
+test('a short list sent from this phone ("5" and "1 200") is an odds list, from someone else it may be a bet', () => {
+  assert.equal(parseOddsList('5\n1 200'), null);
+  const own = parseOddsList('5\n1 200', { own: true });
+  assert.deepEqual([own.raceNum, own.style, own.odds], [5, 'pairs', [{ horseNum: 1, odds: 200 }]]);
+});
