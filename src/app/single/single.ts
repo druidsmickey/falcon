@@ -130,7 +130,9 @@ export class Single implements OnInit {
       await this.loadAndCacheData();
       
       if (races.length > 0) {
-        this.selectedRaceNum = races[0].raceNum;
+        // the race chosen last time, if it is still one of the races
+        const remembered = this.meetingData.recallSingleRace();
+        this.selectedRaceNum = races.some(r => r.raceNum === remembered) ? remembered : races[0].raceNum;
         this.loadRaceData();
       }
       
@@ -161,6 +163,7 @@ export class Single implements OnInit {
   
   selectRace(raceNum: number) {
     this.selectedRaceNum = raceNum;
+    this.meetingData.rememberSingleRace(raceNum);
     setTimeout(() => {
       this.loadRaceData();
     }, 0);

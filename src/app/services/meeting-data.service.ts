@@ -153,6 +153,18 @@ export class MeetingDataService {
     return this._meetingName;
   }
 
+  /** The race last chosen in the Single tab, so the tab opens on it again after another tab was used. */
+  private singleRace: { meetingName: string; raceNum: number } | null = null;
+
+  rememberSingleRace(raceNum: number): void {
+    this.singleRace = { meetingName: this._meetingName, raceNum };
+  }
+
+  /** The remembered race, only when it was chosen in this meeting. */
+  recallSingleRace(): number | null {
+    return this.singleRace && this.singleRace.meetingName === this._meetingName ? this.singleRace.raceNum : null;
+  }
+
   /** Invalidate bets + lastBet caches (call after placing / cancelling / deleting a bet). */
   invalidateBets(): void {
     this._bets = null;
