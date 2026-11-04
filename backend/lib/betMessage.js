@@ -143,7 +143,8 @@ function readHorse(digits, explicitRace, context) {
 const F500_UP_TO = 120;
 const ODDS_FROM = 420;
 
-const NUMBER = /\d+(?:\.\d+)?k?/g;
+// an f straight after a figure ("500f") says those are books; a word that only starts with f ("500 for 200") is a separator
+const NUMBER = /\d+(?:\.\d+)?k?(?:f(?![a-z]))?/g;
 // what may sit between two figures: nothing, a symbol or a short word ("x", "@", "#", "c", "z", "on", "lor", "at")
 const SEPARATOR = /^\s*[a-z#@*×:/\-]{0,5}\s*$/;
 
@@ -156,9 +157,10 @@ function readFigures(rest) {
   let last = 0;
   for (const found of rest.matchAll(NUMBER)) {
     if (!SEPARATOR.test(rest.slice(last, found.index)) || (figures.length === 0 && found.index !== 0)) return null;
-    const text = found[0];
+    const books = found[0].endsWith('f');
+    const text = books ? found[0].slice(0, -1) : found[0];
     const k = text.endsWith('k');
-    figures.push({ value: number(k ? text.slice(0, -1) : text) * (k ? 1000 : 1), k, whole: !k && /^\d+$/.test(text) });
+    figures.push({ value: number(k ? text.slice(0, -1) : text) * (k ? 1000 : 1), k, books, whole: !k && /^\d+$/.test(text) });
     last = found.index + text.length;
   }
   return figures.length > 0 && rest.slice(last).trim() === '' ? figures : null;
@@ -170,10 +172,23 @@ function readFigures(rest) {
  *   up to 120      books at that F500
  *   420 and over   a stake at those odds
  *   in between     could be either, so the person chooses
- * One figure alone is books or a stake (a stake when it has a k, as in 5k) and the person chooses.
+ * An f after the amount ("500f", "150f@90") says it is books. One figure alone is books or a stake (a stake when it has a k, as in 5k) and the person chooses.
  */
 function applyAmount(entry, first, second) {
   const amount = first.value;
+  // "500f" is 500 books, whatever the second figure is
+  if (first.books) {
+    entry.mode = 'f500';
+    entry.books = amount;
+    entry.amountKind = 'books';
+    if (second === null) {
+      entry.issues.push('F500 missing');
+      entry.unsure = true;
+    } else {
+      entry.f500 = second.value;
+    }
+    return;
+  }
   if (second === null) {
     if (first.k) {
       entry.mode = 'odds';
@@ -338,13 +353,15 @@ const IGNORE = Symbol('not a bet');
  */
 function parseLoose(line, context) {
   const lower = line.toLowerCase().replace(/(\d),(?=\d)/g, '$1');
-  const found = [...lower.matchAll(/\d+(?:\.\d+)?k?/g)];
+  const found = [...lower.matchAll(/\d+(?:\.\d+)?k?(?:f(?![a-z]))?/g)];
   if (found.length < 1 || found.length > 2 || !/[a-z]/.test(lower)) return null;
 
-  const words = lower.replace(/\d+(?:\.\d+)?k?/g, ' ').split(/[^a-z']+/).filter(w => w && !FILLER.has(w)).join(' ');
+  const words = lower.replace(/\d+(?:\.\d+)?k?(?:f(?![a-z]))?/g, ' ').split(/[^a-z']+/).filter(w => w && !FILLER.has(w)).join(' ');
   const [first, second] = found.map(f => {
-    const k = f[0].endsWith('k');
-    return { value: number(k ? f[0].slice(0, -1) : f[0]) * (k ? 1000 : 1), k };
+    const books = f[0].endsWith('f');
+    const text = books ? f[0].slice(0, -1) : f[0];
+    const k = text.endsWith('k');
+    return { value: number(k ? text.slice(0, -1) : text) * (k ? 1000 : 1), k, books };
   });
 
   let entry;

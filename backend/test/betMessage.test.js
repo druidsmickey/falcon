@@ -388,3 +388,18 @@ test('an odds list is not a bet whoever sends it, even a short one', () => {
   assert.deepEqual(parseBetMessage('5\n1 200', withHorses), []);
   assert.deepEqual(parseBetMessage('r5\n1 200\n2 1000', withHorses), []);
 });
+
+test('an f after the amount says it is books: 500f is 500 books, 150f is 150 books', () => {
+  const ctx = { raceNum: 5, runners: 12, horses: [] };
+  const one = text => parseBetMessage(text, ctx)[0];
+  const a = one('3 500f@200');
+  assert.deepEqual([a.horseNum, a.amountKind, a.books, a.f500], [3, 'books', 500, 200]);
+  const b = one('3 150f 90');
+  assert.deepEqual([b.amountKind, b.books, b.f500], ['books', 150, 90]);
+  const c = one('put 150f on the grey one');
+  assert.deepEqual([c.amountKind, c.books, c.unsure], ['books', 150, true]); // the F500 is missing
+  assert.ok(c.issues.includes('F500 missing'));
+  // a word that only starts with f is no marker
+  assert.equal(one('3 500 for 90').amountKind, 'books');
+  assert.equal(one('3 500 for 90').f500, 90);
+});
