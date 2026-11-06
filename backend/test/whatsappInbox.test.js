@@ -749,8 +749,8 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     const both = (await inbox.listPending()).items;
     await inbox.decide(both[0].id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 300, second: 90 });
     await inbox.decide(both[1].id, 'confirmed', { raceNum: 1, horseNum: 3, kind: 'books', amount: 150, second: 100 });
-    await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', '12 300x90 ok\n13 150x100 only']]);
+    await waitForReplies(2);
+    assert.deepEqual(sent, [['4477001@c.us', '12 300x90 ok'], ['4477001@c.us', '13 150x100 only']]);
 
     // nothing saved: no answer
     sent.length = 0;

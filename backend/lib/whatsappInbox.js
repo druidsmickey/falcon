@@ -671,7 +671,7 @@ function figuresChanged(item, savedBody) {
 
 /**
  * Tells the player which bets were saved, once the person has decided every bet of the message: "OK" for a message with one bet saved as it was read, the bet as saved ("22 300x90", "55 100k @200") when its figures were changed;
- * several bets: one line for each bet that was saved, as the player wrote it: "64 200x85 ok" when it was saved as it was read and
+ * several bets: one message for each bet that was saved, as the player wrote it: "64 200x85 ok" when it was saved as it was read and
  * "64 100x85 only" when the figures were changed. Never makes saving fail. Switched off with WHATSAPP_REPLY_OK=false.
  */
 async function replyOk(item) {
@@ -686,10 +686,13 @@ async function replyOk(item) {
     if (marked.modifiedCount === 0) return;
     if (!replyClient) throw new Error('WhatsApp is not connected');
     const line = bet => (bet.replyChanged ? bet.replyText + ' only' : String(bet.text).trim() + ' ok');
-    const text = bets.length === 1 ? (saved[0].replyChanged ? saved[0].replyText : 'OK') : saved.map(line).join('\n');
-    // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
-    await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
-    counters.replies.sent += 1;
+    // one message for each bet, so that each can be read at a glance
+    const texts = bets.length === 1 ? [saved[0].replyChanged ? saved[0].replyText : 'OK'] : saved.map(line);
+    for (const text of texts) {
+      // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
+      await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
+      counters.replies.sent += 1;
+    }
   } catch (error) {
     counters.replies.failed += 1;
     counters.replies.lastError = String((error && error.message) || error).slice(0, 160);
