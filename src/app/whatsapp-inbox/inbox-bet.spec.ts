@@ -160,6 +160,12 @@ describe('the message with its race and horse coloured', () => {
     expect(kinds('5.2 200x300', 5, 2)).toEqual(['race:5', '-:.', 'horse:2', '-: 200x300']);
   });
 
+  it('a race and horse with their letters are coloured with the letters', () => {
+    expect(kinds('r6h4 @ 200x85', 6, 4)).toEqual(['race:r6', 'horse:h4', '-: @ 200x85']);
+    expect(kinds('r6 h4 200x85', 6, 4)).toEqual(['race:r6', '-: ', 'horse:h4', '-: 200x85']);
+    expect(kinds('r6h4 @ 200x85', 5, 4)).toEqual(['-:r6h4 @ 200x85']);
+  });
+
   it('a horse name is coloured like the name shown above the choices', () => {
     expect(kinds('cap mag 500x90', 1, 2)).toEqual(['name:cap mag', '-: 500x90']);
   });

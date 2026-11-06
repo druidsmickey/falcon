@@ -235,6 +235,19 @@ export function messageParts(draft: Pick<Draft, 'text' | 'raceNum' | 'horseNum'>
   const plain: MessagePart[] = [{ text, kind: null }];
   const split = (start: MessagePart[], rest: string): MessagePart[] => (rest ? [...start, { text: rest, kind: null }] : start);
 
+  // the race and the horse with their letters: "r6h4 @ 200x85", "r6 h4 200x85", "race 6 horse 4 ..."
+  const lettered = /^(\s*)(r(?:ace)?\s*\d+)(\s*[.,]?\s*)(h(?:orse)?\s*\d+)/i.exec(text);
+  if (lettered) {
+    // the letters are never a horse name; when the bet no longer matches the words nothing is coloured
+    if (lettered[2].replace(/\D/g, '') !== String(draft.raceNum) || lettered[4].replace(/\D/g, '') !== String(draft.horseNum)) return plain;
+    return split([
+      ...(lettered[1] ? [{ text: lettered[1], kind: null } as MessagePart] : []),
+      { text: lettered[2], kind: 'race' },
+      ...(lettered[3] ? [{ text: lettered[3], kind: null } as MessagePart] : []),
+      { text: lettered[4], kind: 'horse' },
+    ], text.slice(lettered[0].length));
+  }
+
   // a horse name first: "cap mag 500x90"
   const name = /^(\s*)([a-z][a-z' ]*?)(?=\s*\d|\s*$)/i.exec(text);
   if (name && name[2].trim()) {
