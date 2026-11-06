@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -67,7 +67,7 @@ const SAVED_SHOWN = 8;
  */
 @Component({
   selector: 'app-whatsapp-inbox',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, MatRadioModule],
+  imports: [DatePipe, DecimalPipe, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, MatRadioModule],
   templateUrl: './whatsapp-inbox.html',
   styleUrl: './whatsapp-inbox.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
