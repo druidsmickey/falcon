@@ -78,7 +78,6 @@ async function getAiSettings() {
   const settings = await loadAiSettings();
   return {
     reading: !doc || doc.reading !== false,
-    autoReply: !doc || doc.autoReply !== false,
     enabled: settings.enabled,
     readAll: settings.readAll,
     preset: (doc && doc.preset) || 'gemini',
@@ -113,10 +112,6 @@ async function saveAiSettings(body) {
   if (input.reading !== undefined) {
     if (typeof input.reading !== 'boolean') throw new Error('reading must be true or false');
     changes.reading = input.reading;
-  }
-  if (input.autoReply !== undefined) {
-    if (typeof input.autoReply !== 'boolean') throw new Error('autoReply must be true or false');
-    changes.autoReply = input.autoReply;
   }
   if (input.readAll !== undefined) {
     if (typeof input.readAll !== 'boolean') throw new Error('readAll must be true or false');
@@ -662,15 +657,10 @@ function betWords(item, savedBody) {
 async function replyOk(item) {
   try {
     if (String(process.env.WHATSAPP_REPLY_OK || '').toLowerCase() === 'false') return;
-    const setting = await WhatsappAi.findOne({ key: 'main' }).select('autoReply').lean();
-    if (setting && setting.autoReply === false) return; // switched off in the app
     const bets = await WhatsappInbox.find({ messageId: item.messageId, unreadable: { $ne: true } }).lean();
     if (bets.some(bet => bet.status === 'pending')) return; // the answer waits for the last bet of the message
     const saved = bets.filter(bet => bet.status === 'confirmed');
     if (saved.length === 0) return;
-    // two bets decided at the same moment both get here: only the one that marks the message sends the answer
-    const marked = await WhatsappInbox.updateMany({ messageId: item.messageId, replied: { $ne: true } }, { $set: { replied: true } });
-    if (marked.modifiedCount === 0) return;
     if (!replyClient) throw new Error('WhatsApp is not connected');
     const text = bets.length === 1 ? (saved[0].replyText || saved[0].text) : `${saved.map(bet => bet.replyText || bet.text).join(', ')}${saved.length < bets.length ? ' only' : ''}`;
     // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
