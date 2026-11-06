@@ -116,7 +116,7 @@ Odds lists are read in two styles: `r1` followed by lines of `horse odds`, or a 
 - Contacts using the newer hidden-number WhatsApp ids may not match the saved number.
 - Free text is read **loosely**: in a line like "put 500 on the grey one" the 500 is taken as the amount (books or a stake, you choose; a second figure is read as usual), filler words (put, on, the, one...) are dropped and the rest ("grey") is tried as the horse name. The card is marked unsure. Only lines with three or four figures among words stay "unreadable", and lines with more than four figures are ignored. Understanding real sentences properly needs the AI step, which is not built yet.
 
-When you press **Save** on a card, the player who sent the bet gets an **OK** reply on WhatsApp (if the message held several bets, the OK carries the line, for example "OK 12 300x90", so the answers can be told apart). Dismissing a card sends nothing. To switch the replies off, set WHATSAPP_REPLY_OK=false in backend/.env.
+When you press **Save** on a card, the player who sent the bet gets a reply on WhatsApp with the bet as you saved it, for example "22 300x90" (with the figures you changed, if you changed any). If the message held several bets, one reply is sent once you have decided the last of them, for example "22 300x90, 33 500x100", ending in "only" when some of the bets were not saved ("22 300x90 only"). Nothing is sent when no bet of the message was saved. To switch the replies off, set WHATSAPP_REPLY_OK=false in backend/.env.
 
 ## AI second opinion (optional)
 
