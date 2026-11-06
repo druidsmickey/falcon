@@ -38,6 +38,8 @@ const whatsappInboxSchema = new mongoose.Schema({
   decidedAt: { type: Date, default: null },
   // the bet as it was saved ("22 300x90"), for the OK that is sent to the player
   replyText: { type: String, default: '' },
+  // the figures were changed before saving: the answer to the player then says the bet, instead of OK
+  replyChanged: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

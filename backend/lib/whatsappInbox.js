@@ -11,7 +11,7 @@ const { parseBetMessage, parseOddsList, emptyContext, isDoubtful, looksLikeBet }
 const WhatsappAi = require('../models/whatsappAi');
 const { AiReader, PRESETS, MAX_LINES } = require('./aiReader');
 const WhatsappCorrection = require('../models/whatsappCorrection');
-const { learn, readingOf, savedReading } = require('./corrections');
+const { learn, readingOf, savedReading, differs } = require('./corrections');
 
 /**
  * A name for a message that is the same every time the message is announced. WhatsApp's own id is used when the
@@ -642,16 +642,30 @@ async function countPending() {
 // the WhatsApp client of the moment, to answer the person whose bet was saved
 let replyClient = null;
 
-/** A saved bet in the player's own words: "22 300x90", with the figures as they were saved (the person may have changed them). */
+/**
+ * A saved bet in the player's own words, with the figures as they were saved (the person may have changed them):
+ * "22 300x90" for books at an F500, "55 100k @200" for a stake at odds.
+ */
 function betWords(item, savedBody) {
   const saved = savedReading(savedBody);
   const read = saved || readingOf(item);
-  return read.horse && read.amount && read.second ? `${read.horse} ${read.amount}x${read.second}` : String(item.text || '').trim();
+  if (!(read.horse && read.amount && read.second)) return String(item.text || '').trim();
+  if (read.kind === 'stake') {
+    const stake = read.amount % 1000 === 0 ? `${read.amount / 1000}k` : String(read.amount);
+    return `${read.horse} ${stake} @${read.second}`;
+  }
+  return `${read.horse} ${read.amount}x${read.second}`;
+}
+
+/** Whether the figures saved are not the ones read from the message (a bet saved without a change is as it was read). */
+function figuresChanged(item, savedBody) {
+  const saved = savedReading(savedBody);
+  return !!saved && differs(readingOf(item), saved);
 }
 
 /**
- * Tells the player which bets were saved, once the person has decided every bet of the message: the bet alone ("22 300x90") for a message with
- * one bet, else "22 300x90, 33 500x100" with the bets as saved, and "only" when some of the others were not saved. Never makes
+ * Tells the player which bets were saved, once the person has decided every bet of the message: "OK" for a message with one bet saved as it was read, the bet as saved ("22 300x90", "55 100k @200") when its figures were changed;
+ * several bets: "22 300x90, 33 500x100" with the bets as saved, and "only" when some of the others were not saved. Never makes
  * saving fail. Switched off with WHATSAPP_REPLY_OK=false.
  */
 async function replyOk(item) {
@@ -662,7 +676,7 @@ async function replyOk(item) {
     const saved = bets.filter(bet => bet.status === 'confirmed');
     if (saved.length === 0) return;
     if (!replyClient) throw new Error('WhatsApp is not connected');
-    const text = bets.length === 1 ? (saved[0].replyText || saved[0].text) : `${saved.map(bet => bet.replyText || bet.text).join(', ')}${saved.length < bets.length ? ' only' : ''}`;
+    const text = bets.length === 1 ? (saved[0].replyChanged ? saved[0].replyText : 'OK') : `${saved.map(bet => bet.replyText || bet.text).join(', ')}${saved.length < bets.length ? ' only' : ''}`;
     // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
     await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
     counters.replies.sent += 1;
@@ -681,7 +695,8 @@ async function decide(id, status, saved) {
   if (!['confirmed', 'dismissed'].includes(status)) throw new Error('bad status');
   const current = await WhatsappInbox.findById(id).lean();
   const replyText = status === 'confirmed' && current ? betWords(current, saved) : '';
-  const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date(), replyText } }, { new: false }).lean();
+  const replyChanged = status === 'confirmed' && current ? figuresChanged(current, saved) : false;
+  const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date(), replyText, replyChanged } }, { new: false }).lean();
   if (before && !before.demo) replyOk(before);
   if (before && status === 'confirmed' && saved && !before.demo) {
     try {

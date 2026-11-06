@@ -704,9 +704,33 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     const [single] = (await inbox.listPending()).items;
     assert.equal(await inbox.decide(single.id, 'confirmed'), true);
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', '1 500x90']]);
+    assert.deepEqual(sent, [['4477001@c.us', 'OK']]); // saved as it was read
     assert.equal(inbox.getCounters().replies.sent, 1);
     assert.equal(await inbox.decide(single.id, 'confirmed'), false);
+
+    // one bet saved with the figures it was read with (the browser sends them): still OK
+    sent.length = 0;
+    assert.equal(await inbox.handleIncoming(message('12 500x90')), 1);
+    const [same] = (await inbox.listPending()).items;
+    await inbox.decide(same.id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 500, second: 90 });
+    await waitForReplies(1);
+    assert.deepEqual(sent, [['4477001@c.us', 'OK']]);
+
+    // one bet saved with another amount: the answer says the bet as saved, not OK
+    sent.length = 0;
+    assert.equal(await inbox.handleIncoming(message('12 500x90')), 1);
+    const [changed] = (await inbox.listPending()).items;
+    await inbox.decide(changed.id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 300, second: 90 });
+    await waitForReplies(1);
+    assert.deepEqual(sent, [['4477001@c.us', '2 300x90']]);
+
+    // a stake at odds is written the way players write it
+    sent.length = 0;
+    assert.equal(await inbox.handleIncoming(message('12 200k @450')), 1);
+    const [stake] = (await inbox.listPending()).items;
+    await inbox.decide(stake.id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'stake', amount: 100000, second: 450 });
+    await waitForReplies(1);
+    assert.deepEqual(sent, [['4477001@c.us', '2 100k @450']]);
 
     sent.length = 0;
     assert.equal(await inbox.handleIncoming(message('12 300x90\n13 200x90')), 2);
