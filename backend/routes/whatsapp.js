@@ -242,7 +242,8 @@ function initializeClient() {
 
   client.on('loading_screen', (percent, message) => {
     console.log('Loading screen:', percent, message);
-    clientStatus = 'loading';
+    // WhatsApp Web shows its loading screen again from time to time: that is no reason to say it is not connected
+    if (!isReady) clientStatus = 'loading';
   });
 
   client.on('qr', (qr) => {
@@ -253,9 +254,26 @@ function initializeClient() {
     qrcode.generate(qr, { small: true });
   });
 
+  const thisClient = client;
   client.on('ready', () => {
     console.log('✅ WhatsApp Client is ready!');
     startRetries = 0;
+    // when the browser dies (it was killed, or crashed) no event tells the library: without this the tab keeps saying
+    // "connected" and the bets stop arriving
+    const browser = thisClient.pupBrowser;
+    if (browser && typeof browser.on === 'function') {
+      browser.on('disconnected', () => {
+        if (client !== thisClient) return; // stopped on purpose
+        console.log('⚠️  The browser of WhatsApp closed: connecting again');
+        stopUnreadSync();
+        isReady = false;
+        clientStatus = 'disconnected';
+        client = null;
+        qrCodeData = null;
+        thisClient.destroy().catch(() => {});
+        scheduleReconnect(15);
+      });
+    }
     isReady = true;
     clientStatus = 'ready';
     qrCodeData = null;
@@ -436,11 +454,13 @@ router.post('/disconnect', async (req, res) => {
       initializationTimeout = null;
     }
     if (client) {
-      await client.destroy();
+      const current = client;
+      // a browser that is already gone must not keep the tab from being disconnected
       client = null;
       isReady = false;
       clientStatus = 'disconnected';
       qrCodeData = null;
+      await current.destroy().catch(error => console.log('Closing the browser:', error.message));
     }
     res.json({ success: true, message: 'WhatsApp client disconnected' });
   } catch (error) {
