@@ -722,7 +722,7 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     const [changed] = (await inbox.listPending()).items;
     await inbox.decide(changed.id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 300, second: 90 });
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', '2 300x90']]);
+    assert.deepEqual(sent, [['4477001@c.us', '12 300x90']]);
 
     // a stake at odds is written the way players write it
     sent.length = 0;
@@ -730,7 +730,7 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     const [stake] = (await inbox.listPending()).items;
     await inbox.decide(stake.id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'stake', amount: 100000, second: 450 });
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', '2 100k @450']]);
+    assert.deepEqual(sent, [['4477001@c.us', '12 100k @450']]);
 
     sent.length = 0;
     assert.equal(await inbox.handleIncoming(message('12 300x90\n13 200x90')), 2);
@@ -741,16 +741,16 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     assert.equal(sent.length, 0);
     await inbox.decide(items[1].id, 'dismissed'); // the other bet is not saved: "only"
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', '2 250x90 only']]);
+    assert.deepEqual(sent, [['4477001@c.us', '12 250x90 only']]);
 
     // both saved: both are in the answer
     sent.length = 0;
     assert.equal(await inbox.handleIncoming(message('12 300x90\n13 200x100')), 2);
     const both = (await inbox.listPending()).items;
     await inbox.decide(both[0].id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 300, second: 90 });
-    await inbox.decide(both[1].id, 'confirmed', { raceNum: 1, horseNum: 3, kind: 'books', amount: 200, second: 100 });
+    await inbox.decide(both[1].id, 'confirmed', { raceNum: 1, horseNum: 3, kind: 'books', amount: 150, second: 100 });
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', '2 300x90, 3 200x100']]);
+    assert.deepEqual(sent, [['4477001@c.us', '12 300x90 ok\n13 150x100 only']]);
 
     // nothing saved: no answer
     sent.length = 0;
