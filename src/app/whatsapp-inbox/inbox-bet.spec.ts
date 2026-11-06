@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Draft, InboxItem, checkText, chooseKind, draftFrom, hasProblem, problems, toBetRequest } from './inbox-bet';
+import { Draft, InboxItem, checkText, chooseKind, draftFrom, hasProblem, messageParts, problems, toBetRequest } from './inbox-bet';
 
 const item = (over: Partial<InboxItem> = {}): InboxItem => ({
   id: 'a1', text: '11 500x90', contactName: 'Ann Smith', clientName: 'ANNIE', sentAt: '2026-10-24T10:15:00.000Z',
@@ -139,5 +139,33 @@ describe('what to check on a card', () => {
     expect(checkText(['race', 'horse'])).toBe('Check RACE and HORSE');
     expect(checkText(['race', 'F500 or odds', 'odds must be 115 to 5000'])).toBe('Check RACE, BOOKS or STAKE and ODDS');
     expect(checkText(['horse is not in this race', 'horse'])).toBe('Check HORSE');
+  });
+});
+
+describe('the message with its race and horse coloured', () => {
+  const kinds = (text: string, raceNum: number | null, horseNum: number | null) =>
+    messageParts({ text, raceNum, horseNum }).map(p => `${p.kind ?? '-'}:${p.text}`);
+
+  it('a horse number is coloured like the horse buttons', () => {
+    expect(kinds('3 500x90', 5, 3)).toEqual(['horse:3', '-: 500x90']);
+  });
+
+  it('a race and a horse written together are split', () => {
+    expect(kinds('22 500x90', 2, 2)).toEqual(['race:2', 'horse:2', '-: 500x90']);
+    expect(kinds('34 500x90', 3, 4)).toEqual(['race:3', 'horse:4', '-: 500x90']);
+  });
+
+  it('a race and a horse written apart', () => {
+    expect(kinds('5 2 200x300', 5, 2)).toEqual(['race:5', '-: ', 'horse:2', '-: 200x300']);
+    expect(kinds('5.2 200x300', 5, 2)).toEqual(['race:5', '-:.', 'horse:2', '-: 200x300']);
+  });
+
+  it('a horse name is coloured like the name shown above the choices', () => {
+    expect(kinds('cap mag 500x90', 1, 2)).toEqual(['name:cap mag', '-: 500x90']);
+  });
+
+  it('nothing is coloured when the bet no longer matches the words', () => {
+    expect(kinds('3 500x90', 5, 4)).toEqual(['-:3 500x90']);
+    expect(kinds('3 500x90', null, null)).toEqual(['-:3 500x90']);
   });
 });

@@ -112,7 +112,7 @@
         <div class="read" [class.unsure]="draft.unsure">
           <div class="line">
             <strong class="who">{{ draft.clientName }}</strong>
-            <span class="said">{{ draft.text }}</span>
+            <span class="said">@for (part of messageParts(draft); track $index) {<span [class]="part.kind ? 'part-' + part.kind : null">{{ part.text }}</span>}</span>
             <span class="time">{{ draft.sentAt | date: 'HH:mm' }}</span>
           </div>
           @if (draft.demo) {

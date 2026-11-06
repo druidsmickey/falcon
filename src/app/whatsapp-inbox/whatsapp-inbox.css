@@ -185,6 +185,19 @@ button.ghost:disabled {
   word-break: break-word;
 }
 
+/* the race and the horse of the message, in the colours of the race and horse buttons; a name like the name above the choices */
+.part-race {
+  color: #1976d2;
+}
+
+.part-horse {
+  color: rgb(34, 110, 35);
+}
+
+.part-name {
+  color: red;
+}
+
 .line .time {
   font-size: 1rem;
 }

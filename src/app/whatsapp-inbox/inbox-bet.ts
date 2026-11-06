@@ -218,3 +218,52 @@ export function toBetRequest(draft: Draft, meetingName: string, horseName: strin
   }
   return bet;
 }
+
+/** A piece of the message as it was written, and what it was read as: the race, the horse number or the horse name. */
+export interface MessagePart {
+  text: string;
+  kind: 'race' | 'horse' | 'name' | null;
+}
+
+/**
+ * Splits the message so that the race and the horse in it can be coloured like the race and horse buttons (and a horse
+ * name like the name shown above the choices). Only the start of the message is looked at: the race and horse, or the name.
+ * When the bet was changed so that it no longer matches the words, nothing is coloured.
+ */
+export function messageParts(draft: Pick<Draft, 'text' | 'raceNum' | 'horseNum'>): MessagePart[] {
+  const text = draft.text;
+  const plain: MessagePart[] = [{ text, kind: null }];
+  const split = (start: MessagePart[], rest: string): MessagePart[] => (rest ? [...start, { text: rest, kind: null }] : start);
+
+  // a horse name first: "cap mag 500x90"
+  const name = /^(\s*)([a-z][a-z' ]*?)(?=\s*\d|\s*$)/i.exec(text);
+  if (name && name[2].trim()) {
+    const lead = name[1] + name[2];
+    return split([...(name[1] ? [{ text: name[1], kind: null } as MessagePart] : []), { text: name[2], kind: 'name' }], text.slice(lead.length));
+  }
+
+  const race = draft.raceNum === null ? null : String(draft.raceNum);
+  const horse = draft.horseNum === null ? null : String(draft.horseNum);
+  if (race === null || horse === null) return plain;
+
+  // "5 2 200x300" or "5.2 200x300": a race, then a horse
+  const pair = /^(\s*)(\d+)([.\s]+)(\d+)(?=\s|$|[^\d])/.exec(text);
+  if (pair && pair[2] === race && pair[4] === horse) {
+    const used = pair[0].length;
+    return split([
+      ...(pair[1] ? [{ text: pair[1], kind: null } as MessagePart] : []),
+      { text: pair[2], kind: 'race' },
+      { text: pair[3], kind: null },
+      { text: pair[4], kind: 'horse' },
+    ], text.slice(used));
+  }
+
+  // "22 500x90": the first number is the horse, or the race and the horse written together
+  const first = /^(\s*)(\d+)/.exec(text);
+  if (!first) return plain;
+  const rest = text.slice(first[0].length);
+  const lead: MessagePart[] = first[1] ? [{ text: first[1], kind: null }] : [];
+  if (first[2] === race + horse) return split([...lead, { text: race, kind: 'race' }, { text: horse, kind: 'horse' }], rest);
+  if (first[2] === horse) return split([...lead, { text: first[2], kind: 'horse' }], rest);
+  return plain;
+}
