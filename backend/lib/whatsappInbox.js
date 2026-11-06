@@ -650,7 +650,7 @@ function betWords(item, savedBody) {
 }
 
 /**
- * Tells the player which bets were saved, once the person has decided every bet of the message: "OK" for a message with
+ * Tells the player which bets were saved, once the person has decided every bet of the message: the bet alone ("22 300x90") for a message with
  * one bet, else "OK 22 300x90" with the bets as saved, and "only" when some of the others were not saved. Never makes
  * saving fail. Switched off with WHATSAPP_REPLY_OK=false.
  */
@@ -662,7 +662,7 @@ async function replyOk(item) {
     const saved = bets.filter(bet => bet.status === 'confirmed');
     if (saved.length === 0) return;
     if (!replyClient) throw new Error('WhatsApp is not connected');
-    const text = bets.length === 1 ? 'OK' : `OK ${saved.map(bet => bet.replyText || bet.text).join(', ')}${saved.length < bets.length ? ' only' : ''}`;
+    const text = bets.length === 1 ? (saved[0].replyText || saved[0].text) : `OK ${saved.map(bet => bet.replyText || bet.text).join(', ')}${saved.length < bets.length ? ' only' : ''}`;
     // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
     await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
     counters.replies.sent += 1;

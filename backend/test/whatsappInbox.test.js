@@ -704,7 +704,7 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     const [single] = (await inbox.listPending()).items;
     assert.equal(await inbox.decide(single.id, 'confirmed'), true);
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', 'OK']]);
+    assert.deepEqual(sent, [['4477001@c.us', '1 500x90']]);
     assert.equal(inbox.getCounters().replies.sent, 1);
     assert.equal(await inbox.decide(single.id, 'confirmed'), false);
 
