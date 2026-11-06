@@ -717,7 +717,7 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     assert.equal(sent.length, 0);
     await inbox.decide(items[1].id, 'dismissed'); // the other bet is not saved: "only"
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', 'OK 2 250x90 only']]);
+    assert.deepEqual(sent, [['4477001@c.us', '2 250x90 only']]);
 
     // both saved: both are in the answer
     sent.length = 0;
@@ -726,7 +726,7 @@ test('saving a bet answers the player with OK, once, and the OK carries the save
     await inbox.decide(both[0].id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 300, second: 90 });
     await inbox.decide(both[1].id, 'confirmed', { raceNum: 1, horseNum: 3, kind: 'books', amount: 200, second: 100 });
     await waitForReplies(1);
-    assert.deepEqual(sent, [['4477001@c.us', 'OK 2 300x90, 3 200x100']]);
+    assert.deepEqual(sent, [['4477001@c.us', '2 300x90, 3 200x100']]);
 
     // nothing saved: no answer
     sent.length = 0;
