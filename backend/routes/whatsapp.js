@@ -4,7 +4,7 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const multer = require('multer');
 const WhatsappContact = require('../models/whatsappContact');
 const WhatsappGroup = require('../models/whatsappGroup');
@@ -139,6 +139,7 @@ function clearAuthSession() {
 
 // Connect again by itself: after a restart of the server, and after the connection was lost.
 let reconnectTimer = null;
+let startRetries = 0; // failed starts since the last time WhatsApp was ready: at most 5 are tried again by themselves
 function scheduleReconnect(seconds = 30) {
   if (reconnectTimer || !autostartEnabled() || !sessionExists(authPath)) return;
   console.log(`WhatsApp will connect again in ${seconds} seconds`);
@@ -146,6 +147,17 @@ function scheduleReconnect(seconds = 30) {
     reconnectTimer = null;
     if (!client && sessionExists(authPath)) initializeClient();
   }, seconds * 1000);
+}
+
+/** Closes browsers that still run on the saved session (Linux only; nothing happens when there are none). */
+function closeLeftoverBrowsers() {
+  if (process.platform !== 'linux') return;
+  try {
+    execFileSync('pkill', ['-f', authPath], { stdio: 'ignore' });
+    console.log('Closed a browser that was still running on the WhatsApp session');
+  } catch (error) {
+    // pkill finds nothing (exit code 1): the normal case
+  }
 }
 
 // Initialize WhatsApp Client
@@ -189,6 +201,9 @@ function initializeClient() {
     puppeteerConfig.executablePath = chromePath;
   }
 
+  // a browser left over from the server that was stopped still holds the session: the new one would be closed at once
+  // ("Navigating frame was detached"), so it is closed first
+  closeLeftoverBrowsers();
   removeStaleLocks(authPath);
   client = new Client({
     authStrategy: new LocalAuth({
@@ -240,6 +255,7 @@ function initializeClient() {
 
   client.on('ready', () => {
     console.log('✅ WhatsApp Client is ready!');
+    startRetries = 0;
     isReady = true;
     clientStatus = 'ready';
     qrCodeData = null;
@@ -316,6 +332,8 @@ function initializeClient() {
     client = null;
     // close a browser that was half started, so that it does not block the next try
     starting.destroy().catch(() => {});
+    // a start that fails (for example in the middle of a restart) is tried again by itself while a saved session exists
+    if (startRetries++ < 5) scheduleReconnect(30);
     if (initializationTimeout) {
       clearTimeout(initializationTimeout);
       initializationTimeout = null;
