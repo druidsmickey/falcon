@@ -72,6 +72,21 @@ async function sendInBatches(items, sendFunction) {
 
 // Find Chrome/Chromium executable
 function findChrome() {
+  // CHROME_PATH in .env, else the Chrome that comes with puppeteer: a snap Chromium (the usual /usr/bin/chromium-browser
+  // on Ubuntu) cannot use the hidden folder the session is kept in, and closes at once ("socket hang up")
+  const preferred = [process.env.CHROME_PATH];
+  try {
+    preferred.push(require('puppeteer').executablePath());
+  } catch (error) {
+    // puppeteer has no browser of its own here: the system ones below are tried
+  }
+  for (const chromePath of preferred) {
+    if (chromePath && fs.existsSync(chromePath)) {
+      console.log('✅ Using Chrome at:', chromePath);
+      return chromePath;
+    }
+  }
+
   const possiblePaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
