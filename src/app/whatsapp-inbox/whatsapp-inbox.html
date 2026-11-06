@@ -138,6 +138,10 @@
         <div class="full-width actions">
           <button mat-raised-button color="primary" type="button" class="save" [disabled]="missing(draft).length > 0 || isBusy(draft)"
                   (click)="save(draft)">{{ isBusy(draft) ? 'Saving...' : 'Save Bet' }}</button>
+          <label class="auto-reply">
+            <input type="checkbox" [checked]="autoReply()" (change)="setAutoReply($any($event.target).checked)">
+            <span>Reply</span>
+          </label>
           <button type="button" class="ghost dismiss" [disabled]="isBusy(draft)" (click)="dismiss(draft)">Dismiss</button>
         </div>
         @if (missing(draft).length > 0) {

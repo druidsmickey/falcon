@@ -110,7 +110,7 @@ for (const [action, status] of [['confirm', 'confirmed'], ['dismiss', 'dismissed
   router.post(`/:id/${action}`, async (req, res) => {
     if (!validId(req.params.id)) return res.status(400).json({ error: 'invalid id' });
     try {
-      res.json({ success: true, changed: await inbox.decide(req.params.id, status, action === 'confirm' ? req.body && req.body.saved : undefined) });
+      res.json({ success: true, changed: await inbox.decide(req.params.id, status, action === 'confirm' ? req.body && req.body.saved : undefined, { reply: !(req.body && req.body.reply === false) }) });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

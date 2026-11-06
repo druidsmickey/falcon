@@ -823,3 +823,21 @@ test('the inbox and the odds lists are cleared with a meeting, and anything olde
   assert.equal(await WhatsappInbox.countDocuments(), 0);
   assert.equal(await WhatsappOdds.countDocuments(), 0);
 });
+
+test('a bet saved with the Reply tickbox off does not answer the player', async () => {
+  const sent = [];
+  inbox.attach({ on: () => {}, sendMessage: async (to, text) => { sent.push([to, text]); } }, { pollEveryMs: 0 });
+  try {
+    await inbox.handleOwn(ownList('r1\n1 1500\n2 500\n3 700\n5 800'));
+    assert.equal(await inbox.handleIncoming(message('11 500x90')), 1);
+    await inbox.decide((await inbox.listPending()).items[0].id, 'confirmed', undefined, { reply: false });
+    await new Promise(r => setTimeout(r, 60));
+    assert.equal(sent.length, 0);
+    assert.equal(await inbox.handleIncoming(message('12 500x90')), 1);
+    await inbox.decide((await inbox.listPending()).items[0].id, 'confirmed');
+    for (let i = 0; i < 50 && sent.length < 1; i++) await new Promise(r => setTimeout(r, 10));
+    assert.equal(sent.length, 1);
+  } finally {
+    inbox.attach({ on: () => {} }, { pollEveryMs: 0 });
+  }
+});

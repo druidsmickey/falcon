@@ -45,6 +45,17 @@ interface SavedBet {
 
 type NumberField = 'tax';
 
+const AUTO_REPLY_KEY = 'itb-inbox-auto-reply';
+
+/** The answer to the player is on unless it was switched off on this device. */
+function readAutoReply(): boolean {
+  try {
+    return localStorage.getItem(AUTO_REPLY_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
 /** How many saved bets stay on screen. */
 const SAVED_SHOWN = 8;
 
@@ -68,7 +79,10 @@ export class WhatsappInbox implements OnInit, OnDestroy {
   private api = `${environment.apiUrl}/api/whatsapp-inbox`;
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Bets already saved here whose confirmation the server has not heard yet; they are not shown again meanwhile. */
-  private unconfirmed = new Map<string, { saved: object }>();
+  private unconfirmed = new Map<string, { saved: object; reply: boolean }>();
+
+  /** Whether the player is answered when a bet is saved: the tickbox next to the Save button, remembered on this device. */
+  protected readonly autoReply = signal(readAutoReply());
 
   protected readonly drafts = signal<Draft[]>([]);
   protected readonly saved = signal<SavedBet[]>([]);
@@ -320,10 +334,19 @@ export class WhatsappInbox implements OnInit, OnDestroy {
 
       // tell the server it is no longer waiting; if that fails it is tried again later, and the bet cannot be entered
       // twice anyway (same request id)
-      this.unconfirmed.set(draft.id, { saved: savedFigures(draft) });
+      this.unconfirmed.set(draft.id, { saved: savedFigures(draft), reply: this.autoReply() });
       await this.confirmPending();
     } finally {
       this.setBusy(draft.id, false);
+    }
+  }
+
+  protected setAutoReply(on: boolean): void {
+    this.autoReply.set(on);
+    try {
+      localStorage.setItem(AUTO_REPLY_KEY, on ? 'on' : 'off');
+    } catch {
+      // not remembered: the tickbox still works until the page is closed
     }
   }
 

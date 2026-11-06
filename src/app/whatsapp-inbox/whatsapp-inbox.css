@@ -398,6 +398,14 @@ input.missing {
   align-self: flex-start;
 }
 
+.auto-reply {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px;
+  white-space: nowrap;
+}
+
 .actions {
   display: flex;
   gap: 19px;

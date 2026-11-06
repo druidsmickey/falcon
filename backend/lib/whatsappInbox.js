@@ -691,13 +691,13 @@ async function replyOk(item) {
  * Marks a pending item confirmed or dismissed. Returns false if it was not pending (already decided). When the bet
  * was saved with figures other than the ones read, the change is kept as an example for the AI.
  */
-async function decide(id, status, saved) {
+async function decide(id, status, saved, { reply = true } = {}) {
   if (!['confirmed', 'dismissed'].includes(status)) throw new Error('bad status');
   const current = await WhatsappInbox.findById(id).lean();
   const replyText = status === 'confirmed' && current ? betWords(current, saved) : '';
   const replyChanged = status === 'confirmed' && current ? figuresChanged(current, saved) : false;
   const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date(), replyText, replyChanged } }, { new: false }).lean();
-  if (before && !before.demo) replyOk(before);
+  if (before && !before.demo && reply) replyOk(before); // the person can untick the answer next to the Save button
   if (before && status === 'confirmed' && saved && !before.demo) {
     try {
       await learn(WhatsappCorrection, before, saved);
