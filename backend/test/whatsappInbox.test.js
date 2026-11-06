@@ -694,7 +694,7 @@ test('groups, community announcements and channels are not read, even from a lis
   assert.equal(await WhatsappInbox.countDocuments(), 0);
 });
 
-test('saving a bet answers the player with OK, once, and the OK carries the line when the message held several bets', async () => {
+test('saving a bet answers the player with OK, once, and the OK carries the saved bets when the message held several', async () => {
   const sent = [];
   inbox.attach({ on: () => {}, sendMessage: async (to, text, options) => { assert.equal(options.sendSeen, false); sent.push([to, text]); } }, { pollEveryMs: 0 });
   const waitForReplies = async count => { for (let i = 0; i < 50 && sent.length < count; i++) await new Promise(r => setTimeout(r, 10)); };
@@ -711,13 +711,27 @@ test('saving a bet answers the player with OK, once, and the OK carries the line
     sent.length = 0;
     assert.equal(await inbox.handleIncoming(message('12 300x90\n13 200x90')), 2);
     const items = (await inbox.listPending()).items;
-    await inbox.decide(items[0].id, 'confirmed');
+    // the figures are changed before saving: the answer carries what was saved, and waits for the other bet
+    await inbox.decide(items[0].id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 250, second: 90 });
+    await new Promise(r => setTimeout(r, 50));
+    assert.equal(sent.length, 0);
+    await inbox.decide(items[1].id, 'dismissed'); // the other bet is not saved: "only"
     await waitForReplies(1);
-    assert.equal(sent[0][1], 'OK ' + items[0].text);
+    assert.deepEqual(sent, [['4477001@c.us', 'OK 2 250x90 only']]);
 
-    // dismissing does not answer
+    // both saved: both are in the answer
     sent.length = 0;
-    await inbox.decide(items[1].id, 'dismissed');
+    assert.equal(await inbox.handleIncoming(message('12 300x90\n13 200x100')), 2);
+    const both = (await inbox.listPending()).items;
+    await inbox.decide(both[0].id, 'confirmed', { raceNum: 1, horseNum: 2, kind: 'books', amount: 300, second: 90 });
+    await inbox.decide(both[1].id, 'confirmed', { raceNum: 1, horseNum: 3, kind: 'books', amount: 200, second: 100 });
+    await waitForReplies(1);
+    assert.deepEqual(sent, [['4477001@c.us', 'OK 2 300x90, 3 200x100']]);
+
+    // nothing saved: no answer
+    sent.length = 0;
+    assert.equal(await inbox.handleIncoming(message('12 300x90')), 1);
+    await inbox.decide((await inbox.listPending()).items[0].id, 'dismissed');
     await new Promise(r => setTimeout(r, 50));
     assert.equal(sent.length, 0);
   } finally {

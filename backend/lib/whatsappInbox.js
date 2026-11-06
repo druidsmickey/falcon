@@ -11,7 +11,7 @@ const { parseBetMessage, parseOddsList, emptyContext, isDoubtful, looksLikeBet }
 const WhatsappAi = require('../models/whatsappAi');
 const { AiReader, PRESETS, MAX_LINES } = require('./aiReader');
 const WhatsappCorrection = require('../models/whatsappCorrection');
-const { learn } = require('./corrections');
+const { learn, readingOf, savedReading } = require('./corrections');
 
 /**
  * A name for a message that is the same every time the message is announced. WhatsApp's own id is used when the
@@ -642,16 +642,27 @@ async function countPending() {
 // the WhatsApp client of the moment, to answer the person whose bet was saved
 let replyClient = null;
 
+/** A saved bet in the player's own words: "22 300x90", with the figures as they were saved (the person may have changed them). */
+function betWords(item, savedBody) {
+  const saved = savedReading(savedBody);
+  const read = saved || readingOf(item);
+  return read.horse && read.amount && read.second ? `${read.horse} ${read.amount}x${read.second}` : String(item.text || '').trim();
+}
+
 /**
- * Tells the player that the bet was saved: "OK", or "OK" and the line when the message held several bets (so that
- * the answers can be told apart). Never makes saving fail. Switched off with WHATSAPP_REPLY_OK=false.
+ * Tells the player which bets were saved, once the person has decided every bet of the message: "OK" for a message with
+ * one bet, else "OK 22 300x90" with the bets as saved, and "only" when some of the others were not saved. Never makes
+ * saving fail. Switched off with WHATSAPP_REPLY_OK=false.
  */
 async function replyOk(item) {
   try {
     if (String(process.env.WHATSAPP_REPLY_OK || '').toLowerCase() === 'false') return;
+    const bets = await WhatsappInbox.find({ messageId: item.messageId, unreadable: { $ne: true } }).lean();
+    if (bets.some(bet => bet.status === 'pending')) return; // the answer waits for the last bet of the message
+    const saved = bets.filter(bet => bet.status === 'confirmed');
+    if (saved.length === 0) return;
     if (!replyClient) throw new Error('WhatsApp is not connected');
-    const several = (await WhatsappInbox.countDocuments({ messageId: item.messageId })) > 1;
-    const text = several ? `OK ${item.text}` : 'OK';
+    const text = bets.length === 1 ? 'OK' : `OK ${saved.map(bet => bet.replyText || bet.text).join(', ')}${saved.length < bets.length ? ' only' : ''}`;
     // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
     await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
     counters.replies.sent += 1;
@@ -668,8 +679,10 @@ async function replyOk(item) {
  */
 async function decide(id, status, saved) {
   if (!['confirmed', 'dismissed'].includes(status)) throw new Error('bad status');
-  const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date() } }, { new: false }).lean();
-  if (before && status === 'confirmed' && !before.demo) replyOk(before);
+  const current = await WhatsappInbox.findById(id).lean();
+  const replyText = status === 'confirmed' && current ? betWords(current, saved) : '';
+  const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date(), replyText } }, { new: false }).lean();
+  if (before && !before.demo) replyOk(before);
   if (before && status === 'confirmed' && saved && !before.demo) {
     try {
       await learn(WhatsappCorrection, before, saved);

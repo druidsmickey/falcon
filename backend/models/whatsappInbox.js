@@ -36,6 +36,8 @@ const whatsappInboxSchema = new mongoose.Schema({
   // the request id the bet is sent with, so confirming twice (or after a lost answer) cannot enter it twice
   clientRequestId: { type: String, required: true },
   decidedAt: { type: Date, default: null },
+  // the bet as it was saved ("22 300x90"), for the OK that is sent to the player
+  replyText: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
 });
 
