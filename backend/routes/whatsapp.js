@@ -34,6 +34,8 @@ let client = null;
 let isReady = false;
 let qrCodeData = null;
 let clientStatus = 'disconnected';
+// why the last start failed, shown on the WhatsApp tab
+let lastError = '';
 let initializationTimeout = null;
 
 // Track chats that should remain unread
@@ -140,6 +142,7 @@ function initializeClient() {
 
   console.log('Starting WhatsApp client initialization...');
   clientStatus = 'initializing';
+  lastError = '';
   qrCodeData = null;
 
   // Find Chrome executable
@@ -198,6 +201,7 @@ function initializeClient() {
       console.error('Current status:', clientStatus);
       console.error('QR Code exists:', !!qrCodeData);
       clientStatus = 'timeout';
+      lastError = 'WhatsApp did not answer within 3 minutes';
       qrCodeData = null;
       if (client) {
         client.destroy().catch(console.error);
@@ -287,12 +291,16 @@ function initializeClient() {
   });
 
   console.log('📱 Calling client.initialize()...');
+  const starting = client;
   client.initialize().catch((error) => {
     console.error('❌ Client initialization error:', error);
     console.error('Error stack:', error.stack);
     clientStatus = 'error';
+    lastError = String((error && error.message) || error).slice(0, 300);
     qrCodeData = null;
     client = null;
+    // close a browser that was half started, so that it does not block the next try
+    starting.destroy().catch(() => {});
     if (initializationTimeout) {
       clearTimeout(initializationTimeout);
       initializationTimeout = null;
@@ -307,6 +315,7 @@ router.get('/status', (req, res) => {
     status: clientStatus,
     isReady,
     qrCode: qrCodeData,
+    error: clientStatus === 'error' || clientStatus === 'timeout' ? lastError : '',
     debug: {
       clientExists: !!client,
       authPathExists: fs.existsSync(authPath),

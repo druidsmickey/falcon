@@ -9,6 +9,7 @@ import { environment } from '../../environments/environment';
 
 interface WhatsAppStatus {
   status: string;
+  error?: string;
   isReady: boolean;
   qrCode: string | null;
 }
@@ -187,6 +188,7 @@ export class Whatsapp implements OnInit, OnDestroy {
       case 'authenticated': return 'Authenticating...';
       case 'disconnected': return 'Disconnected';
       case 'auth_failure': return 'Authentication Failed';
+      case 'error': return 'Could not start' + (this.status().error ? ': ' + this.status().error : '');
       default: return status;
     }
   }
