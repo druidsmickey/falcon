@@ -7,6 +7,8 @@ const whatsappAiSchema = new mongoose.Schema({
   enabled: { type: Boolean, default: false },
   // off after a racing day: no message is read and none reaches the inbox
   reading: { type: Boolean, default: true },
+  // the answer to the player when a bet is saved
+  autoReply: { type: Boolean, default: true },
   // every line with a figure goes to the AI, not only the lines the rules were unsure about
   readAll: { type: Boolean, default: false },
   preset: { type: String, enum: ['gemini', 'groq', 'claude', 'custom'], default: 'gemini' },

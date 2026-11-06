@@ -60,6 +60,10 @@
           <input type="checkbox" [checked]="a.reading !== false" [disabled]="aiBusy()" (change)="setReading($any($event.target).checked)">
           <span>{{ a.reading !== false ? 'On: bets sent by the contacts ticked below arrive in the Inbox' : 'Off: no message is read' }}</span>
         </label>
+        <label class="check ai-switch">
+          <input type="checkbox" [checked]="a.autoReply !== false" [disabled]="aiBusy()" (change)="setAutoReply($any($event.target).checked)">
+          <span>{{ a.autoReply !== false ? 'Auto reply on: the player is answered with the bet as saved (22 300x90)' : 'Auto reply off: the player is not answered' }}</span>
+        </label>
         <p class="hint">Untick it after the racing day. Messages that arrive while it is off are not read later.</p>
         @if (aiMessage()) {
           <p class="hint">{{ aiMessage() }}</p>

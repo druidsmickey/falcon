@@ -34,6 +34,7 @@ interface ListenContact {
 /** The settings of the AI that gives a second opinion on messages the rules cannot read (the key stays on the server). */
 interface AiSettings {
   reading?: boolean;
+  autoReply?: boolean;
   enabled: boolean;
   readAll?: boolean;
   preset: 'gemini' | 'groq' | 'claude' | 'custom';
@@ -236,6 +237,10 @@ export class Whatsapp implements OnInit, OnDestroy {
 
   protected async setReading(reading: boolean): Promise<void> {
     await this.saveAi({ reading });
+  }
+
+  protected async setAutoReply(autoReply: boolean): Promise<void> {
+    await this.saveAi({ autoReply });
   }
 
   protected async setAiEnabled(enabled: boolean): Promise<void> {
