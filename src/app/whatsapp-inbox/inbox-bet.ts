@@ -225,58 +225,85 @@ export interface MessagePart {
   kind: 'race' | 'horse' | 'name' | null;
 }
 
+/** Words that are not part of a horse name: units, the words of a bet and filler ("put 500 on the grey one"). */
+const NOT_NAME = new Set(['x', 'k', 'f', 'r', 'h', 'race', 'horse', 'odds', 'f500', 'sales', 'sale', 'pur', 'put', 'bet', 'on', 'the', 'a', 'an', 'one', 'of', 'at', 'for', 'to', 'me', 'my', 'please', 'pls', 'plz', 'with', 'in', 'is', 'and', 'win', 'book', 'books', 'stake', 'pounds', 'pound', 'gbp']);
+
+/** Marks the horse name wherever it is in a piece of the message: "cap mag 200x20", "200 cap mag 20". */
+function nameParts(text: string): MessagePart[] {
+  const parts: MessagePart[] = [];
+  let last = 0;
+  let run: { start: number; end: number } | null = null;
+  const flush = (): void => {
+    if (!run) return;
+    if (run.start > last) parts.push({ text: text.slice(last, run.start), kind: null });
+    parts.push({ text: text.slice(run.start, run.end), kind: 'name' });
+    last = run.end;
+    run = null;
+  };
+  for (const found of text.matchAll(/[a-z][a-z']*/gi)) {
+    const end = found.index + found[0].length;
+    // letters stuck to a figure are units ("500x90", "5k", "500f"), and the filler words are not names
+    const isName = !NOT_NAME.has(found[0].toLowerCase()) && !/\d/.test(text[found.index - 1] ?? '') && !/\d/.test(text[end] ?? '');
+    if (!isName) {
+      flush();
+    } else if (run && text.slice(run.end, found.index) === ' ') {
+      run.end = end;
+    } else {
+      flush();
+      run = { start: found.index, end };
+    }
+  }
+  flush();
+  if (last < text.length) parts.push({ text: text.slice(last), kind: null });
+  return parts;
+}
+
 /**
- * Splits the message so that the race and the horse in it can be coloured like the race and horse buttons (and a horse
- * name like the name shown above the choices). Only the start of the message is looked at: the race and horse, or the name.
- * When the bet was changed so that it no longer matches the words, nothing is coloured.
+ * Splits the message so that the race and the horse in it can be coloured like the race and horse buttons, and a horse
+ * name wherever it is in the message, like the name shown above the choices. The race and horse numbers are looked for
+ * at the start of the message. When the bet was changed so that it no longer matches the words, they are not coloured.
  */
 export function messageParts(draft: Pick<Draft, 'text' | 'raceNum' | 'horseNum'>): MessagePart[] {
   const text = draft.text;
   const plain: MessagePart[] = [{ text, kind: null }];
   const split = (start: MessagePart[], rest: string): MessagePart[] => (rest ? [...start, { text: rest, kind: null }] : start);
+  // the names are looked for in what the numbers left over
+  const withNames = (parts: MessagePart[]): MessagePart[] => parts.flatMap(part => (part.kind === null ? nameParts(part.text) : [part]));
 
   // the race and the horse with their letters: "r6h4 @ 200x85", "r6 h4 200x85", "race 6 horse 4 ..."
   const lettered = /^(\s*)(r(?:ace)?\s*\d+)(\s*[.,]?\s*)(h(?:orse)?\s*\d+)/i.exec(text);
   if (lettered) {
     // the letters are never a horse name; when the bet no longer matches the words nothing is coloured
     if (lettered[2].replace(/\D/g, '') !== String(draft.raceNum) || lettered[4].replace(/\D/g, '') !== String(draft.horseNum)) return plain;
-    return split([
+    return withNames(split([
       ...(lettered[1] ? [{ text: lettered[1], kind: null } as MessagePart] : []),
       { text: lettered[2], kind: 'race' },
       ...(lettered[3] ? [{ text: lettered[3], kind: null } as MessagePart] : []),
       { text: lettered[4], kind: 'horse' },
-    ], text.slice(lettered[0].length));
-  }
-
-  // a horse name first: "cap mag 500x90"
-  const name = /^(\s*)([a-z][a-z' ]*?)(?=\s*\d|\s*$)/i.exec(text);
-  if (name && name[2].trim()) {
-    const lead = name[1] + name[2];
-    return split([...(name[1] ? [{ text: name[1], kind: null } as MessagePart] : []), { text: name[2], kind: 'name' }], text.slice(lead.length));
+    ], text.slice(lettered[0].length)));
   }
 
   const race = draft.raceNum === null ? null : String(draft.raceNum);
   const horse = draft.horseNum === null ? null : String(draft.horseNum);
-  if (race === null || horse === null) return plain;
+  if (race === null || horse === null) return withNames(plain);
 
   // "5 2 200x300" or "5.2 200x300": a race, then a horse
   const pair = /^(\s*)(\d+)([.\s]+)(\d+)(?=\s|$|[^\d])/.exec(text);
   if (pair && pair[2] === race && pair[4] === horse) {
-    const used = pair[0].length;
-    return split([
+    return withNames(split([
       ...(pair[1] ? [{ text: pair[1], kind: null } as MessagePart] : []),
       { text: pair[2], kind: 'race' },
       { text: pair[3], kind: null },
       { text: pair[4], kind: 'horse' },
-    ], text.slice(used));
+    ], text.slice(pair[0].length)));
   }
 
   // "22 500x90": the first number is the horse, or the race and the horse written together
   const first = /^(\s*)(\d+)/.exec(text);
-  if (!first) return plain;
+  if (!first) return withNames(plain);
   const rest = text.slice(first[0].length);
   const lead: MessagePart[] = first[1] ? [{ text: first[1], kind: null }] : [];
-  if (first[2] === race + horse) return split([...lead, { text: race, kind: 'race' }, { text: horse, kind: 'horse' }], rest);
-  if (first[2] === horse) return split([...lead, { text: first[2], kind: 'horse' }], rest);
-  return plain;
+  if (first[2] === race + horse) return withNames(split([...lead, { text: race, kind: 'race' }, { text: horse, kind: 'horse' }], rest));
+  if (first[2] === horse) return withNames(split([...lead, { text: first[2], kind: 'horse' }], rest));
+  return withNames(plain);
 }

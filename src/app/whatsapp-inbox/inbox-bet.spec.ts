@@ -166,8 +166,17 @@ describe('the message with its race and horse coloured', () => {
     expect(kinds('r6h4 @ 200x85', 5, 4)).toEqual(['-:r6h4 @ 200x85']);
   });
 
-  it('a horse name is coloured like the name shown above the choices', () => {
+  it('a horse name is coloured like the name shown above the choices, wherever it is in the message', () => {
     expect(kinds('cap mag 500x90', 1, 2)).toEqual(['name:cap mag', '-: 500x90']);
+    expect(kinds('horsename 200x20', 1, 2)).toEqual(['name:horsename', '-: 200x20']);
+    expect(kinds('200 horsename 20', 1, 2)).toEqual(['-:200 ', 'name:horsename', '-: 20']);
+    expect(kinds('put 500 on the grey one', 1, 2)).toEqual(['-:put 500 on the ', 'name:grey', '-: one']);
+  });
+
+  it('units next to a figure are not names', () => {
+    expect(kinds('3 500x90', 5, 3)).toEqual(['horse:3', '-: 500x90']);
+    expect(kinds('3 5k @450', 5, 3)).toEqual(['horse:3', '-: 5k @450']);
+    expect(kinds('3 500f@200', 5, 3)).toEqual(['horse:3', '-: 500f@200']);
   });
 
   it('nothing is coloured when the bet no longer matches the words', () => {

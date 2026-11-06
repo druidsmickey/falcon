@@ -187,7 +187,7 @@ button.ghost:disabled {
 
 /* the race and the horse of the message, in the colours of the race and horse buttons; a name like the name above the choices */
 .part-race {
-  color: red;
+  color: #1976d2;
 }
 
 .part-horse {
