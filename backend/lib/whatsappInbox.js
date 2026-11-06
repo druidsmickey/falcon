@@ -670,29 +670,23 @@ function figuresChanged(item, savedBody) {
 }
 
 /**
- * Tells the player which bets were saved, once the person has decided every bet of the message: "OK" for a message with one bet saved as it was read, the bet as saved ("22 300x90", "55 100k @200") when its figures were changed;
- * several bets: one message for each bet that was saved, as the player wrote it: "64 200x85 ok" when it was saved as it was read and
- * "64 100x85 only" when the figures were changed. Never makes saving fail. Switched off with WHATSAPP_REPLY_OK=false.
+ * Answers the player as soon as a bet is saved, with a message for that bet alone. A message with one bet is answered
+ * "OK" when it was saved as it was read, else with the bet as saved and "only" ("22 300x90 only"). With several bets
+ * it is the line as the player wrote it: "64 200x85 ok" when saved as read, "64 100x85 only" when the figures were
+ * changed. Never makes saving fail. Switched off with WHATSAPP_REPLY_OK=false.
  */
-async function replyOk(item) {
+async function replyOk(item, words, changed) {
   try {
     if (String(process.env.WHATSAPP_REPLY_OK || '').toLowerCase() === 'false') return;
-    const bets = await WhatsappInbox.find({ messageId: item.messageId, unreadable: { $ne: true } }).lean();
-    if (bets.some(bet => bet.status === 'pending')) return; // the answer waits for the last bet of the message
-    const saved = bets.filter(bet => bet.status === 'confirmed');
-    if (saved.length === 0) return;
-    // two bets decided at the same moment both get here: only the one that marks the message sends the answer
-    const marked = await WhatsappInbox.updateMany({ messageId: item.messageId, replied: { $ne: true } }, { $set: { replied: true } });
+    // the same bet is never answered twice
+    const marked = await WhatsappInbox.updateOne({ _id: item._id, replied: { $ne: true } }, { $set: { replied: true } });
     if (marked.modifiedCount === 0) return;
     if (!replyClient) throw new Error('WhatsApp is not connected');
-    const line = bet => (bet.replyChanged ? bet.replyText + ' only' : String(bet.text).trim() + ' ok');
-    // one message for each bet, so that each can be read at a glance
-    const texts = bets.length === 1 ? [saved[0].replyChanged ? saved[0].replyText : 'OK'] : saved.map(line);
-    for (const text of texts) {
-      // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
-      await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
-      counters.replies.sent += 1;
-    }
+    const several = (await WhatsappInbox.countDocuments({ messageId: item.messageId, unreadable: { $ne: true } })) > 1;
+    const text = changed ? words + ' only' : several ? String(item.text).trim() + ' ok' : 'OK';
+    // sendSeen is left out: it fails on some versions of WhatsApp Web ("markedUnread"), and the chat is not marked as read
+    await withTimeout(replyClient.sendMessage(item.contactNumber, text, { sendSeen: false }), 20000, 'sending the OK');
+    counters.replies.sent += 1;
   } catch (error) {
     counters.replies.failed += 1;
     counters.replies.lastError = String((error && error.message) || error).slice(0, 160);
@@ -710,7 +704,8 @@ async function decide(id, status, saved, { reply = true } = {}) {
   const replyText = status === 'confirmed' && current ? betWords(current, saved) : '';
   const replyChanged = status === 'confirmed' && current ? figuresChanged(current, saved) : false;
   const before = await WhatsappInbox.findOneAndUpdate({ _id: id, status: 'pending' }, { $set: { status, decidedAt: new Date(), replyText, replyChanged } }, { new: false }).lean();
-  if (before && !before.demo && reply) replyOk(before); // the person can untick the answer next to the Save button
+  // the answer goes as soon as the bet is saved; the person can untick it next to the Save button
+  if (before && status === 'confirmed' && !before.demo && reply) replyOk(before, replyText, replyChanged);
   if (before && status === 'confirmed' && saved && !before.demo) {
     try {
       await learn(WhatsappCorrection, before, saved);
