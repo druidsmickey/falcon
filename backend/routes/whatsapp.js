@@ -140,6 +140,7 @@ function clearAuthSession() {
 // Connect again by itself: after a restart of the server, and after the connection was lost.
 let reconnectTimer = null;
 let startRetries = 0; // failed starts since the last time WhatsApp was ready: at most 5 are tried again by themselves
+let browserDeaths = []; // when the browser died, for the last hour
 function scheduleReconnect(seconds = 30) {
   if (reconnectTimer || !autostartEnabled() || !sessionExists(authPath)) return;
   console.log(`WhatsApp will connect again in ${seconds} seconds`);
@@ -271,7 +272,11 @@ function initializeClient() {
         client = null;
         qrCodeData = null;
         thisClient.destroy().catch(() => {});
-        scheduleReconnect(15);
+        // at most 5 times an hour: a browser that keeps dying must not be started again and again
+        browserDeaths = browserDeaths.filter(at => Date.now() - at < 3600000);
+        browserDeaths.push(Date.now());
+        if (browserDeaths.length <= 5) scheduleReconnect(15);
+        else console.log("The browser of WhatsApp keeps closing: not connecting again by itself, press Initialize");
       });
     }
     isReady = true;
@@ -282,11 +287,15 @@ function initializeClient() {
       initializationTimeout = null;
     }
     
-    // Sync unread chats periodically (every 30 seconds). Only one timer may run, however often the
-    // client reconnects.
+    // Note the chats with unread messages now and then. Loading every chat is heavy for the browser (and it fails on the
+    // current WhatsApp Web), so it is done every 5 minutes, never twice at once, and given up after 3 failures in a row.
+    // Only one timer may run, however often the client reconnects.
     stopUnreadSync();
+    let syncing = false;
+    let syncFailures = 0;
     unreadSyncTimer = setInterval(async () => {
-      if (!client) return;
+      if (!client || syncing) return;
+      syncing = true;
       try {
         const chats = await client.getChats();
         for (const chat of chats) {
@@ -295,10 +304,18 @@ function initializeClient() {
             chatsToKeepUnread.add(chat.id._serialized);
           }
         }
+        syncFailures = 0;
       } catch (err) {
+        syncFailures += 1;
         console.log('Error syncing unread chats:', err.message);
+        if (syncFailures >= 3) {
+          console.log('Syncing unread chats is given up until WhatsApp connects again');
+          stopUnreadSync();
+        }
+      } finally {
+        syncing = false;
       }
-    }, 30000);
+    }, 5 * 60 * 1000);
   });
 
   client.on('authenticated', () => {
