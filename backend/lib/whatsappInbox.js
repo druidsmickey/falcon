@@ -537,6 +537,7 @@ const POLL_MESSAGES_PER_CHAT = 15;
  * connection was down, once it is back. Returns how many bets were added.
  */
 async function pollListened(client, now = Date.now()) {
+  if (!(await isReading())) return 0; // switched off: no chat is asked for
   const contacts = await WhatsappContact.find({ listen: true });
   let added = 0;
   for (const contact of contacts) {
@@ -801,4 +802,4 @@ async function clearDemo() {
   return result.deletedCount;
 }
 
-module.exports = { getAiSettings, saveAiSettings, testAi, setAiReader, messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, forgetCorrections, updateContact, currentContext, requestIdFor };
+module.exports = { isReading, getAiSettings, saveAiSettings, testAi, setAiReader, messageIdOf, getTrace, setLookupTimeout, getCounters, pollListened, getActivity, clearActivity, countPending, createDemo, clearDemo, handleIncoming, handleOwn, attach, listPending, decide, forgetCorrections, updateContact, currentContext, requestIdFor };

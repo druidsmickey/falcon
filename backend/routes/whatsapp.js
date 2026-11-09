@@ -295,6 +295,7 @@ function initializeClient() {
     let syncFailures = 0;
     unreadSyncTimer = setInterval(async () => {
       if (!client || syncing) return;
+      if (!(await whatsappInbox.isReading().catch(() => true))) return; // reading is switched off: WhatsApp is not asked for the chats
       syncing = true;
       try {
         const chats = await client.getChats();

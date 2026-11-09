@@ -840,3 +840,22 @@ test('a bet saved with the Reply tickbox off does not answer the player', async 
     inbox.attach({ on: () => {} }, { pollEveryMs: 0 });
   }
 });
+
+test('with message reading switched off the polling does not ask WhatsApp for any chat', async () => {
+  await WhatsappContact.deleteMany({});
+  await WhatsappContact.create({ number: '4477001@c.us', name: 'Ann', listen: true });
+  await WhatsappAi.deleteMany({});
+  let asked = 0;
+  const client = { getChatById: async () => { asked += 1; return null; } };
+  try {
+    await inbox.saveAiSettings({ reading: false });
+    assert.equal(await inbox.pollListened(client), 0);
+    assert.equal(asked, 0);
+    await inbox.saveAiSettings({ reading: true });
+    await inbox.pollListened(client);
+    assert.equal(asked, 1);
+  } finally {
+    await WhatsappAi.deleteMany({});
+    await WhatsappContact.deleteMany({});
+  }
+});
