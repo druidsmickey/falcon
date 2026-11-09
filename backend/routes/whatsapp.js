@@ -287,36 +287,9 @@ function initializeClient() {
       initializationTimeout = null;
     }
     
-    // Note the chats with unread messages now and then. Loading every chat is heavy for the browser (and it fails on the
-    // current WhatsApp Web), so it is done every 5 minutes, never twice at once, and given up after 3 failures in a row.
-    // Only one timer may run, however often the client reconnects.
+    // The chats are not loaded in the background any more: loading every chat is heavy for the browser, and the Inbox does
+    // not need it (it reads the contacts that were ticked). A chat is kept unread only when it is marked on purpose.
     stopUnreadSync();
-    let syncing = false;
-    let syncFailures = 0;
-    unreadSyncTimer = setInterval(async () => {
-      if (!client || syncing) return;
-      if (!(await whatsappInbox.isReading().catch(() => true))) return; // reading is switched off: WhatsApp is not asked for the chats
-      syncing = true;
-      try {
-        const chats = await client.getChats();
-        for (const chat of chats) {
-          if (chat.unreadCount > 0) {
-            // Add chats with unread messages to tracking
-            chatsToKeepUnread.add(chat.id._serialized);
-          }
-        }
-        syncFailures = 0;
-      } catch (err) {
-        syncFailures += 1;
-        console.log('Error syncing unread chats:', err.message);
-        if (syncFailures >= 3) {
-          console.log('Syncing unread chats is given up until WhatsApp connects again');
-          stopUnreadSync();
-        }
-      } finally {
-        syncing = false;
-      }
-    }, 5 * 60 * 1000);
   });
 
   client.on('authenticated', () => {
