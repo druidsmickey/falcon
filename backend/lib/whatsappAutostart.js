@@ -44,4 +44,24 @@ function removeStaleLocks(authPath) {
   }
 }
 
-module.exports = { sessionExists, autostartEnabled, shouldReconnect, removeStaleLocks, SESSION_FOLDER };
+/**
+ * The hour (0 to 23, server time, UTC on the droplet) at which the browser of WhatsApp is closed and started again every
+ * night, so that a page that has been open for days cannot slowly use up the memory of the server. WHATSAPP_RESTART_HOUR
+ * sets it (default 23); "off" switches the restart off. Returns null when it is off.
+ */
+function restartHour(env = process.env) {
+  const text = String(env.WHATSAPP_RESTART_HOUR === undefined ? '23' : env.WHATSAPP_RESTART_HOUR).trim().toLowerCase();
+  if (text === 'off' || text === 'false' || env.NODE_ENV === 'test') return null;
+  const hour = Number(text);
+  return Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : 23;
+}
+
+/** The next time it is that hour (always in the future). */
+function nextRestartAt(hour, now = new Date()) {
+  const next = new Date(now);
+  next.setHours(hour, 0, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+  return next;
+}
+
+module.exports = { sessionExists, autostartEnabled, shouldReconnect, removeStaleLocks, restartHour, nextRestartAt, SESSION_FOLDER };

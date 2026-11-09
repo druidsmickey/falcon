@@ -8,7 +8,7 @@ const { execSync, execFileSync } = require('child_process');
 const WhatsappContact = require('../models/whatsappContact');
 const whatsappInbox = require('../lib/whatsappInbox');
 const { usableContacts, syncContacts } = require('../lib/contactSync');
-const { sessionExists, autostartEnabled, shouldReconnect, removeStaleLocks } = require('../lib/whatsappAutostart');
+const { sessionExists, autostartEnabled, shouldReconnect, removeStaleLocks, restartHour, nextRestartAt } = require('../lib/whatsappAutostart');
 
 let unreadSyncTimer = null;
 function stopUnreadSync() {
@@ -660,6 +660,41 @@ router.delete('/contacts/:id', async (req, res) => {
   }
 });
 
+/**
+ * Every night the browser of WhatsApp is closed the proper way (the session is saved) and started again from the saved
+ * session, so no QR code is asked. A browser that stays open for days slowly uses more and more memory.
+ */
+async function restartBrowser() {
+  if (!client || !isReady) return; // not connected: the reconnecting that is already going on does it
+  console.log('Nightly restart of the WhatsApp browser');
+  const current = client;
+  client = null;
+  isReady = false;
+  clientStatus = 'disconnected';
+  qrCodeData = null;
+  stopUnreadSync();
+  await Promise.race([current.destroy().catch(() => {}), new Promise(resolve => setTimeout(resolve, 20000))]);
+  scheduleReconnect(10);
+}
+
+let nightlyTimer = null;
+function scheduleNightlyRestart() {
+  const hour = restartHour();
+  if (hour === null || !autostartEnabled()) return;
+  const at = nextRestartAt(hour);
+  nightlyTimer = setTimeout(async () => {
+    try {
+      await restartBrowser();
+    } catch (error) {
+      console.log('Nightly restart of the WhatsApp browser failed:', error.message);
+    }
+    scheduleNightlyRestart();
+  }, at.getTime() - Date.now());
+  if (typeof nightlyTimer.unref === 'function') nightlyTimer.unref();
+  console.log('The browser of WhatsApp restarts every night at ' + String(hour).padStart(2, '0') + ':00 (server time); next: ' + at.toISOString());
+}
+scheduleNightlyRestart();
+
 // After a restart the saved session is taken up again, so that the inbox works without pressing Initialize
 if (autostartEnabled() && sessionExists(authPath)) {
   console.log('A saved WhatsApp session was found: connecting in 10 seconds');
@@ -672,6 +707,7 @@ if (autostartEnabled() && sessionExists(authPath)) {
  */
 router.shutdown = async function shutdown(timeoutMs = 15000) {
   if (reconnectTimer) clearTimeout(reconnectTimer);
+  if (nightlyTimer) clearTimeout(nightlyTimer);
   stopUnreadSync();
   const current = client;
   client = null;

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { sessionExists, autostartEnabled, shouldReconnect, SESSION_FOLDER } = require('../lib/whatsappAutostart');
+const { sessionExists, autostartEnabled, shouldReconnect, restartHour, nextRestartAt, SESSION_FOLDER } = require('../lib/whatsappAutostart');
 
 test('a saved session is found only when the folder has something in it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-'));
@@ -47,4 +47,20 @@ test('stale Chrome lock files are removed from the saved session, and the sessio
   assert.deepEqual(fs.readdirSync(folder), ['Cookies']);
   assert.equal(sessionExists(auth), true);
   fs.rmSync(auth, { recursive: true, force: true });
+});
+
+test('the nightly restart hour: 23 by default, set or switched off in .env', () => {
+  assert.equal(restartHour({}), 23);
+  assert.equal(restartHour({ WHATSAPP_RESTART_HOUR: '3' }), 3);
+  assert.equal(restartHour({ WHATSAPP_RESTART_HOUR: 'off' }), null);
+  assert.equal(restartHour({ WHATSAPP_RESTART_HOUR: '99' }), 23); // nonsense: the default
+  assert.equal(restartHour({ NODE_ENV: 'test' }), null);
+});
+
+test('the next restart is always in the future, today or tomorrow', () => {
+  const before = new Date(2026, 10, 9, 10, 30);
+  const after = new Date(2026, 10, 9, 23, 30);
+  assert.deepEqual([nextRestartAt(23, before).getDate(), nextRestartAt(23, before).getHours()], [9, 23]);
+  assert.deepEqual([nextRestartAt(23, after).getDate(), nextRestartAt(23, after).getHours()], [10, 23]);
+  assert.ok(nextRestartAt(23, new Date(2026, 10, 9, 23, 0, 0, 0)).getTime() > new Date(2026, 10, 9, 23, 0, 0, 0).getTime());
 });
