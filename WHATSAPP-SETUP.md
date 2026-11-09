@@ -9,7 +9,7 @@ The tab has two parts:
 | **WhatsApp (connection)** | Connect or disconnect WhatsApp, show the QR code, reset the session, test that the server can start Chrome |
 | **Contacts** | One button, **Sync contacts from the phone**, copies the contacts of the phone. For each contact you type a **nickname** and tick whether to **listen** to it |
 
-Sending messages, groups of contacts and sending reports or photos are **no longer in the app**. The server routes for them are still there (see the API list) but nothing in the app uses them.
+Sending messages, groups of contacts and sending reports or photos have been **removed** from the app and from the server. The only messages the app sends are the replies to the players when you save a bet.
 
 ## Before you start
 
@@ -48,7 +48,6 @@ Connection: `GET /api/whatsapp/status`, `POST /initialize`, `POST /disconnect`, 
 
 Contacts: `POST /sync-contacts` (copy the phone's contacts), `GET /contacts`, `POST /contacts`, `DELETE /contacts/:id`, `GET /whatsapp-contacts`, `POST /import-contacts`. Nickname and listen: `GET /api/whatsapp-inbox/contacts`, `PATCH /api/whatsapp-inbox/contacts/:id`.
 
-Routes the app no longer uses: groups (`GET/POST /groups`, `PUT/DELETE /groups/:id`), sending (`POST /send-message`, `/send-bulk`, `/send-to-group`, `/send-image-to-group`, `/send-report`, `GET /messages/:groupId`, `POST /delete-messages`) and chat "keep unread" tracking (`POST /mark-keep-unread`, `/unmark-keep-unread`).
 
 All paths start with `/api/whatsapp` unless written in full.
 
@@ -65,9 +64,6 @@ All paths start with `/api/whatsapp` unless written in full.
 - The status must be **Connected**.
 - Check the number: country code, digits only, and it must be registered on WhatsApp.
 - Look at the server log (`pm2 logs <process>`).
-
-**"A group with that name already exists" for a name you have not used**
-- Group names are compared ignoring capitals, as plain text. Check the list of groups for the same name.
 
 **The session ended**
 - WhatsApp can unlink a device (for example if the phone is offline for weeks). Scan the QR code again.
